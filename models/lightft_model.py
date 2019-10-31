@@ -21,6 +21,7 @@ class lightftModel(BaseModel):
         if is_train:
             parser.set_defaults(pool_size=0, gan_mode='lsgan')
             parser.add_argument('--lambda_L1', type=float, default=100.0, help='weight for L1 loss')
+            parser.add_argument('--ft_model',type=str,default='/home/tushar/Ilumination_gan/models/trained/trained_model_03.t7')
 
         return parser
 
@@ -39,7 +40,8 @@ class lightftModel(BaseModel):
 
         # TODO::  Initialise the network???
         self.netG1 = HourglassNet()
-        self.netG1.load_state_dict(torch.load(os.path.join('/home/tushar/Ilumination_gan/models/trained/trained_model_03.t7')))
+        print(opt.ft_model)
+        self.netG1.load_state_dict(torch.load(os.path.join(opt.ft_model)))
 
         # todo check this again
         self.netG1.train(True)
