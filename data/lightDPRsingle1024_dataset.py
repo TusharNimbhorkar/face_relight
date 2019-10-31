@@ -11,7 +11,9 @@ import torch
 from torch.autograd import Variable
 class lightDPRsingle1024Dataset(BaseDataset):
     @staticmethod
-    def modify_commandline_options(parser, is_train):
+    def modify_commandline_options(parser, is_train=True):
+        if is_train:
+            parser.add_argument('--ffhq', type=int, default=70000, help='sample size ffhq')
         return parser
 
     def __init__(self, opt):
@@ -38,7 +40,7 @@ class lightDPRsingle1024Dataset(BaseDataset):
     def __getitem__(self, index):
         # todo: A,B,AL,BL
 
-        real_im_number  = random.choice(range(0, 70000))
+        real_im_number  = random.choice(range(0, self.opt.ffhq))
         # real_im_number  = random.choice(range(0, 10))
         real_im_path = os.path.join(self.opt.dataroot,'real_im',"{:05d}".format(real_im_number)+'.png')
         C = cv2.imread(real_im_path)
