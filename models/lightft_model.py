@@ -49,8 +49,6 @@ class lightftModel(BaseModel):
         self.netG.train(True)
         # networks.init_weights(self.netG)
 
-
-
         # networks.init_weights(self.netG)
         if self.isTrain:
             # Todo: maybe change this or check it
