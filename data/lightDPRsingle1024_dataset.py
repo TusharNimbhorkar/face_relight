@@ -39,7 +39,7 @@ class lightDPRsingle1024Dataset(BaseDataset):
         # todo: A,B,AL,BL
 
         real_im_number  = random.choice(range(0, 70000))
-        real_im_number  = random.choice(range(0, 10))
+        # real_im_number  = random.choice(range(0, 10))
         real_im_path = os.path.join(self.opt.dataroot,'real_im',"{:05d}".format(real_im_number)+'.png')
         C = cv2.imread(real_im_path)
         img_C = cv2.resize(C, (1024, 1024))
