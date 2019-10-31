@@ -40,7 +40,7 @@ class lightftModel(BaseModel):
 
         # TODO::  Initialise the network???
         self.netG1 = HourglassNet()
-        print(opt.ft_model)
+        # print(opt.ft_model)
         self.netG1.load_state_dict(torch.load(os.path.join(opt.ft_model)))
 
         # todo check this again
@@ -137,7 +137,7 @@ class lightftModel(BaseModel):
         self.loss_G_MSE = self.mseloss(self.fake_AL , self.real_AL )
 
         self.loss_G_total_variance = self.criterionL1(self.calc_gradient(x=self.real_B),self.calc_gradient(self.fake_B))
-        print(self.loss_G_total_variance)
+        # print(self.loss_G_total_variance)
 
 
 
