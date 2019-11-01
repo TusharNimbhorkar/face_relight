@@ -44,11 +44,11 @@ class lightftModel(BaseModel):
         self.netG1.load_state_dict(torch.load(os.path.join(opt.ft_model)))
 
         # todo check this again
-        self.netG1.train(True)
+        # self.netG1.train(True)
 
         self.netG = HourglassNet_1024(self.netG1).cuda()
         # todo check this again
-        self.netG.train(True)
+        # self.netG.train(True)
         # networks.init_weights(self.netG)
 
         # networks.init_weights(self.netG)
