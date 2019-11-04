@@ -82,7 +82,6 @@ class HourglassBlock(nn.Module):
         out_lower, out_middle = self.middle(out_lower, light, count + 1, skip_count)
         out_lower = self.low2(out_lower)
         out_lower = self.upSample(out_lower)
-        print('COUNT:::',count,'SKIP COUNT:::',skip_count)
 
         if count >= skip_count and self.skipLayer:
             # withSkip is true, then we use skip layer
@@ -90,10 +89,8 @@ class HourglassBlock(nn.Module):
             # print('skipadded? HGmodule')
             # print(count,skip_count)
             out = out_lower + out_upper
-            print('adding skip')
         else:
             out = out_lower
-            print('not adding skip')
             # out = out_upper
         return out, out_middle
 
