@@ -115,7 +115,7 @@ class BaseModel(ABC):
 
                 if len(self.gpu_ids) > 0 and torch.cuda.is_available():
 
-                    if (name=='G' or name=='G1') and (self.opt.model=='light' or self.opt.model=='lightgrad' or self.opt.model=='lightft'):
+                    if (name=='G' or name=='G1') and (self.opt.model=='light' or self.opt.model=='lightgrad' or self.opt.model=='lightft' or self.opt.model=='lightgrad5'):
                         torch.save(net.cpu().state_dict(), save_path)
                         net.cuda(self.gpu_ids[0])
 

@@ -9,9 +9,9 @@ import torch.nn as nn
 from torch.autograd import Variable
 import numpy as np
 
-class lightgradModel(BaseModel):
+class lightgrad5Model(BaseModel):
     def name(self):
-        return 'lightgradModel'
+        return 'lightgrad5Model'
 
     @staticmethod
     def modify_commandline_options(parser, is_train=True):
@@ -35,7 +35,6 @@ class lightgradModel(BaseModel):
         else:  # during test time, only load Gs
             self.model_names = ['G']
 
-
         self.netG = HourglassNet().cuda()
         networks.init_weights(self.netG)
 
@@ -48,7 +47,7 @@ class lightgradModel(BaseModel):
 
             self.criterionGAN = networks.GANLoss(opt.gan_mode).to(self.device)
             self.criterionL1 = torch.nn.L1Loss()
-            self.mseloss = torch.nn.MSELoss()
+            self.mseloss = torch.nn.MSELoss(reduction='sum')
 
             # initialize optimizers
             self.optimizers = []
@@ -81,10 +80,10 @@ class lightgradModel(BaseModel):
         if epoch > 10:
             count_skip = 0
 
-        self.fake_B, self.fake_AL, self.face_feat_A = self.netG(self.real_A,self.real_BL,count_skip)
+        self.fake_B, self.fake_AL, _ = self.netG(self.real_A,self.real_BL,count_skip)
 
-        if epoch>10:
-            _, _, self.face_feat_B = self.netG(self.real_B, self.real_AL, count_skip)
+        # if epoch>10:
+        #     _, _, self.face_feat_B = self.netG(self.real_B, self.real_AL, count_skip)
 
     def calc_gradient(self,x):
 
@@ -120,25 +119,27 @@ class lightgradModel(BaseModel):
 
     def backward_G(self,epoch):
         # First, G(A) should fake the discriminator
+        '''
         fake_AB = torch.cat((self.real_C, self.fake_B), 1)
         pred_fake = self.netD(fake_AB)
         self.loss_G_GAN = self.criterionGAN(pred_fake, True)
-
+        '''
         # Second, G(A) = B
-        self.loss_G_L1 = self.criterionL1(self.fake_B, self.real_B) #* self.opt.lambda_L1
+        self.loss_G_L1 = self.criterionL1(self.real_B, self.fake_B) #* self.opt.lambda_L1
 
-        self.loss_G_MSE = self.mseloss(self.fake_AL , self.real_AL )
+        self.loss_G_MSE = self.mseloss(self.real_AL, self.fake_AL)
 
-        self.loss_G_total_variance = self.criterionL1(self.calc_gradient(x=self.real_B),self.calc_gradient(self.fake_B))
-        print(self.loss_G_total_variance)
+        # self.loss_G_total_variance = self.criterionL1(self.calc_gradient(x=self.real_B),self.calc_gradient(self.fake_B))
+        # print(self.loss_G_total_variance)
+
+        self.loss_G = self.loss_G_L1 + self.loss_G_MSE
 
 
-
-        self.loss_G = self.loss_G_GAN + self.loss_G_L1 + self.loss_G_MSE + self.loss_G_total_variance
-
-        if epoch>10:
-            self.loss_G_feat = self.criterionL1(self.face_feat_A, self.face_feat_B) *0.5
-            self.loss_G = self.loss_G + self.loss_G_feat
+        # self.loss_G = self.loss_G_GAN + self.loss_G_L1 + self.loss_G_MSE + self.loss_G_total_variance
+        #
+        # if epoch>10:
+        #     self.loss_G_feat = self.criterionL1(self.face_feat_A, self.face_feat_B) *0.5
+        #     self.loss_G = self.loss_G + self.loss_G_feat
 
         self.loss_G.backward()
 
