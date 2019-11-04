@@ -6,10 +6,10 @@ from util.visualizer import Visualizer
 sys.path.append('models')
 if __name__ == '__main__':
     opt = TrainOptions().parse()
-    data_loader = CreateDataLoader(opt)
-    dataset = data_loader.load_data()
-    dataset_size = len(data_loader)
-    print('#training images = %d' % dataset_size)
+    # data_loader = CreateDataLoader(opt)
+    # dataset = data_loader.load_data()
+    # dataset_size = len(data_loader)
+    # print('#training images = %d' % dataset_size)
 
     model = create_model(opt)
     model.setup(opt)
@@ -20,6 +20,10 @@ if __name__ == '__main__':
         epoch_start_time = time.time()
         iter_data_time = time.time()
         epoch_iter = 0
+        data_loader = CreateDataLoader(opt)
+        dataset = data_loader.load_data()
+        dataset_size = len(data_loader)
+        print('#training images = %d' % dataset_size)
 
         for i, data in enumerate(dataset):
             iter_start_time = time.time()
