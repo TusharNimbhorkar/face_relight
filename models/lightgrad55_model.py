@@ -133,7 +133,7 @@ class lightgrad55Model(BaseModel):
         self.loss_G_GAN = self.criterionGAN(pred_fake, True)  * 0.5
         
         # Second, G(A) = B
-        self.loss_G_L1 = self.criterionL1(self.real_B, self.fake_B) * 10#* self.opt.lambda_L1
+        self.loss_G_L1 = self.criterionL1(self.real_B, self.fake_B) #* self.opt.lambda_L1
 
         self.loss_G_MSE = self.mseloss(self.real_AL, self.fake_AL)
 
