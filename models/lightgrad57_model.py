@@ -10,9 +10,9 @@ import torch.nn as nn
 from torch.autograd import Variable
 import numpy as np
 
-class lightgrad55Model(BaseModel):
+class lightgrad57Model(BaseModel):
     def name(self):
-        return 'lightgrad55Model'
+        return 'lightgrad57Model'
 
     @staticmethod
     def modify_commandline_options(parser, is_train=True):
