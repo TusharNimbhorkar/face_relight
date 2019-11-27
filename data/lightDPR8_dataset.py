@@ -38,12 +38,10 @@ class lightDPR8Dataset(BaseDataset):
             i1 = self.AB_paths_[i:i + 5]
             self.list_SR.append([random.sample(i1,1)[0],i2[-1]])
             self.AB_paths.append(i1[-1])
-
             i2 = self.AB_paths_[i:i + 5]
 
 
             for j in range(2):
-
                 i1 = self.AB_paths_[i:i + 5]
                 i2 = self.AB_paths_[i:i + 5]
                 for i in range(5):
