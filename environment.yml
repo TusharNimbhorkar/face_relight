@@ -1,4 +1,4 @@
-name: base
+name: fr
 channels:
   - pytorch
   - conda-forge
