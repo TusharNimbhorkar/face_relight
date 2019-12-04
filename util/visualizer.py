@@ -173,10 +173,13 @@ class Visualizer():
             self.throw_visdom_connection_error()
 
     # losses: same format as |losses| of plot_current_losses
-    def print_current_losses(self, epoch, i, losses, t, t_data):
+    def print_current_losses(self, epoch, i, losses, t, t_data, extra={}):
         message = '(epoch: %d, iters: %d, time: %.3f, data: %.3f) ' % (epoch, i, t, t_data)
         for k, v in losses.items():
             message += '%s: %.3f ' % (k, v)
+
+        for key,val in extra.items():
+            message += key % val
 
         print(message)
         with open(self.log_name, "a") as log_file:
