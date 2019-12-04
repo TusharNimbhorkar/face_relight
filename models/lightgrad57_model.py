@@ -79,7 +79,7 @@ class lightgrad57Model(BaseModel):
         count_skip = 4
         if epoch > 5:
             count_skip = 9 % epoch
-        if epoch > 10:
+        if epoch >= 10:
             count_skip = 0
         '''
         self.fake_B, self.fake_AL, _ = self.netG(self.real_A,self.real_BL,count_skip)
