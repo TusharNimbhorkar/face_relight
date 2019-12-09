@@ -47,17 +47,17 @@ class lightDPR10Dataset(BaseDataset):
                 self.AB_paths.append(a[0])
                 self.list_AB.append([a[0] , b[0]])
 
-            i1 = self.AB_paths_[i:i + 5]
-            i2 = self.AB_paths_[i:i + 5]
-
-            for l in range(2):
-                a = [i1.pop(random.randrange(len(i1))) for _ in range(1)]
-                blist = list(set(i2) - set(a))
-                b = [blist.pop(random.randrange(len(blist))) for _ in range(1)]
-                blist.append(a[0])
-                i2 = blist
-                self.AB_paths.append(a[0])
-                self.list_AB.append([a[0] , b[0]])
+            # i1 = self.AB_paths_[i:i + 5]
+            # i2 = self.AB_paths_[i:i + 5]
+            #
+            # for l in range(2):
+            #     a = [i1.pop(random.randrange(len(i1))) for _ in range(1)]
+            #     blist = list(set(i2) - set(a))
+            #     b = [blist.pop(random.randrange(len(blist))) for _ in range(1)]
+            #     blist.append(a[0])
+            #     i2 = blist
+            #     self.AB_paths.append(a[0])
+            #     self.list_AB.append([a[0] , b[0]])
 
 
         random.shuffle(self.list_AB)
