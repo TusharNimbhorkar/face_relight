@@ -7,9 +7,11 @@ __pycache__/
 *.so
 .idea/
 # Distribution / packaging
+
 .Python
 build/
 develop-eggs/
+videos_res/
 dist/
 downloads/
 eggs/
