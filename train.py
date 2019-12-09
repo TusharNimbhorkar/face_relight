@@ -15,6 +15,11 @@ if __name__ == '__main__':
     visualizer = Visualizer(opt)
     total_steps = 0
 
+    def str_time(s):
+        hours, remainder = divmod(s, 3600)
+        minutes, seconds = divmod(remainder, 60)
+        return '{:02}:{:02}'.format(int(hours), int(minutes))
+
     for epoch in range(1,15):
         epoch_start_time = torch.cuda.Event(enable_timing=True)
         epoch_end_time = torch.cuda.Event(enable_timing=True)
@@ -59,8 +64,10 @@ if __name__ == '__main__':
                 torch.cuda.synchronize(model.device)
                 t = (iter_start_time.elapsed_time(iter_end_time)/1000) / opt.batch_size
                 t_data = (data_start_time.elapsed_time(data_end_time)/1000) / opt.batch_size
-                t_current = ((epoch_start_time.elapsed_time(iter_end_time) / 1000) / opt.batch_size)/epoch_iter
-                visualizer.print_current_losses(epoch, epoch_iter, losses, t, t_data, {'Avg Time: %.3f':t_current})
+                t_current = (epoch_start_time.elapsed_time(iter_end_time) / 1000)/epoch_iter
+
+                visualizer.print_current_losses(epoch, epoch_iter, losses, t, t_data, ['Avg Time: %.3f' % t_current,
+                                                                                       'Ep Time %s / %s' % (str_time(t_current*epoch_iter),str_time(t_current*(dataset_size/opt.batch_size)))])
                 if opt.display_id > 0:
                     visualizer.plot_current_losses(epoch, float(epoch_iter) / dataset_size, opt, losses)
 
