@@ -97,38 +97,38 @@ for sh_v in sh_vals:
 		inputL = Variable(torch.from_numpy(inputL).cuda())
 
 		for i in range(36):
-		    sh = np.loadtxt(os.path.join(lightFolder, 'rotate_light_{:02d}.txt'.format(i)))
-		    sh = sh[0:9]
-		    sh = sh* sh_constant
-		    #--------------------------------------------------
-		    # rendering half-sphere
-		    sh = np.squeeze(sh)
-		    shading = get_shading(normal, sh)
-		    value = np.percentile(shading, 95)
-		    ind = shading > value
-		    shading[ind] = value
-		    shading = (shading - np.min(shading))/(np.max(shading) - np.min(shading))
-		    shading = (shading *255.0).astype(np.uint8)
-		    shading = np.reshape(shading, (256, 256))
-		    shading = shading * valid
-		    
-		    sh = np.reshape(sh, (1,9,1,1)).astype(np.float32)
-		    sh = Variable(torch.from_numpy(sh).cuda())
+			sh = np.loadtxt(os.path.join(lightFolder, 'rotate_light_{:02d}.txt'.format(i)))
+			sh = sh[0:9]
+			sh = sh * sh_constant
+			# --------------------------------------------------
+			# rendering half-sphere
+			sh = np.squeeze(sh)
+			shading = get_shading(normal, sh)
+			value = np.percentile(shading, 95)
+			ind = shading > value
+			shading[ind] = value
+			shading = (shading - np.min(shading)) / (np.max(shading) - np.min(shading))
+			shading = (shading * 255.0).astype(np.uint8)
+			shading = np.reshape(shading, (256, 256))
+			shading = shading * valid
 
-		    millis_start = int(round(time.time() * 1000))
-		    
-		    outputImg,_, outputSH,_  = my_network(inputL, sh, skip_c)
-		    millis_after = int(round(time.time() * 1000))
-		    elapsed = millis_after-millis_start
-		    print('MILISECONDS:  ', elapsed)
-		    time_avg+=elapsed
-		    count = count+1
-		    outputImg = outputImg[0].cpu().data.numpy()
-		    outputImg = outputImg.transpose((1,2,0))
-		    outputImg = np.squeeze(outputImg)
-		    outputImg = (outputImg*255.0).astype(np.uint8)
-		    Lab[:,:,0] = outputImg
-		    resultLab = cv2.cvtColor(Lab, cv2.COLOR_LAB2BGR)
-		    resultLab = cv2.resize(resultLab, (col, row))
-		    cv2.imwrite(os.path.join(saveFolder, \
-		         im[:-4]+'_{:02d}.jpg'.format(i)), resultLab)
+			sh = np.reshape(sh, (1, 9, 1, 1)).astype(np.float32)
+			sh = Variable(torch.from_numpy(sh).cuda())
+
+			millis_start = int(round(time.time() * 1000))
+
+			outputImg, _, outputSH, _ = my_network(inputL, sh, skip_c)
+			millis_after = int(round(time.time() * 1000))
+			elapsed = millis_after - millis_start
+			print('MILISECONDS:  ', elapsed)
+			time_avg += elapsed
+			count = count + 1
+			outputImg = outputImg[0].cpu().data.numpy()
+			outputImg = outputImg.transpose((1, 2, 0))
+			outputImg = np.squeeze(outputImg)
+			outputImg = (outputImg * 255.0).astype(np.uint8)
+			Lab[:, :, 0] = outputImg
+			resultLab = cv2.cvtColor(Lab, cv2.COLOR_LAB2BGR)
+			resultLab = cv2.resize(resultLab, (col, row))
+			cv2.imwrite(os.path.join(saveFolder, \
+									 im[:-4] + '_{:02d}.jpg'.format(i)), resultLab)
