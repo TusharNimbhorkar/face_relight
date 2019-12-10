@@ -48,8 +48,8 @@ class lightgrad55Model(BaseModel):
             self.fake_AB_pool = ImagePool(opt.pool_size)
 
             self.criterionGAN = networks.GANLoss(gan_mode='lsgan').to(self.device)
-            self.criterionL1 = torch.nn.L1Loss()
-            self.mseloss = torch.nn.MSELoss(reduction='sum')
+            self.criterionL1 = torch.nn.L1Loss().to(self.device)
+            self.mseloss = torch.nn.MSELoss(reduction='sum').to(self.device)
 
             # initialize optimizers
             self.optimizers = []
