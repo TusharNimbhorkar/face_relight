@@ -117,7 +117,7 @@ for sh_v in sh_vals:
 
 		    millis_start = int(round(time.time() * 1000))
 		    
-		    outputImg, outputSH  = my_network(inputL, sh, skip_c)
+		    outputImg,_, outputSH,_  = my_network(inputL, sh, skip_c)
 		    millis_after = int(round(time.time() * 1000))
 		    elapsed = millis_after-millis_start
 		    print('MILISECONDS:  ', elapsed)

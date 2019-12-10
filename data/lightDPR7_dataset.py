@@ -29,7 +29,7 @@ class lightDPR7Dataset(BaseDataset):
 
             self.list_AB.append([i1[-1], i1[-1]])
             self.AB_paths.append(i1[-1])
-            for i in range(6):
+            for k in range(6):
                 a = [i1.pop(random.randrange(len(i1))) for _ in range(1)]
                 blist = list(set(i2) - set(a))
                 b = [blist.pop(random.randrange(len(blist))) for _ in range(1)]
@@ -82,10 +82,8 @@ class lightDPR7Dataset(BaseDataset):
         inputB = inputB.transpose((0, 1))
         inputB = inputB[ ... ,None]
 
-        '''
-        orig_im_path = os.path.join(self.opt.dataroot, 'orig',
-                                    "{:05d}".format(int(AB_path.split('/')[-1].split('_')[0][5:]) + 1) + '.jpg')
 
+        orig_im_path = target_path[:-5]+'5.png'
         orig = cv2.imread(orig_im_path)
         img_orig = cv2.resize(orig, (512, 512))
         Lab_orig = cv2.cvtColor(img_orig, cv2.COLOR_BGR2LAB)
@@ -93,14 +91,14 @@ class lightDPR7Dataset(BaseDataset):
         inputorig = inputLorig.astype(np.float32) / 255.0
         inputorig = inputorig.transpose((0, 1))
         inputorig = inputorig[..., None]
-        '''
+
 
 
         # TODO NORMALISE??????? Check base dataset
         A = self.transform_A(inputA)
         B = self.transform_A(inputB)
         C = self.transform_A(inputC)
-        # D = self.transform_A(inputorig)
+        D = self.transform_A(inputorig)
 
         del_item = AB_path[0].split('_')[-1][:-4]
         target_item = target_path.split('_')[-1][:-4]
@@ -122,7 +120,7 @@ class lightDPR7Dataset(BaseDataset):
 
         # todo: check for just VARIABLE thingy
 
-        return {'A': A, 'B': B,'C':C, 'AL':torch.from_numpy(sh_AL),'BL':torch.from_numpy(sh_BL), 'A_paths': AB_path, 'B_paths': AB_path}
+        return {'A': A, 'B': B,'C':C,'D':D, 'AL':torch.from_numpy(sh_AL),'BL':torch.from_numpy(sh_BL), 'A_paths': AB_path, 'B_paths': AB_path}
 
     def __len__(self):
         return len(self.list_AB)

@@ -27,7 +27,7 @@ class lightgrad55Model(BaseModel):
     def __init__(self, opt):
         BaseModel.__init__(self, opt)
         # specify the training losses you want to print out. The program will call base_model.get_current_losses
-        self.loss_names = ['G_GAN', 'G_L1','G_MSE','G_total_variance', 'D_real', 'D_fake','D']
+        self.loss_names = ['G_GAN', 'G_L1','G_MSE','G_total_variance','G_feat','D_real', 'D_fake','D']
         # self.loss_names = ['G_L1','G_MSE', 'G_total_variance', 'D_real', 'D_fake']
         # specify the images you want to save/display. The program will call base_model.get_current_visuals
         self.visual_names = ['real_A', 'fake_B', 'real_B']
@@ -70,7 +70,7 @@ class lightgrad55Model(BaseModel):
         self.real_AL = input['AL'].to(self.device)
         self.real_BL = input['BL'].to(self.device)
         self.real_C = input['C'].to(self.device)
-        # self.real_D = input['D'].to(self.device)
+        self.real_D = input['D'].to(self.device)
 
         self.image_paths = input['A_paths' if AtoB else 'B_paths']
 
@@ -79,7 +79,7 @@ class lightgrad55Model(BaseModel):
         count_skip = 4
         if epoch > 5:
             count_skip = 9 % epoch
-        if epoch > 10:
+        if epoch >= 10:
             count_skip = 0
         '''
         self.fake_B, self.fake_AL, _ = self.netG(self.real_A,self.real_BL,count_skip)
@@ -91,7 +91,7 @@ class lightgrad55Model(BaseModel):
         	self.fake_B, _ ,self.fake_AL, _ = self.netG(self.real_A,self.real_BL,count_skip,oriImg=None)
 
         if epoch>10:
-            self.fake_B, self.face_feat_A, self.fake_AL, self.face_feat_B = self.netG(self.real_A,self.real_BL,count_skip, oriImg=self.real_B)
+            self.fake_B, self.face_feat_A, self.fake_AL, self.face_feat_B = self.netG(self.real_A,self.real_BL,count_skip, oriImg=self.real_D)
 
     def calc_gradient(self,x):
 
@@ -145,9 +145,11 @@ class lightgrad55Model(BaseModel):
 
         self.loss_G = self.loss_G_GAN + self.loss_G_L1 + self.loss_G_MSE + self.loss_G_total_variance
         #
-        if epoch>10:
+        if epoch > 10:
             self.loss_G_feat = self.criterionL1(self.face_feat_A, self.face_feat_B) * 0.5
             self.loss_G = self.loss_G + self.loss_G_feat
+        else:
+            self.loss_G_feat = 0.0
 
         self.loss_G.backward()
 
