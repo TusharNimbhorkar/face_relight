@@ -90,15 +90,14 @@ class lightgrad57Model(BaseModel):
             self.fake_B, self.face_feat_A, self.fake_AL, self.face_feat_B = self.netG(self.real_A,self.real_BL,count_skip, oriImg=self.real_D)
 
     def calc_gradient(self,x):
-
         a = np.array([[1, 0, -1], [2, 0, -2], [1, 0, -1]])
         conv1 = nn.Conv2d(1, 1, kernel_size=3, stride=1, padding=1, bias=False)
         conv1.weight = nn.Parameter(torch.from_numpy(a).float().unsqueeze(0).unsqueeze(0).cuda())
-        G_x = conv1(Variable(x)).data.view(1, 512, 512)
+        G_x = conv1(Variable(x)).data.view(self.opt.batch_size,1, 512, 512)
         b = np.array([[1, 2, 1], [0, 0, 0], [-1, -2, -1]])
         conv2 = nn.Conv2d(1, 1, kernel_size=3, stride=1, padding=1, bias=False)
         conv2.weight = nn.Parameter(torch.from_numpy(b).float().unsqueeze(0).unsqueeze(0).cuda())
-        G_y = conv2(Variable(x)).data.view(1, 512, 512)
+        G_y = conv2(Variable(x)).data.view(self.opt.batch_size,1, 512, 512)
         G = torch.sqrt(torch.pow(G_x, 2) + torch.pow(G_y, 2))
 
         return G
