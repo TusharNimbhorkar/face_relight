@@ -38,7 +38,8 @@ class lightgrad57Model(BaseModel):
             self.model_names = ['G']
 
         self.netG = HourglassNet().cuda()
-        networks.init_weights(self.netG)
+        # networks.init_weights(self.netG)
+        self.netG.train(True)
 
         if self.isTrain:
             self.netD = networks.define_D(2, opt.ndf, opt.netD,
@@ -70,7 +71,7 @@ class lightgrad57Model(BaseModel):
         self.real_AL = input['AL'].to(self.device)
         self.real_BL = input['BL'].to(self.device)
         self.real_C = input['C'].to(self.device)
-        # self.real_D = input['D'].to(self.device)
+        self.real_D = input['D'].to(self.device)
 
         self.image_paths = input['A_paths' if AtoB else 'B_paths']
 
@@ -81,17 +82,12 @@ class lightgrad57Model(BaseModel):
             count_skip = 9 % epoch
         if epoch >= 10:
             count_skip = 0
-        '''
-        self.fake_B, self.fake_AL, _ = self.netG(self.real_A,self.real_BL,count_skip)
 
-        if epoch>10:
-            _, _, self.face_feat_B = self.netG(self.real_B, self.real_AL, count_skip)
-		'''
         if epoch<=10:
         	self.fake_B, _ ,self.fake_AL, _ = self.netG(self.real_A,self.real_BL,count_skip,oriImg=None)
 
         if epoch>10:
-            self.fake_B, self.face_feat_A, self.fake_AL, self.face_feat_B = self.netG(self.real_A,self.real_BL,count_skip, oriImg=self.real_B)
+            self.fake_B, self.face_feat_A, self.fake_AL, self.face_feat_B = self.netG(self.real_A,self.real_BL,count_skip, oriImg=self.real_D)
 
     def calc_gradient(self,x):
 
