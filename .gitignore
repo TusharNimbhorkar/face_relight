@@ -9,7 +9,8 @@ __pycache__/
 # Distribution / packaging
 runresult*
 subset*
-nultipie*
+subset_eval*
+multipie*
 mp_subset*
 *.pth
 face_crops*
