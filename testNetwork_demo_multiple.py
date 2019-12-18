@@ -1,6 +1,9 @@
 '''
     this is a simple test file
 '''
+
+# trained_model_03.t7
+# 14_net_G.pth
 import sys
 sys.path.append('models')
 sys.path.append('utils')
@@ -61,9 +64,9 @@ my_network.load_state_dict(torch.load(checkpoint_dir_cmd))
 my_network.cuda()
 my_network.train(False)
 
-lightFolder = 'test_data/01/'
+lightFolder = 'test_data/00/'
 
-sh_vals = ['07','09','10']
+sh_vals = ['07']#,'09','10']
 
 for sh_v in sh_vals:
 
@@ -118,6 +121,11 @@ for sh_v in sh_vals:
 			millis_start = int(round(time.time() * 1000))
 
 			outputImg, _, outputSH, _ = my_network(inputL, sh, skip_c)
+
+			# outputImg, _, outputSH, _ = my_network(inputL, outputSH, skip_c)
+
+
+
 			millis_after = int(round(time.time() * 1000))
 			elapsed = millis_after - millis_start
 			print('MILISECONDS:  ', elapsed)
@@ -125,10 +133,10 @@ for sh_v in sh_vals:
 			count = count + 1
 			outputImg = outputImg[0].cpu().data.numpy()
 			outputImg = outputImg.transpose((1, 2, 0))
-			outputImg = np.squeeze(outputImg)
+			outputImg = np.squeeze(outputImg) #*1.45
 			outputImg = (outputImg * 255.0).astype(np.uint8)
 			Lab[:, :, 0] = outputImg
 			resultLab = cv2.cvtColor(Lab, cv2.COLOR_LAB2BGR)
 			resultLab = cv2.resize(resultLab, (col, row))
-			cv2.imwrite(os.path.join(saveFolder, \
-									 im[:-4] + '_{:02d}.jpg'.format(i)), resultLab)
+			cv2.imwrite(os.path.join(saveFolder, im[:-4] + '_{:02d}.jpg'.format(i)), resultLab)
+			# cv2.imwrite(os.path.join(saveFolder, im[:-4] + '_{:02d}.jpg'.format(i)), outputImg)
