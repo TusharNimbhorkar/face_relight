@@ -10,6 +10,7 @@ __pycache__/
 runresult*
 subset*
 subset_eval*
+substet_eval*
 multipie*
 mp_subset*
 *.pth
