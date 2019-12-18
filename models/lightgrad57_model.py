@@ -3,12 +3,14 @@ import sys
 from util.image_pool import ImagePool
 from .base_model import BaseModel
 from . import networks
+
 sys.path.append('.')
 # from relight_model import *
 from skeleton512 import *
 import torch.nn as nn
 from torch.autograd import Variable
 import numpy as np
+
 
 class lightgrad57Model(BaseModel):
     def name(self):
@@ -23,12 +25,10 @@ class lightgrad57Model(BaseModel):
 
         return parser
 
-
     def __init__(self, opt):
         BaseModel.__init__(self, opt)
         # specify the training losses you want to print out. The program will call base_model.get_current_losses
-        self.loss_names = ['G_GAN', 'G_L1','G_MSE','G_total_variance', 'D_real', 'D_fake','D']
-        # self.loss_names = ['G_L1','G_MSE', 'G_total_variance', 'D_real', 'D_fake']
+        self.loss_names = ['G_GAN', 'G_L1', 'G_MSE', 'G_total_variance', 'G_feat', 'D_real', 'D_fake', 'D']
         # specify the images you want to save/display. The program will call base_model.get_current_visuals
         self.visual_names = ['real_A', 'fake_B', 'real_B']
         # specify the models you want to save to the disk. The program will call base_model.save_networks and base_model.load_networks
@@ -38,7 +38,6 @@ class lightgrad57Model(BaseModel):
             self.model_names = ['G']
 
         self.netG = HourglassNet().cuda()
-        # networks.init_weights(self.netG)
         self.netG.train(True)
 
         if self.isTrain:
@@ -54,9 +53,6 @@ class lightgrad57Model(BaseModel):
 
             # initialize optimizers
             self.optimizers = []
-
-            # self.optimizer_G = torch.optim.Adam(self.netG.parameters(), lr=opt.lr, betas=(opt.beta1, 0.999))
-            # self.optimizer_D = torch.optim.Adam(self.netD.parameters(), lr=opt.lr, betas=(opt.beta1, 0.999))
 
             self.optimizer_G = torch.optim.Adam(self.netG.parameters())
             self.optimizer_D = torch.optim.Adam(self.netD.parameters())
@@ -75,7 +71,7 @@ class lightgrad57Model(BaseModel):
 
         self.image_paths = input['A_paths' if AtoB else 'B_paths']
 
-    def forward(self,epoch):
+    def forward(self, epoch):
 
         count_skip = 4
         if epoch > 5:
@@ -83,25 +79,25 @@ class lightgrad57Model(BaseModel):
         if epoch >= 10:
             count_skip = 0
 
-        if epoch<=10:
-        	self.fake_B, _ ,self.fake_AL, _ = self.netG(self.real_A,self.real_BL,count_skip,oriImg=None)
+        if epoch <= 10:
+            self.fake_B, _, self.fake_AL, _ = self.netG(self.real_A, self.real_BL, count_skip, oriImg=None)
 
-        if epoch>10:
-            self.fake_B, self.face_feat_A, self.fake_AL, self.face_feat_B = self.netG(self.real_A,self.real_BL,count_skip, oriImg=self.real_D)
+        if epoch > 10:
+            self.fake_B, self.face_feat_A, self.fake_AL, self.face_feat_B = self.netG(self.real_A, self.real_BL,
+                                                                                      count_skip, oriImg=self.real_D)
 
-    def calc_gradient(self,x):
+    def calc_gradient(self, x):
         a = np.array([[1, 0, -1], [2, 0, -2], [1, 0, -1]])
         conv1 = nn.Conv2d(1, 1, kernel_size=3, stride=1, padding=1, bias=False)
         conv1.weight = nn.Parameter(torch.from_numpy(a).float().unsqueeze(0).unsqueeze(0).cuda())
-        G_x = conv1(Variable(x)).data.view(self.opt.batch_size,1, 512, 512)
+        G_x = conv1(Variable(x)).data.view(self.opt.batch_size, 1, 512, 512)
         b = np.array([[1, 2, 1], [0, 0, 0], [-1, -2, -1]])
         conv2 = nn.Conv2d(1, 1, kernel_size=3, stride=1, padding=1, bias=False)
         conv2.weight = nn.Parameter(torch.from_numpy(b).float().unsqueeze(0).unsqueeze(0).cuda())
-        G_y = conv2(Variable(x)).data.view(self.opt.batch_size,1, 512, 512)
+        G_y = conv2(Variable(x)).data.view(self.opt.batch_size, 1, 512, 512)
         G = torch.sqrt(torch.pow(G_x, 2) + torch.pow(G_y, 2))
 
         return G
-
 
     def backward_D(self):
         # Fake
@@ -120,34 +116,32 @@ class lightgrad57Model(BaseModel):
 
         self.loss_D.backward()
 
-    def backward_G(self,epoch):
+    def backward_G(self, epoch):
         # First, G(A) should fake the discriminator
-        
+
         fake_AB = torch.cat((self.real_C, self.fake_B), 1)
         pred_fake = self.netD(fake_AB)
-        self.loss_G_GAN = self.criterionGAN(pred_fake, True)  * 0.5
-        
+        self.loss_G_GAN = self.criterionGAN(pred_fake, True) * 0.5
+
         # Second, G(A) = B
-        self.loss_G_L1 = self.criterionL1(self.real_B, self.fake_B) #* self.opt.lambda_L1
+        self.loss_G_L1 = self.criterionL1(self.real_B, self.fake_B)  # * self.opt.lambda_L1
 
         self.loss_G_MSE = self.mseloss(self.real_AL, self.fake_AL)
 
-        self.loss_G_total_variance = self.criterionL1(self.calc_gradient(x=self.real_B),self.calc_gradient(self.fake_B))
-        # print(self.loss_G_total_variance)
-
-        # self.loss_G = self.loss_G_L1 + self.loss_G_MSE + self.loss_G_total_variance
-
+        self.loss_G_total_variance = self.criterionL1(self.calc_gradient(x=self.real_B),
+                                                      self.calc_gradient(self.fake_B))
 
         self.loss_G = self.loss_G_GAN + self.loss_G_L1 + self.loss_G_MSE + self.loss_G_total_variance
         #
-        if epoch>10:
+        if epoch > 10:
             self.loss_G_feat = self.criterionL1(self.face_feat_A, self.face_feat_B) * 0.5
             self.loss_G = self.loss_G + self.loss_G_feat
+        else:
+            self.loss_G_feat = 0.0
 
         self.loss_G.backward()
 
-    def optimize_parameters(self,epoch):
-        # print(epoch)
+    def optimize_parameters(self, epoch):
         self.forward(epoch)
         # update D
         self.set_requires_grad(self.netD, True)
