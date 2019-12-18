@@ -8,6 +8,11 @@ __pycache__/
 .idea/
 # Distribution / packaging
 runresult*
+subset*
+nultipie*
+mp_subset*
+*.pth
+face_crops*
 .Python
 build/
 develop-eggs/
