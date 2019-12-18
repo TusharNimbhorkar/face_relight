@@ -72,7 +72,7 @@ for sh_v in sh_vals:
     if not os.path.exists(saveFolder):
         os.makedirs(saveFolder)
 
-    dir_ims = 'test_data/portrait_'
+    dir_ims = 'test_data/relight_constant'
     ims = os.listdir(dir_ims)
     time_avg = 0
     count = 0.0

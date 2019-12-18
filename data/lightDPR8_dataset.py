@@ -44,7 +44,7 @@ class lightDPR8Dataset(BaseDataset):
             for j in range(2):
                 i1 = self.AB_paths_[i:i + 5]
                 i2 = self.AB_paths_[i:i + 5]
-                for i in range(5):
+                for kl in range(5):
                     a = [i1.pop(random.randrange(len(i1))) for _ in range(1)]
                     blist = list(set(i2) - set(a))
                     b = [blist.pop(random.randrange(len(blist))) for _ in range(1)]
