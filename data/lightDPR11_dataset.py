@@ -33,7 +33,8 @@ class lightDPR11Dataset(BaseDataset):
             lines = f.read().splitlines()
 
         for line in lines:
-            self.list_AB.append([os.path.join(opt.dataroot,'train',line.split(' ')[0],line.split(' ')[1]), os.path.join(opt.dataroot,'train',line.split(' ')[0],line.split(' ')[2])])
+            self.list_AB.append([os.path.join(opt.dataroot, 'train', line.split(' ')[0], line.split(' ')[1]),
+                                 os.path.join(opt.dataroot, 'train', line.split(' ')[0], line.split(' ')[2])])
             self.AB_paths.append(line.split(' ')[1])
 
         for i in range(0, len(self.AB_paths_) - 6, 6):
@@ -43,9 +44,8 @@ class lightDPR11Dataset(BaseDataset):
             self.list_RR.append([i1[-1], i1[-1]])
             self.AB_paths.append(i1[-1])
             i1 = self.AB_paths_[i:i + 5]
-            self.list_SR.append([random.sample(i1,1)[0],i2[-1]])
+            self.list_SR.append([random.sample(i1, 1)[0], i2[-1]])
             self.AB_paths.append(i1[-1])
-
 
         random.shuffle(self.list_AB)
         random.shuffle(self.list_RR)
@@ -64,16 +64,8 @@ class lightDPR11Dataset(BaseDataset):
         # todo: A,B,AL,BL
 
         # choose set
-        prob = random.uniform(0, 1)
-        set_id=2
-        if prob <= 0.05:
-            set_id=0
-        if prob <= 0.20 and prob>0.05:
-            set_id = 1
-        if prob > 0.20:
-            set_id = 2
-        # choose sample
 
+        set_id = np.random.choice([0, 1, 2], 1, p=[0.05, 0.20, 0.75])
         if set_id == 0:
             sample = next(self.ori_ori_it)
         if set_id == 1:
@@ -115,8 +107,7 @@ class lightDPR11Dataset(BaseDataset):
         inputB = inputB.transpose((0, 1))
         inputB = inputB[..., None]
 
-
-        orig_im_path = sample[0][:-5]+'5.png'
+        orig_im_path = sample[0][:-5] + '5.png'
 
         orig = cv2.imread(orig_im_path)
         img_orig = cv2.resize(orig, (512, 512))
@@ -125,7 +116,6 @@ class lightDPR11Dataset(BaseDataset):
         inputorig = inputLorig.astype(np.float32) / 255.0
         inputorig = inputorig.transpose((0, 1))
         inputorig = inputorig[..., None]
-
 
         # TODO NORMALISE??????? Check base dataset
         A = self.transform_A(inputA)
@@ -151,7 +141,7 @@ class lightDPR11Dataset(BaseDataset):
         sh_BL = np.squeeze(sh_BL)
         sh_BL = np.reshape(sh_BL, (9, 1, 1)).astype(np.float32)
 
-        return {'A': A, 'B': B, 'C': C,'D':D, 'AL': torch.from_numpy(sh_AL), 'BL': torch.from_numpy(sh_BL),
+        return {'A': A, 'B': B, 'C': C, 'D': D, 'AL': torch.from_numpy(sh_AL), 'BL': torch.from_numpy(sh_BL),
                 'A_paths': AB_path, 'B_paths': AB_path}
 
     def __len__(self):
