@@ -86,6 +86,12 @@ class lightDPR11Dataset(BaseDataset):
 
         AB_path = sample
         A = cv2.imread(AB_path[0])
+        if A is None:
+            print('-'*50)
+            print(AB_path)
+            print('\n')
+            print(AB_path[0])
+            print('-' * 50)
         img_A = cv2.resize(A, (512, 512))
         Lab_A = cv2.cvtColor(img_A, cv2.COLOR_BGR2LAB)
         inputLA = Lab_A[:, :, 0]
