@@ -33,6 +33,7 @@ checkpoint_dir_cmd = args["first"]
 skip_c = int(args["second"])
 # imageB = cv2.imread(args["second"])
 
+checkpoint_dir_our = 'models/trained/14_net_G_BS8_DPR7.pth'
 
 # ---------------- create normal for rendering half sphere ------
 img_size = 256
@@ -61,18 +62,29 @@ my_network.load_state_dict(torch.load(checkpoint_dir_cmd))
 my_network.cuda()
 my_network.train(False)
 
+our_network = HourglassNet()
+print(checkpoint_dir_our)
+our_network.load_state_dict(torch.load(checkpoint_dir_our))
+our_network.cuda()
+our_network.train(False)
+
+
+
+
+
 lightFolder = 'test_data/01/'
 
-sh_vals = ['07', '09', '10']
+sh_vals = ['07']#, '09', '10']
 
 for sh_v in sh_vals:
 
-    saveFolder = os.path.join('runresult', checkpoint_dir_cmd.split('/')[-2], sh_v)
+    saveFolder = os.path.join('runresult_transfer', checkpoint_dir_cmd.split('/')[-2], sh_v)
 
     if not os.path.exists(saveFolder):
         os.makedirs(saveFolder)
 
-    dir_ims = 'test_data/relight_constant'
+    # dir_ims = 'test_data/relight_constant'
+    dir_ims = 'test_data/2x_MP'
     ims = os.listdir(dir_ims)
     time_avg = 0
     count = 0.0
@@ -86,6 +98,8 @@ for sh_v in sh_vals:
     for im in ims:
         im_path = os.path.join(dir_ims, im)
         img = cv2.imread(im_path)
+        img_copy = cv2.imread(im_path)
+        img_copy = cv2.resize(img_copy, (512, 512))
         row, col, _ = img.shape
         img = cv2.resize(img, (512, 512))
         Lab = cv2.cvtColor(img, cv2.COLOR_BGR2LAB)
@@ -118,8 +132,12 @@ for sh_v in sh_vals:
 
             millis_start = int(round(time.time() * 1000))
 
-            outputImg, _, outputSH, _ = my_network(inputL, sh, skip_c)
+            _, _, outputSH, _ = my_network(inputL, sh, 0)
+            outputImg_og, _, _, _ = my_network(inputL, outputSH, 0)
 
+            outputImg, _, outputSH_our, _ = our_network(inputL, outputSH, 0)
+
+            ############################################################################################
             y = torch.Tensor.cpu(outputSH).detach().numpy()
             sh = np.squeeze(y)
             shading = get_shading(normal, sh)
@@ -130,15 +148,27 @@ for sh_v in sh_vals:
             shading = (shading * 255.0).astype(np.uint8)
             shading = np.reshape(shading, (256, 256))
             shading = shading * valid
-            cv2.imwrite(os.path.join(saveFolder, im[:-4] + '_light_{:02d}.png'.format(i)), shading)
+            cv2.imwrite(os.path.join(saveFolder, im[:-4] + '_light_{:02d}_og.png'.format(i)), shading)
+
+            y = torch.Tensor.cpu(outputSH_our).detach().numpy()
+            sh = np.squeeze(y)
+            shading = get_shading(normal, sh)
+            value = np.percentile(shading, 95)
+            ind = shading > value
+            shading[ind] = value
+            shading = (shading - np.min(shading)) / (np.max(shading) - np.min(shading))
+            shading = (shading * 255.0).astype(np.uint8)
+            shading = np.reshape(shading, (256, 256))
+            shading = shading * valid
+            cv2.imwrite(os.path.join(saveFolder, im[:-4] + '_light_{:02d}_our.png'.format(i)), shading)
+            ############################################################################################
 
 
 
             millis_after = int(round(time.time() * 1000))
             elapsed = millis_after - millis_start
             print('MILISECONDS:  ', elapsed)
-            time_avg += elapsed
-            count = count + 1
+
             outputImg = outputImg[0].cpu().data.numpy()
             outputImg = outputImg.transpose((1, 2, 0))
             outputImg = np.squeeze(outputImg)
@@ -146,5 +176,15 @@ for sh_v in sh_vals:
             Lab[:, :, 0] = outputImg
             resultLab = cv2.cvtColor(Lab, cv2.COLOR_LAB2BGR)
             resultLab = cv2.resize(resultLab, (col, row))
-            # cv2.imwrite(os.path.join(saveFolder, \
-            #                          im[:-4] + '_{:02d}.jpg'.format(i)), resultLab)
+            img_copy = cv2.resize(img_copy, (col, row))
+
+            outputImg_og = outputImg_og[0].cpu().data.numpy()
+            outputImg_og = outputImg_og.transpose((1, 2, 0))
+            outputImg_og = np.squeeze(outputImg_og)
+            outputImg_og = (outputImg_og * 255.0).astype(np.uint8)
+            Lab[:, :, 0] = outputImg_og
+            resultLab_og = cv2.cvtColor(Lab, cv2.COLOR_LAB2BGR)
+            resultLab_og = cv2.resize(resultLab_og, (col, row))
+
+            cv2.imwrite(os.path.join(saveFolder, \
+                                     im[:-4] + '_{:02d}.jpg'.format(i)), np.hstack((img_copy,resultLab,resultLab_og)))
