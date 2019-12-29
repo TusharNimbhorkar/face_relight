@@ -35,6 +35,8 @@ args = vars(ap.parse_args())
 
 
 checkpoint_dir_cmd = args["first"]
+# checkpoint_dir_cmd = 'models/trained/trained_model_03.t7'#args["first"]
+
 skip_c = int(args["second"])
 # imageB = cv2.imread(args["second"])
 
@@ -140,9 +142,9 @@ for per in persons:
     if per in old_people:
         person_dir = os.path.join(test_dir, per)
         # from
-        side_im = os.path.join(person_dir, per + '_07.png')
+        side_im = os.path.join(person_dir, per + '_10.png')
         # To
-        front_im = os.path.join(person_dir, per + '_04.png')
+        front_im = os.path.join(person_dir, per + '_07.png')
         if os.path.exists(side_im) and os.path.exists(front_im):
 
             for sh_v in sh_vals:
@@ -207,7 +209,7 @@ for per in persons:
 
                     _, _, outputSH, _ = my_network(inputL1, sh, skip_c)
 
-                    # outputImg, _, _, _ = my_network(inputL, outputSH*(10.0/7.0), skip_c)
+                    # outputImg, _, _, _ = my_network(inputL, outputSH*0.7, skip_c)
                     outputImg, _, _, _ = my_network(inputL, outputSH, skip_c)
 
                     '''sh_viz'''
