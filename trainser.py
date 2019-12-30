@@ -68,7 +68,7 @@ if __name__ == '__main__':
                 t_current = (epoch_start_time.elapsed_time(iter_end_time) / 1000)/epoch_iter
 
                 visualizer.print_current_losses(epoch, epoch_iter, losses, t, t_data, ['Avg Time: %.3f' % t_current,
-                                                                                       'Ep Time %s / %s' % (str_time(t_current*epoch_iter),str_time(t_current*(dataset_size/opt.batch_size)))])
+                                                                                       'Ep Time %s / %s' % (str_time(t_current*epoch_iter),str_time(t_current*(dataset_size)))])
                 if opt.display_id > 0:
                     visualizer.plot_current_losses(epoch, float(epoch_iter) / dataset_size, opt, losses)
 
