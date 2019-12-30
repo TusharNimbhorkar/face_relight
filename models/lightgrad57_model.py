@@ -67,8 +67,7 @@ class lightgrad57Model(BaseModel):
         self.real_AL = input['AL'].to(self.device)
         self.real_BL = input['BL'].to(self.device)
         self.real_C = input['C'].to(self.device)
-        # self.real_D = input['D'].to(self.device)
-        self.real_D = input['D'].to(torch.device('cuda:{}'.format(self.gpu_ids[1])))
+        self.real_D = input['D'].to(self.device)
         self.image_paths = input['A_paths' if AtoB else 'B_paths']
 
     def forward(self, epoch):
