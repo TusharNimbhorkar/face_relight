@@ -28,7 +28,7 @@ class lightgrad57Model(BaseModel):
     def __init__(self, opt):
         BaseModel.__init__(self, opt)
         # specify the training losses you want to print out. The program will call base_model.get_current_losses
-        self.loss_names = ['G_GAN', 'G_L1', 'G_MSE', 'G_total_variance', 'G_feat', 'D_real', 'D_fake', 'D']
+        self.loss_names = ['G_GAN', 'G_L1', 'G_MSE', 'G_total_variance', 'G_feat','G', 'D_real', 'D_fake', 'D']
         # specify the images you want to save/display. The program will call base_model.get_current_visuals
         self.visual_names = ['real_A', 'fake_B', 'real_B']
         # specify the models you want to save to the disk. The program will call base_model.save_networks and base_model.load_networks
