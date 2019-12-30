@@ -14,13 +14,18 @@ if __name__ == '__main__':
     model.setup(opt)
     visualizer = Visualizer(opt)
     total_steps = 0
+    data_loader = CreateDataLoader(opt)
+    dataset = data_loader.load_data()
+    dataset_size = len(data_loader)
+    print('#training images = %d' % dataset_size)
+
 
     def str_time(s):
         hours, remainder = divmod(s, 3600)
         minutes, seconds = divmod(remainder, 60)
         return '{:02}:{:02}'.format(int(hours), int(minutes))
 
-    for epoch in range(11,15):
+    for epoch in range(1,15):
         epoch_start_time = torch.cuda.Event(enable_timing=True)
         epoch_end_time = torch.cuda.Event(enable_timing=True)
 
@@ -35,10 +40,6 @@ if __name__ == '__main__':
 
 
         epoch_iter = 0
-        data_loader = CreateDataLoader(opt)
-        dataset = data_loader.load_data()
-        dataset_size = len(data_loader)
-        print('#training images = %d' % dataset_size)
 
         for i, data in enumerate(dataset):
             total_steps += opt.batch_size
