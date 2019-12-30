@@ -7,6 +7,7 @@ __pycache__/
 *.so
 .idea/
 # Distribution / packaging
+test_data/2x_MP*
 runresult*
 subset*
 subset_eval*
