@@ -144,7 +144,7 @@ class BaseModel(ABC):
         """Load models from the disk"""
         for name in self.model_names:
             print(name)
-            if name=='G':
+            if name=='G' or name=='D':
                 if isinstance(name, str):
                     load_filename = '%s_net_%s.pth' % (epoch, name)
                     load_path = os.path.join(self.save_dir, load_filename)
