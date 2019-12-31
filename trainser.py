@@ -25,7 +25,7 @@ if __name__ == '__main__':
         minutes, seconds = divmod(remainder, 60)
         return '{:02}:{:02}'.format(int(hours), int(minutes))
 
-    for epoch in range(1,15):
+    for epoch in range(11,15):
         epoch_start_time = torch.cuda.Event(enable_timing=True)
         epoch_end_time = torch.cuda.Event(enable_timing=True)
 
