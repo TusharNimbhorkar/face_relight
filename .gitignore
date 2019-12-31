@@ -7,6 +7,10 @@ __pycache__/
 *.so
 .idea/
 # Distribution / packaging
+*.dot
+*.pdf
+*.ipynb
+*.gv
 test_data/2x_MP*
 runresult*
 subset*
