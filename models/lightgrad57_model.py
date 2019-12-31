@@ -38,9 +38,7 @@ class lightgrad57Model(BaseModel):
             self.model_names = ['G']
 
         self.netG = HourglassNet().cuda()
-        # TRY DATAPRALLEL WITH GENERATOR
         self.netG = torch.nn.DataParallel(self.netG, self.opt.gpu_ids)
-        #
         self.netG.train(True)
 
         if self.isTrain:
