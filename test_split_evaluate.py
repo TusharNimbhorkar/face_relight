@@ -83,9 +83,6 @@ for sh_v in sh_vals:
         list_im.append([os.path.join(dataroot, 'train', line.split(' ')[0], line.split(' ')[1]),
                              os.path.join(dataroot, 'train', line.split(' ')[0], line.split(' ')[2])])
 
-
-    # dir_ims = 'test_data/2x_MP'
-    # ims = os.listdir(dir_ims)
     time_avg = 0
     count = 0.0
     if sh_v == '07':
