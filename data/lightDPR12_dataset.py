@@ -86,9 +86,6 @@ class lightDPR12Dataset(BaseDataset):
         if set_id == 2:
             sample = next(self.syn_syn_it)
 
-        # real_im_number = random.choice(range(0, self.opt.ffhq))
-        #
-        # real_im_path = os.path.join(self.opt.dataroot, 'real_im', "{:05d}".format(real_im_number) + '.png')
         real_im_path = str(next(self.ffhq_it))
         C = cv2.imread(real_im_path)
         img_C = cv2.resize(C, (512, 512))
