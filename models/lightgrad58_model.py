@@ -67,7 +67,7 @@ class lightgrad58Model(BaseModel):
         if epoch >= 10:
             count_skip = 0
 
-        _, _, self.fake_AL, _ = self.netG(self.real_A, self.real_BL, count_skip, oriImg=None)
+        self.fake_B, _, self.fake_AL, _ = self.netG(self.real_A, self.real_BL, count_skip, oriImg=None)
 
     def calc_gradient(self, x):
         a = np.array([[1, 0, -1], [2, 0, -2], [1, 0, -1]])
