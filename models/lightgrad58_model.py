@@ -52,7 +52,7 @@ class lightgrad58Model(BaseModel):
     def set_input(self, input):
         AtoB = self.opt.direction == 'AtoB'
         self.real_A = input['A'].to(self.device)
-        # self.real_B = input['B'].to(self.device)
+        self.real_B = input['B'].to(self.device)
         self.real_AL = input['AL'].to(self.device)
         self.real_BL = input['BL'].to(self.device)
         # self.real_C = input['C'].to(self.device)
