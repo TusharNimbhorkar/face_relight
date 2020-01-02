@@ -110,7 +110,7 @@ class lightgrad58Model(BaseModel):
     def optimize_parameters(self, epoch):
         self.forward(epoch)
         # update G
-        self.set_requires_grad(self.netD, False)
+        # self.set_requires_grad(self.netD, False)
         self.optimizer_G.zero_grad()
         self.backward_G(epoch)
         self.optimizer_G.step()
