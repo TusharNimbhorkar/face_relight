@@ -122,8 +122,8 @@ for sh_v in sh_vals:
 
         # *****************source_im*************************
         img = cv2.imread(im_path)
-        img_copy = cv2.imread(im_path)
-        img_copy = cv2.resize(img_copy, (512, 512))
+        # img_copy = cv2.imread(im_path)
+        # img_copy = cv2.resize(img_copy, (512, 512))
         row, col, _ = img.shape
         img = cv2.resize(img, (512, 512))
         Lab = cv2.cvtColor(img, cv2.COLOR_BGR2LAB)
@@ -137,8 +137,8 @@ for sh_v in sh_vals:
         # *****************target_im***************************
 
         img_target = cv2.imread(im_path)
-        img_copy_target = cv2.imread(im_path_target)
-        img_copy_target = cv2.resize(img_copy_target, (512, 512))
+        # img_copy_target = cv2.imread(im_path_target)
+        # img_copy_target = cv2.resize(img_copy_target, (512, 512))
         row_target, col_target, _ = img_target.shape
         img_target = cv2.resize(img_target, (512, 512))
         Lab_target = cv2.cvtColor(img_target, cv2.COLOR_BGR2LAB)
