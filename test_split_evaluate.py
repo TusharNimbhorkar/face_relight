@@ -90,7 +90,8 @@ our_network.cuda()
 our_network.train(False)
 
 lightFolder = 'test_data/01/'
-dataroot = '/home/tushar/DPR_data/skel'
+# dataroot = '/home/tushar/DPR_data/skel'
+dataroot = '/home/tushar/data2/DPR'
 sh_vals = ['07']  # , '09', '10']
 list_im = []
 for sh_v in sh_vals:
@@ -124,7 +125,7 @@ for sh_v in sh_vals:
         img = cv2.imread(im_path)
         # img_copy = cv2.imread(im_path)
         # img_copy = cv2.resize(img_copy, (512, 512))
-        print(im_path)
+        # print(im_path)
         row, col, _ = img.shape
         img = cv2.resize(img, (512, 512))
         Lab = cv2.cvtColor(img, cv2.COLOR_BGR2LAB)
