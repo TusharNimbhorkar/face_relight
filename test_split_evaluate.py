@@ -124,6 +124,7 @@ for sh_v in sh_vals:
         img = cv2.imread(im_path)
         # img_copy = cv2.imread(im_path)
         # img_copy = cv2.resize(img_copy, (512, 512))
+        print(im_path)
         row, col, _ = img.shape
         img = cv2.resize(img, (512, 512))
         Lab = cv2.cvtColor(img, cv2.COLOR_BGR2LAB)
