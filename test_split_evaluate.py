@@ -20,18 +20,24 @@ import time
 import cv2
 
 ap = argparse.ArgumentParser()
-ap.add_argument("-f", "--first", required=True,
+ap.add_argument("-fc", "--first_checkpoint", required=True,
                 help="checkpoint")
+ap.add_argument("-sc", "--second_checkpoint", required=True,
+                help="checkpoint")
+
 ap.add_argument("-s", "--second", required=True,
                 help="skip")
+ap.add_argument("-t", "--third", default=False,type=bool,
+                help="data parallel or not")
 args = vars(ap.parse_args())
 
-checkpoint_dir_cmd = args["first"]
+checkpoint_dir_cmd = args["first_checkpoint"]
+checkpoint_dir_our = args["second_checkpoint"]
+
 skip_c = int(args["second"])
+dataparallel_bool = args["third"]
 
-checkpoint_dir_our = 'models/trained/14_net_G_BS8_DPR7.pth'
-
-
+# checkpoint_dir_our = 'models/trained/14_net_G_BS8_DPR7.pth'
 
 
 
@@ -62,9 +68,24 @@ my_network.load_state_dict(torch.load(checkpoint_dir_cmd))
 my_network.cuda()
 my_network.train(False)
 
-our_network = HourglassNet()
-print(checkpoint_dir_our)
-our_network.load_state_dict(torch.load(checkpoint_dir_our))
+if dataparallel_bool:
+    our_network = HourglassNet()
+    # original saved file with DataParallel
+    state_dict = torch.load(checkpoint_dir_our)
+    # create new OrderedDict that does not contain `module.`
+    from collections import OrderedDict
+
+    new_state_dict = OrderedDict()
+    for k, v in state_dict.items():
+        name = k[7:]  # remove `module.`
+        new_state_dict[name] = v
+    # load params
+    our_network.load_state_dict(new_state_dict)
+else:
+
+    our_network = HourglassNet()
+    print(checkpoint_dir_our)
+    our_network.load_state_dict(torch.load(checkpoint_dir_our))
 our_network.cuda()
 our_network.train(False)
 
