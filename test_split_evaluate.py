@@ -31,6 +31,10 @@ skip_c = int(args["second"])
 
 checkpoint_dir_our = 'models/trained/14_net_G_BS8_DPR7.pth'
 
+
+
+
+
 # ---------------- create normal for rendering half sphere ------
 img_size = 256
 x = np.linspace(-1, 1, img_size)
@@ -83,6 +87,7 @@ for sh_v in sh_vals:
 
     time_avg = 0
     count = 0.0
+
     if sh_v == '07':
         sh_constant = 0.7
     if sh_v == '10':
@@ -94,6 +99,7 @@ for sh_v in sh_vals:
         im_path = im[0]
         im_path_target = im[1]
 
+        # *****************source_im*************************
         img = cv2.imread(im_path)
         img_copy = cv2.imread(im_path)
         img_copy = cv2.resize(img_copy, (512, 512))
@@ -107,9 +113,31 @@ for sh_v in sh_vals:
         inputL = inputL[None, None, ...]
         inputL = Variable(torch.from_numpy(inputL).cuda())
 
-        del_item = im_path[0].split('_')[-1][:-4]
+        # *****************target_im***************************
 
-        sh = np.loadtxt(os.path.join(lightFolder, 'rotate_light_{:02d}.txt'.format(i)))
+        img_target = cv2.imread(im_path)
+        img_copy_target = cv2.imread(im_path_target)
+        img_copy_target = cv2.resize(img_copy_target, (512, 512))
+        row_target, col_target, _ = img_target.shape
+        img_target = cv2.resize(img_target, (512, 512))
+        Lab_target = cv2.cvtColor(img_target, cv2.COLOR_BGR2LAB)
+
+        inputL_target = Lab_target[:, :, 0]
+        inputL_target = inputL_target.astype(np.float32) / 255.0
+        inputL_target = inputL_target.transpose((0, 1))
+        inputL_target = inputL_target[None, None, ...]
+        inputL_target = Variable(torch.from_numpy(inputL_target).cuda())
+
+
+
+        del_item_source = im[0].split('_')[-1][:-4]
+        del_item_target = im[0].split('_')[-1][:-4]
+
+        SL_path = im[0][:-6] + 'light_' + del_item_source + '.txt'
+        TL_path = im[0][:-6] + 'light_' + del_item_target + '.txt'
+
+        # Source_light
+        sh = np.loadtxt(SL_path)
         sh = sh[0:9]
         sh = sh * sh_constant
         # --------------------------------------------------
@@ -122,33 +150,48 @@ for sh_v in sh_vals:
         shading = (shading - np.min(shading)) / (np.max(shading) - np.min(shading))
         shading = (shading * 255.0).astype(np.uint8)
         shading = np.reshape(shading, (256, 256))
-        shading = shading * valid
+        shading_vis_source_light = shading * valid
 
         # cv2.imwrite(os.path.join(saveFolder, 'light_{:02d}.png'.format(i)), shading)
         sh = np.reshape(sh, (1, 9, 1, 1)).astype(np.float32)
-        sh = Variable(torch.from_numpy(sh).cuda())
+        sh_source_tensor = Variable(torch.from_numpy(sh).cuda())
 
-        millis_start = int(round(time.time() * 1000))
 
-        _, _, outputSH, _ = my_network(inputL, sh, 0)
-        outputImg_og, _, _, _ = my_network(inputL, outputSH, 0)
 
-        outputImg, _, outputSH_our, _ = our_network(inputL, outputSH, 0)
+        # target
+        sh = np.loadtxt(TL_path)
+        sh = sh[0:9]
+        sh = sh * sh_constant
+        # --------------------------------------------------
+        # rendering half-sphere
+        sh = np.squeeze(sh)
+        shading = get_shading(normal, sh)
+        value = np.percentile(shading, 95)
+        ind = shading > value
+        shading[ind] = value
+        shading = (shading - np.min(shading)) / (np.max(shading) - np.min(shading))
+        shading = (shading * 255.0).astype(np.uint8)
+        shading = np.reshape(shading, (256, 256))
+        shading_vis_target_light = shading * valid
+
+        # cv2.imwrite(os.path.join(saveFolder, 'light_{:02d}.png'.format(i)), shading)
+        sh = np.reshape(sh, (1, 9, 1, 1)).astype(np.float32)
+        sh_target_tensor = Variable(torch.from_numpy(sh).cuda())
+
+
+        # forward pass
+        # _, _, outputSH, _ = my_network(inputL, sh, 0)
+
+
+        predicted_img_auth, _, pred_sh_auth, _ = my_network(inputL, sh_target_tensor, 0)
+
+        predicted_img_our, _, pred_sh_our, _ = our_network(inputL, sh_target_tensor, 0)
+
 
         ############################################################################################
-        y = torch.Tensor.cpu(outputSH).detach().numpy()
-        sh = np.squeeze(y)
-        shading = get_shading(normal, sh)
-        value = np.percentile(shading, 95)
-        ind = shading > value
-        shading[ind] = value
-        shading = (shading - np.min(shading)) / (np.max(shading) - np.min(shading))
-        shading = (shading * 255.0).astype(np.uint8)
-        shading = np.reshape(shading, (256, 256))
-        shading = shading * valid
-        cv2.imwrite(os.path.join(saveFolder, im[:-4] + '_light_{:02d}_og.png'.format(i)), shading)
 
-        y = torch.Tensor.cpu(outputSH_our).detach().numpy()
+
+        y = torch.Tensor.cpu(pred_sh_auth).detach().numpy()
         sh = np.squeeze(y)
         shading = get_shading(normal, sh)
         value = np.percentile(shading, 95)
@@ -157,13 +200,25 @@ for sh_v in sh_vals:
         shading = (shading - np.min(shading)) / (np.max(shading) - np.min(shading))
         shading = (shading * 255.0).astype(np.uint8)
         shading = np.reshape(shading, (256, 256))
-        shading = shading * valid
-        cv2.imwrite(os.path.join(saveFolder, im[:-4] + '_light_{:02d}_our.png'.format(i)), shading)
+        shading_pred_auth = shading * valid
+        # cv2.imwrite(os.path.join(saveFolder, im[:-4] + '_light_{:02d}_og.png'.format(i)), shading)
+
+        y = torch.Tensor.cpu(pred_sh_our).detach().numpy()
+        sh = np.squeeze(y)
+        shading = get_shading(normal, sh)
+        value = np.percentile(shading, 95)
+        ind = shading > value
+        shading[ind] = value
+        shading = (shading - np.min(shading)) / (np.max(shading) - np.min(shading))
+        shading = (shading * 255.0).astype(np.uint8)
+        shading = np.reshape(shading, (256, 256))
+        shading_pred_ours = shading * valid
         ###########################################################################################
+        sh_comparison = np.hstack((shading_vis_source_light,shading_pred_auth,shading_pred_ours))
+        # cv2.imwrite(os.path.join(saveFolder, im[:-4] + '_light_{:02d}_our.png'.format(i)), shading)
+        cv2.imwrite( os.path.join(saveFolder, im_path.split(('/'))[-1].split('.')[0] + '_sh_pred.png'), sh_comparison)
 
-        millis_after = int(round(time.time() * 1000))
-        elapsed = millis_after - millis_start
-        print('MILISECONDS:  ', elapsed)
+        '''
 
         outputImg = outputImg[0].cpu().data.numpy()
         outputImg = outputImg.transpose((1, 2, 0))
@@ -184,3 +239,4 @@ for sh_v in sh_vals:
 
         cv2.imwrite(os.path.join(saveFolder, im[:-4] + '_{:02d}.jpg'.format(i)),
                     np.hstack((img_copy, resultLab, resultLab_og)))
+        '''
