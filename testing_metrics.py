@@ -129,8 +129,8 @@ my_network.cuda()
 my_network.train(False)
 
 lightFolder = 'test_data/01/'
-dataroot = '/home/tushar/DPR_data/skel'
-# dataroot = '/home/tushar/data2/DPR'
+# dataroot = '/home/tushar/DPR_data/skel'
+dataroot = '/home/tushar/data2/DPR'
 sh_vals = ['07']  # , '09', '10']
 list_im = []
 
