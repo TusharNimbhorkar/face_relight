@@ -272,7 +272,7 @@ for sh_v in sh_vals:
 
         overall_mse = overall_mse+temp_mse_sh
         count_number = count_number+1
-        if count_number%100==0:
+        if count_number%1000==0:
             print(count_number)
 
 
