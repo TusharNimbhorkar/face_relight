@@ -116,12 +116,13 @@ class lightgrad57Model(BaseModel):
 
         self.loss_D.backward()
 
-    def backward_G(self, epoch):
+    def backward_G(self, epoch, train_mode=True):
         # First, G(A) should fake the discriminator
 
-        fake_AB = torch.cat((self.real_C, self.fake_B), 1)
-        pred_fake = self.netD(fake_AB)
-        self.loss_G_GAN = self.criterionGAN(pred_fake, True) * 0.5
+        if train_mode:
+            fake_AB = torch.cat((self.real_C, self.fake_B), 1)
+            pred_fake = self.netD(fake_AB)
+            self.loss_G_GAN = self.criterionGAN(pred_fake, True) * 0.5
 
         # Second, G(A) = B
         self.loss_G_L1 = self.criterionL1(self.real_B, self.fake_B)  # * self.opt.lambda_L1
@@ -133,7 +134,10 @@ class lightgrad57Model(BaseModel):
 
         self.loss_L1_add = self.loss_G_L1 + self.loss_G_MSE + self.loss_G_total_variance
 
-        self.loss_G = self.loss_G_GAN + self.loss_L1_add #self.loss_G_L1 + self.loss_G_MSE + self.loss_G_total_variance
+        if train_mode:
+            self.loss_G = self.loss_G_GAN + self.loss_L1_add #self.loss_G_L1 + self.loss_G_MSE + self.loss_G_total_variance
+        else:
+            self.loss_G = self.loss_L1_add  # self.loss_G_L1 + self.loss_G_MSE + self.loss_G_total_variance
         #
         if epoch > 10:
             self.loss_G_feat = self.criterionL1(self.face_feat_A, self.face_feat_B) * 0.5
@@ -141,7 +145,8 @@ class lightgrad57Model(BaseModel):
         else:
             self.loss_G_feat = 0.0
 
-        self.loss_G.backward()
+        if train_mode:
+            self.loss_G.backward()
 
     def optimize_parameters(self, epoch):
         self.forward(epoch)

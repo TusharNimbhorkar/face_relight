@@ -6,6 +6,7 @@ import time
 from . import util
 from . import html
 from scipy.misc import imresize
+from commons.common_tools import Logger, BColors, def_log
 from PIL import Image
 if sys.version_info[0] == 2:
     VisdomExceptionBase = Exception
@@ -173,13 +174,18 @@ class Visualizer():
             self.throw_visdom_connection_error()
 
     # losses: same format as |losses| of plot_current_losses
-    def print_current_losses(self, epoch, i, losses, t, t_data, extra=[]):
+    def print_current_losses(self, epoch, i, losses, t, t_data, extra=[], log=None):
+
         message = '(epoch: %d, iters: %d, time: %.3f, data: %.3f) ' % (epoch, i, t, t_data)
         for k, v in losses.items():
             message += '%s: %.3f ' % (k, v)
 
         message += ' '.join(extra)
 
-        print(message)
+        if log is None:
+            print(message)
+        else:
+            log.i(message)
+
         with open(self.log_name, "a") as log_file:
             log_file.write('%s\n' % message)
