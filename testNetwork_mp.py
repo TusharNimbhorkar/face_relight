@@ -139,11 +139,11 @@ test_dir = '/home/tushar/face_relight/substet_eval/face_crops_face_rel_full'
 # test_dir = '/home/tushar/face_relight/substet_eval/transfer_batch_2x'
 # test_dir = '/home/tushar/face_relight/substet_eval/transfer_batch_fullres'
 
-
+test_dir = '/home/nedko/face_relight/outputs/mpie'
 # test_dir1 = '/home/tushar/face_relight/substet_eval/transfer_batch_1xhalf'
 # test_dir = '/home/tushar/face_relight/substet_eval/transfer_batch_1xhalf'
 test_dir1 = '/home/tushar/face_relight/substet_eval/face_crops_face_rel_full'
-
+test_dir1 = test_dir
 
 
 segment = False
@@ -164,10 +164,15 @@ for per in persons:
     if per in old_people:
         person_dir = os.path.join(test_dir, per)
         # from
-        side_im = os.path.join(person_dir, per + '_06.png')
+        side_im = os.path.join(person_dir, per + '_07.png')
         # To
-        front_im = os.path.join(person_dir, per + '_07.png')
-        if os.path.exists(side_im) and os.path.exists(front_im):
+        front_im = os.path.join(person_dir, per + '_09.png')
+
+
+        exists_ims_side = cv2.imread(side_im) is not None
+        exists_ims_front = cv2.imread(front_im) is not None
+
+        if os.path.exists(side_im) and os.path.exists(front_im) and exists_ims_front and exists_ims_side:
 
             for sh_v in sh_vals:
 
@@ -231,8 +236,8 @@ for per in persons:
 
                     _, _, outputSH, _ = my_network(inputL1, sh, skip_c)
 
-                    # outputImg, _, _, _ = my_network(inputL, outputSH*0.95, skip_c)
-                    outputImg, _, _, _ = my_network(inputL, outputSH, skip_c)
+                    outputImg, _, _, _ = my_network(inputL, outputSH*1.4, skip_c)
+                    # outputImg, _, _, _ = my_network(inputL, outputSH, skip_c)
 
                     '''sh_viz'''
                     y = torch.Tensor.cpu(outputSH).detach().numpy()
@@ -245,7 +250,7 @@ for per in persons:
                     shading = (shading * 255.0).astype(np.uint8)
                     shading = np.reshape(shading, (256, 256))
                     shading = shading * valid
-                    cv2.imwrite(os.path.join('_light_{:02d}_07_front.png'.format(i)), shading)
+                    #cv2.imwrite(os.path.join('_light_{:02d}_07_front.png'.format(i)), shading)
                     '''end'''
 
                     outputImg = outputImg[0].cpu().data.numpy()
@@ -255,8 +260,8 @@ for per in persons:
                     Lab[:, :, 0] = outputImg
                     resultLab = cv2.cvtColor(Lab, cv2.COLOR_LAB2BGR)
                     resultLab = cv2.resize(resultLab, (col, row))
-                    # cv2.imwrite(os.path.join(saveFolder, side_im[:-4] + '_{:02d}.jpg'.format(i)), resultLab)
-                    cv2.imwrite(os.path.join('07_10.jpg'.format(i)), resultLab)
+                    # #cv2.imwrite(os.path.join(saveFolder, side_im[:-4] + '_{:02d}.jpg'.format(i)), resultLab)
+                    #cv2.imwrite(os.path.join('07_10.jpg'.format(i)), resultLab)
 
 
 
