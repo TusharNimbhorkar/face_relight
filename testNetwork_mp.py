@@ -106,6 +106,24 @@ modelFolder = 'trained_model/'
 from skeleton512 import *
 
 my_network = HourglassNet()
+
+
+
+'''
+# original saved file with DataParallel
+state_dict = torch.load(checkpoint_dir_cmd)
+# create new OrderedDict that does not contain `module.`
+from collections import OrderedDict
+new_state_dict = OrderedDict()
+for k, v in state_dict.items():
+    name = k[7:] # remove `module.`
+    new_state_dict[name] = v
+# load params
+my_network.load_state_dict(new_state_dict)
+my_network.cuda()
+my_network.train(False)
+
+'''
 print(checkpoint_dir_cmd)
 my_network.load_state_dict(torch.load(checkpoint_dir_cmd))
 my_network.cuda()
@@ -116,12 +134,15 @@ lightFolder = 'test_data/01/'
 sh_vals = ['07']
 
 # test_dir = '/home/tushar/face_relight/substet_eval/transfer_q_2x'
+test_dir = '/home/tushar/face_relight/substet_eval/face_crops_face_rel_full'
 # test_dir = '/home/tushar/face_relight/substet_eval/transfer_batch_2x'
-test_dir = '/home/tushar/face_relight/substet_eval/transfer_batch_fullres'
+# test_dir = '/home/tushar/face_relight/substet_eval/transfer_batch_fullres'
 
 
-test_dir1 = '/home/tushar/face_relight/substet_eval/transfer_batch_1xhalf'
+# test_dir1 = '/home/tushar/face_relight/substet_eval/transfer_batch_1xhalf'
 # test_dir = '/home/tushar/face_relight/substet_eval/transfer_batch_1xhalf'
+test_dir1 = '/home/tushar/face_relight/substet_eval/face_crops_face_rel_full'
+
 
 
 segment = False
@@ -137,12 +158,12 @@ number_seg = 0.0
 
 overall_error_1 = 0.0
 
-
+lowest_error = 9999999
 for per in persons:
     if per in old_people:
         person_dir = os.path.join(test_dir, per)
         # from
-        side_im = os.path.join(person_dir, per + '_10.png')
+        side_im = os.path.join(person_dir, per + '_06.png')
         # To
         front_im = os.path.join(person_dir, per + '_07.png')
         if os.path.exists(side_im) and os.path.exists(front_im):
@@ -209,7 +230,7 @@ for per in persons:
 
                     _, _, outputSH, _ = my_network(inputL1, sh, skip_c)
 
-                    # outputImg, _, _, _ = my_network(inputL, outputSH*0.7, skip_c)
+                    # outputImg, _, _, _ = my_network(inputL, outputSH*0.95, skip_c)
                     outputImg, _, _, _ = my_network(inputL, outputSH, skip_c)
 
                     '''sh_viz'''
@@ -234,7 +255,7 @@ for per in persons:
                     resultLab = cv2.cvtColor(Lab, cv2.COLOR_LAB2BGR)
                     resultLab = cv2.resize(resultLab, (col, row))
                     # cv2.imwrite(os.path.join(saveFolder, side_im[:-4] + '_{:02d}.jpg'.format(i)), resultLab)
-                    # cv2.imwrite(os.path.join('f_s.jpg'.format(i)), resultLab)
+                    cv2.imwrite(os.path.join('07_10.jpg'.format(i)), resultLab)
 
 
 
@@ -254,18 +275,8 @@ for per in persons:
                     overall_error_2 = overall_error_2 + current_mse_all
                     number = number+1
                     print(number)
-                    '''
-                    if current_mse_all<35:
-                        overall_error_1 = overall_error_1 + current_mse_all
-                        number_seg=number_seg+1
 
-                    current_mse_all = mse_all(img_side_copy, resultLab)
-                    # if current_mse_all<40.:
-                    if current_mse_all < 35:
-                        overall_error_2 = overall_error_2 + current_mse_all
-                        number = number+1
-                    print(number)
-                    '''
+
 
 
 print("\nnumber of files: ",number)
