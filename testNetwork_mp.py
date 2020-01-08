@@ -4,6 +4,7 @@
 
 # trained_model_03.t7
 # 14_net_G.pth
+# bestcoesf=1.3 and 1.0
 import sys
 
 sys.path.append('models')
