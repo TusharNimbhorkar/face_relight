@@ -16,22 +16,20 @@ from torch.autograd import Variable
 from torchvision.utils import make_grid
 import torch
 import cv2
-
+import math
 
 ap = argparse.ArgumentParser()
 ap.add_argument("-fc", "--first_checkpoint", required=True,
                 help="checkpoint")
-ap.add_argument("-sc", "--second_checkpoint", required=True,
-                help="checkpoint")
 
 ap.add_argument("-s", "--second", required=True,
                 help="skip")
+
 ap.add_argument("-t", "--third", default=False,type=bool,
                 help="data parallel or not")
 args = vars(ap.parse_args())
 
 checkpoint_dir_cmd = args["first_checkpoint"]
-checkpoint_dir_our = args["second_checkpoint"]
 
 skip_c = int(args["second"])
 dataparallel_bool = args["third"]
@@ -50,6 +48,12 @@ def mse(imageA, imageB):
     rmse = math.sqrt(err)
     return rmse
 
+def mse_sh(imageA, imageB):
+
+    err = np.sum((imageA.astype("float") - imageB.astype("float")) ** 2)
+    # err /= float(imageA.shape[0])
+    # rmse = math.sqrt(err)
+    return err
 
 def mse_all(i1,i2):
     mse_r = mse(i1[:, :, 0], i2[:, :, 0])
@@ -103,16 +107,10 @@ sphere_segment = sphere_segment.astype(np.uint8)
 # load model
 from skeleton512 import *
 
-my_network = HourglassNet()
-print(checkpoint_dir_cmd)
-my_network.load_state_dict(torch.load(checkpoint_dir_cmd))
-my_network.cuda()
-my_network.train(False)
-
 if dataparallel_bool:
-    our_network = HourglassNet()
+    my_network = HourglassNet()
     # original saved file with DataParallel
-    state_dict = torch.load(checkpoint_dir_our)
+    state_dict = torch.load(checkpoint_dir_cmd)
     # create new OrderedDict that does not contain `module.`
     from collections import OrderedDict
 
@@ -121,23 +119,27 @@ if dataparallel_bool:
         name = k[7:]  # remove `module.`
         new_state_dict[name] = v
     # load params
-    our_network.load_state_dict(new_state_dict)
+    my_network.load_state_dict(new_state_dict)
 else:
+    my_network = HourglassNet()
+    print(checkpoint_dir_cmd)
+    my_network.load_state_dict(torch.load(checkpoint_dir_cmd))
 
-    our_network = HourglassNet()
-    print(checkpoint_dir_our)
-    our_network.load_state_dict(torch.load(checkpoint_dir_our))
-our_network.cuda()
-our_network.train(False)
+my_network.cuda()
+my_network.train(False)
 
 lightFolder = 'test_data/01/'
 # dataroot = '/home/tushar/DPR_data/skel'
 dataroot = '/home/tushar/data2/DPR'
 sh_vals = ['07']  # , '09', '10']
 list_im = []
-for sh_v in sh_vals:
 
-    saveFolder = os.path.join('runresult_transfer', checkpoint_dir_our.split('/')[-2], sh_v)
+overall_mse = 0.0
+count_number = 0.0
+
+
+for sh_v in sh_vals:
+    saveFolder = os.path.join('runresult_transfer', checkpoint_dir_cmd.split('/')[-2], sh_v)
 
     if not os.path.exists(saveFolder):
         os.makedirs(saveFolder)
@@ -206,7 +208,7 @@ for sh_v in sh_vals:
         sh = sh * sh_constant
         # --------------------------------------------------
         # rendering half-sphere
-        sh = np.squeeze(sh)
+        sh_input = np.squeeze(sh)
         shading = get_shading(normal, sh)
         value = np.percentile(shading, 95)
         ind = shading > value
@@ -217,8 +219,8 @@ for sh_v in sh_vals:
         shading_vis_source_light = shading * valid
 
         # cv2.imwrite(os.path.join(saveFolder, 'light_{:02d}.png'.format(i)), shading)
-        sh = np.reshape(sh, (1, 9, 1, 1)).astype(np.float32)
-        sh_source_tensor = Variable(torch.from_numpy(sh).cuda())
+        sh_source = np.reshape(sh_input, (1, 9, 1, 1)).astype(np.float32)
+        sh_source_tensor = Variable(torch.from_numpy(sh_source).cuda())
 
 
 
@@ -249,15 +251,15 @@ for sh_v in sh_vals:
 
         predicted_img_auth, _, pred_sh_auth, _ = my_network(inputL, sh_target_tensor, 0)
 
-        predicted_img_our, _, pred_sh_our, _ = our_network(inputL, sh_target_tensor, 0)
+        # predicted_img_our, _, pred_sh_our, _ = my_network(inputL, sh_target_tensor, 0)
 
 
         ############################################################################################
 
 
         y = torch.Tensor.cpu(pred_sh_auth).detach().numpy()
-        sh = np.squeeze(y)
-        shading = get_shading(normal, sh)
+        sh_pred = np.squeeze(y)
+        shading = get_shading(normal, sh_pred)
         value = np.percentile(shading, 95)
         ind = shading > value
         shading[ind] = value
@@ -265,8 +267,18 @@ for sh_v in sh_vals:
         shading = (shading * 255.0).astype(np.uint8)
         shading = np.reshape(shading, (256, 256))
         shading_pred_auth = shading * valid
-        # cv2.imwrite(os.path.join(saveFolder, im[:-4] + '_light_{:02d}_og.png'.format(i)), shading)
 
+        temp_mse_sh = mse_sh(sh_input,sh_pred)
+
+        overall_mse = overall_mse+temp_mse_sh
+        count_number = count_number+1
+        if count_number%1000==0:
+            print(count_number)
+
+
+
+        # cv2.imwrite(os.path.join(saveFolder, im[:-4] + '_light_{:02d}_og.png'.format(i)), shading)
+        '''
         y = torch.Tensor.cpu(pred_sh_our).detach().numpy()
         sh = np.squeeze(y)
         shading = get_shading(normal, sh)
@@ -277,10 +289,15 @@ for sh_v in sh_vals:
         shading = (shading * 255.0).astype(np.uint8)
         shading = np.reshape(shading, (256, 256))
         shading_pred_ours = shading * valid
+        '''
         ###########################################################################################
-        sh_comparison = np.hstack((shading_vis_source_light,shading_pred_auth,shading_pred_ours))
+        # sh_comparison = np.hstack((shading_vis_source_light,shading_pred_auth,shading_pred_ours))
+        ###########################################################################################
+
+
+
         # cv2.imwrite(os.path.join(saveFolder, im[:-4] + '_light_{:02d}_our.png'.format(i)), shading)
-        cv2.imwrite( os.path.join(saveFolder, im_path.split(('/'))[-1].split('.')[0] + '_sh_pred.png'), sh_comparison)
+        # cv2.imwrite( os.path.join(saveFolder, im_path.split(('/'))[-1].split('.')[0] + '_sh_pred.png'), sh_comparison)
 
         '''
 
@@ -304,3 +321,6 @@ for sh_v in sh_vals:
         cv2.imwrite(os.path.join(saveFolder, im[:-4] + '_{:02d}.jpg'.format(i)),
                     np.hstack((img_copy, resultLab, resultLab_og)))
         '''
+
+
+print('MSE_sh',(overall_mse/count_number))
