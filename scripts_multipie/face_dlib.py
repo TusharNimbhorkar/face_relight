@@ -60,7 +60,7 @@ predictor = dlib.shape_predictor('/home/tushar/face_relight/shape_predictor_68_f
 
 
 
-obj_dir = '/home/tushar/face_relight/multipie'
+obj_dir = '/home/tushar/data2/face_rel_multipie'
 objs = sorted(os.listdir(obj_dir))
 
 count = len(objs)
@@ -71,14 +71,16 @@ if not os.path.exists(save_folder):
 
 
 for o in objs:
-    print(count)
-    count = count-1
     save_folder_obj = os.path.join(save_folder,o)
     if not os.path.exists(save_folder_obj):
         os.makedirs(save_folder_obj)
 
     person_dir = os.path.join(obj_dir,o)
     center_frame = os.path.join(person_dir,o+'_07.png')
+
+    print(count, person_dir)
+    count = count-1
+    # continue
 
     # load the input image, resize it, and convert it to grayscale
     image = cv2.imread(center_frame)
@@ -90,6 +92,10 @@ for o in objs:
 
     ilums = os.listdir(person_dir)
 
+    def R(theta):
+        return np.array([[np.cos(theta), -np.sin(theta)],[np.sin(theta), np.cos(theta)]])
+
+    R_90 = R(np.deg2rad(90))
 
     for (i, rect) in enumerate(rects):
         # determine the facial landmarks for the face region, then
@@ -98,13 +104,40 @@ for o in objs:
         shape = predictor(gray, rect)
         shape = shape_to_np(shape)
 
+
         # convert dlib's rectangle to a OpenCV-style bounding box
         # [i.e., (x, y, w, h)], then draw the face bounding box
         (x, y, w, h) = rect_to_bb(rect)
-        cv2.rectangle(image, (x-12, y-25), (x + w+12, y + h+25), (0, 255, 0), 2)
-        plt.imshow(image[y - 25:y + h + 25, x - 12:x + w + 20])
+        e0 = np.array(shape[38])
+        e1 = np.array(shape[43])
+        m0 = np.array(shape[48])
+        m1 = np.array(shape[54])
+
+        x_p = e1-e0
+        y_p = 0.5*(e0+e1) - 0.5*(m0+m1)
+        c = 0.5*(e0+e1) - 0.1*y_p
+        s = np.max([4.0*np.linalg.norm(x_p),3.6*np.linalg.norm(y_p)])
+        xv = x_p - np.dot(R_90,y_p)
+        xv /= np.linalg.norm(xv)
+        yv = np.dot(R_90,y_p)
+        print('Center: ', c, 'Size: ', s)
+
+        # image = image[:,:, ::-1]
+        # sz = 3
+        # to_draw = [e0,e1,m0,m1]
+        # # print(image.shape)
+        # for point in to_draw:
+        #     image[point[1]-sz:point[1]+sz, point[0]-sz:point[0]+sz, :] = [255,0,0]
+        #
+        # print(image.shape)
+        # image = np.ascontiguousarray(image)
+
+        # cv2.rectangle(image, (int(c[0]-s/2), int(c[1]-s/2)), (int(c[0] + s/2), int(c[1] + s/2)), (0, 255, 0), 2)
+
+        # plt.imshow(image[int(c[1] - s/2):int(c[1] + s/2), int(c[0] - s/2):int(c[0]+s/2)])
+        # plt.show()
 
         for il in ilums:
             im1 = cv2.imread(os.path.join(person_dir,il))
             save_file_name = os.path.join(save_folder_obj,il)
-            cv2.imwrite(save_file_name,im1[y - 25:y + h + 25, x - 12:x + w + 20])
+            cv2.imwrite(save_file_name,im1[int(c[1] - s/2):int(c[1] + s/2), int(c[0] - s/2):int(c[0]+s/2)])
