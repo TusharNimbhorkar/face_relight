@@ -12,12 +12,11 @@ from utils_SH import *
 import os
 import numpy as np
 import argparse
-
 from torch.autograd import Variable
 from torchvision.utils import make_grid
 import torch
-import time
 import cv2
+
 
 ap = argparse.ArgumentParser()
 ap.add_argument("-fc", "--first_checkpoint", required=True,
@@ -37,9 +36,48 @@ checkpoint_dir_our = args["second_checkpoint"]
 skip_c = int(args["second"])
 dataparallel_bool = args["third"]
 
+
 # checkpoint_dir_our = 'models/trained/14_net_G_BS8_DPR7.pth'
 
 
+'''
+begin MSE FUNCTION
+'''
+def mse(imageA, imageB):
+
+    err = np.sum((imageA.astype("float") - imageB.astype("float")) ** 2)
+    err /= float(imageA.shape[0] * imageA.shape[1])
+    rmse = math.sqrt(err)
+    return rmse
+
+
+def mse_all(i1,i2):
+    mse_r = mse(i1[:, :, 0], i2[:, :, 0])
+    mse_g = mse(i1[:, :, 1], i2[:, :, 1])
+    mse_b = mse(i1[:, :, 2], i2[:, :, 2])
+
+    return (mse_r+mse_g+mse_b)/3.0
+
+def mse_seg(imageA, imageB,seg):
+
+    err = np.sum((imageA.astype("float") - imageB.astype("float")) ** 2)
+    # print(float(np.sum(seg[:,:,0])))
+    err /= float(np.sum(seg[:,:,0]))
+    # err /= float(imageA.shape[0] * imageA.shape[1])
+    rmse = math.sqrt(err)
+    return rmse
+
+
+def mse_all_seg(i1,i2,seg):
+    mse_r = mse_seg(i1[:, :, 0], i2[:, :, 0],seg)
+    mse_g = mse_seg(i1[:, :, 1], i2[:, :, 1],seg)
+    mse_b = mse_seg(i1[:, :, 2], i2[:, :, 2],seg)
+
+    return (mse_r+mse_g+mse_b)/3.0
+
+'''
+end
+'''
 
 # ---------------- create normal for rendering half sphere ------
 img_size = 256
@@ -55,9 +93,12 @@ y = y * valid
 z = z * valid
 normal = np.concatenate((x[..., None], y[..., None], z[..., None]), axis=2)
 normal = np.reshape(normal, (-1, 3))
+sphere_segment = valid+np.zeros((256,256))
+sphere_segment = sphere_segment.astype(np.uint8)
+
 # -----------------------------------------------------------------
 
-modelFolder = 'trained_model/'
+# modelFolder = 'trained_model/'
 
 # load model
 from skeleton512 import *
@@ -96,7 +137,7 @@ sh_vals = ['07']  # , '09', '10']
 list_im = []
 for sh_v in sh_vals:
 
-    saveFolder = os.path.join('runresult_transfer', checkpoint_dir_cmd.split('/')[-2], sh_v)
+    saveFolder = os.path.join('runresult_transfer', checkpoint_dir_our.split('/')[-2], sh_v)
 
     if not os.path.exists(saveFolder):
         os.makedirs(saveFolder)
@@ -154,10 +195,10 @@ for sh_v in sh_vals:
 
 
         del_item_source = im[0].split('_')[-1][:-4]
-        del_item_target = im[0].split('_')[-1][:-4]
+        del_item_target = im[1].split('_')[-1][:-4]
 
         SL_path = im[0][:-6] + 'light_' + del_item_source + '.txt'
-        TL_path = im[0][:-6] + 'light_' + del_item_target + '.txt'
+        TL_path = im[1][:-6] + 'light_' + del_item_target + '.txt'
 
         # Source_light
         sh = np.loadtxt(SL_path)
