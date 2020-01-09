@@ -2,14 +2,18 @@ import cv2
 import matplotlib.pyplot as plt
 import os,glob
 import numpy as np
+# local
+# mask_dir_folder = '/home/tushar/bayer2rgb/mask/0'
+# folders_DPR = os.listdir('/home/tushar/DPR_data/skel/train')
+# save_folder = '/home/tushar/DPR_data/skel/segments'
+# server
+mask_dir_folder = '/home/tushar/data2/DPR/CelebAMask-HQ/combined'
+folders_DPR = os.listdir('/home/tushar/data2/DPR/train')
+save_folder = '/home/tushar/data2/DPR/segments'
 
-mask_dir_folder = '/home/tushar/bayer2rgb/mask/0'
-
-# objs = os.listdir(mask_dir_folder)
 
 
-folders_DPR = os.listdir('/home/tushar/DPR_data/skel/train')
-save_folder = '/home/tushar/DPR_data/skel/segments'
+
 if not os.path.exists(save_folder):
     os.makedirs(save_folder)
 
@@ -20,7 +24,7 @@ for  kk in files:
     temp_files.append(kk.split('_')[0])
 temp_files = list(set(temp_files))
 
-os.chdir( '/home/tushar/bayer2rgb/mask/0')
+os.chdir(mask_dir_folder)
 
 for tmp in temp_files:
     temp_list = []
