@@ -139,10 +139,10 @@ sh_vals = ['07']
 
 # test_dir = '/home/tushar/face_relight/substet_eval/transfer_batch_2x'
 
-test_dir = '/home/tushar/face_relight/substet_eval/mpie'
+# test_dir = '/home/tushar/face_relight/substet_eval/mpie'
 
 
-# test_dir = '/home/tushar/face_relight/substet_eval/mpie_singel'
+test_dir = '/home/tushar/face_relight/substet_eval/mpie_singel'
 
 # test_dir = '/home/nedko/face_relight/outputs/mpie'
 # test_dir1 = '/home/tushar/face_relight/substet_eval/transfer_batch_1xhalf'
@@ -242,7 +242,7 @@ for per in persons:
 
                     _, _, outputSH, _ = my_network(inputL1, sh, skip_c)
 
-                    outputImg, _, _, _ = my_network(inputL, outputSH*1.65, skip_c)
+                    outputImg, _, _, _ = my_network(inputL, outputSH*1.3, skip_c)
                     # outputImg, _, _, _ = my_network(inputL, outputSH, skip_c)
 
                     '''sh_viz'''
@@ -272,9 +272,17 @@ for per in persons:
 
 
                     segment_im = cv2.imread(os.path.join(person_dir, 'mask.png'))
-                    segment_im[:, :, 1] = np.copy(segment_im[:, :, 0])
-                    segment_im[:, :, 2] = np.copy(segment_im[:, :, 0])
+                    first_channel = np.copy(segment_im[:, :, 0])
+                    first_channel[first_channel<255]=0
+                    segment_im[:, :, 0] = np.copy(first_channel)
+                    segment_im[:, :, 1] = np.copy(first_channel)
+                    segment_im[:, :, 2] = np.copy(first_channel)
                     segment_im[segment_im > 0] = 1
+                    resize = True
+                    if resize:
+                        img_side_copy = cv2.resize(img_side_copy,(128,128))
+                        segment_im = cv2.resize(segment_im,(128,128))
+                        resultLab = cv2.resize(resultLab,(128,128))
 
                     current_mse_all = mse_all_seg(np.multiply(img_side_copy,segment_im), np.multiply(resultLab,segment_im),segment_im)
                     if current_mse_all>max_mse:
