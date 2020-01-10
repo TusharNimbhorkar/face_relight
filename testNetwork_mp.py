@@ -135,14 +135,19 @@ lightFolder = 'test_data/01/'
 sh_vals = ['07']
 
 # test_dir = '/home/tushar/face_relight/substet_eval/transfer_q_2x'
-test_dir = '/home/tushar/face_relight/substet_eval/face_crops_face_rel_full'
-# test_dir = '/home/tushar/face_relight/substet_eval/transfer_batch_2x'
-# test_dir = '/home/tushar/face_relight/substet_eval/transfer_batch_fullres'
+# test_dir = '/home/tushar/face_relight/substet_eval/face_crops_face_rel_full'
 
-test_dir = '/home/nedko/face_relight/outputs/mpie'
+# test_dir = '/home/tushar/face_relight/substet_eval/transfer_batch_2x'
+
+test_dir = '/home/tushar/face_relight/substet_eval/mpie'
+
+
+# test_dir = '/home/tushar/face_relight/substet_eval/mpie_singel'
+
+# test_dir = '/home/nedko/face_relight/outputs/mpie'
 # test_dir1 = '/home/tushar/face_relight/substet_eval/transfer_batch_1xhalf'
 # test_dir = '/home/tushar/face_relight/substet_eval/transfer_batch_1xhalf'
-test_dir1 = '/home/tushar/face_relight/substet_eval/face_crops_face_rel_full'
+# test_dir1 = '/home/tushar/face_relight/substet_eval/face_crops_face_rel_full'
 test_dir1 = test_dir
 
 
@@ -160,13 +165,14 @@ number_seg = 0.0
 overall_error_1 = 0.0
 
 lowest_error = 9999999
+max_mse = 0
 for per in persons:
     if per in old_people:
         person_dir = os.path.join(test_dir, per)
         # from
         side_im = os.path.join(person_dir, per + '_07.png')
         # To
-        front_im = os.path.join(person_dir, per + '_09.png')
+        front_im = os.path.join(person_dir, per + '_05.png')
 
 
         exists_ims_side = cv2.imread(side_im) is not None
@@ -236,7 +242,7 @@ for per in persons:
 
                     _, _, outputSH, _ = my_network(inputL1, sh, skip_c)
 
-                    outputImg, _, _, _ = my_network(inputL, outputSH*1.4, skip_c)
+                    outputImg, _, _, _ = my_network(inputL, outputSH*1.65, skip_c)
                     # outputImg, _, _, _ = my_network(inputL, outputSH, skip_c)
 
                     '''sh_viz'''
@@ -250,7 +256,7 @@ for per in persons:
                     shading = (shading * 255.0).astype(np.uint8)
                     shading = np.reshape(shading, (256, 256))
                     shading = shading * valid
-                    #cv2.imwrite(os.path.join('_light_{:02d}_07_front.png'.format(i)), shading)
+                    cv2.imwrite(os.path.join('_light_{:02d}_07_front.png'.format(i)), shading)
                     '''end'''
 
                     outputImg = outputImg[0].cpu().data.numpy()
@@ -261,7 +267,7 @@ for per in persons:
                     resultLab = cv2.cvtColor(Lab, cv2.COLOR_LAB2BGR)
                     resultLab = cv2.resize(resultLab, (col, row))
                     # #cv2.imwrite(os.path.join(saveFolder, side_im[:-4] + '_{:02d}.jpg'.format(i)), resultLab)
-                    #cv2.imwrite(os.path.join('07_10.jpg'.format(i)), resultLab)
+                    cv2.imwrite(os.path.join('07_10.jpg'.format(i)), resultLab)
 
 
 
@@ -271,7 +277,9 @@ for per in persons:
                     segment_im[segment_im > 0] = 1
 
                     current_mse_all = mse_all_seg(np.multiply(img_side_copy,segment_im), np.multiply(resultLab,segment_im),segment_im)
-
+                    if current_mse_all>max_mse:
+                        max_mse=current_mse_all
+                        print('max  ',per, '  err  ',max_mse)
 
                     overall_error_1 = overall_error_1 + current_mse_all
 
