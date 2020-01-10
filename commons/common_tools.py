@@ -70,6 +70,10 @@ class BColors:
 def colored(text, color):
     return color + str(text) + BColors.ResetAll
 
+
+
+
+
 class Logger:
     def __init__(self, tag, log_level=0, tag_color=BColors.Green):
         '''
@@ -89,8 +93,8 @@ class Logger:
     def __process_args(self, message, *args):
         message = str(message)
         for arg in args:
-            if arg != []:
-                message+=' ' + str(arg)
+            # if arg != []:
+            message+=' ' + str(arg)
 
         return message
 

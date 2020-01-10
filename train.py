@@ -1,19 +1,36 @@
+import os
 import time,sys
 
 import torch
 
 from options.train_options import TrainOptions
 from data import CreateDataLoader
+from data.lightDPR9_dataset import EvaluationDataLoader
 from models import create_model
 from util.visualizer import Visualizer
+from commons.common_tools import Logger
 sys.path.append('models')
+
+log = Logger("General")
+
+def validate(model, data_loader):
+    for i, data in enumerate(data_loader):
+        log.d("Validating", i)
+        model.set_input(data)
+
 if __name__ == '__main__':
     opt = TrainOptions().parse()
+
 
     model = create_model(opt)
     model.setup(opt)
     visualizer = Visualizer(opt)
     total_steps = 0
+
+    data_root_dir = os.path.join(opt.data_root, 'train')
+    pair_list_path = 'splits/test.lst'
+    validate_n_batch = 5
+    validation_data_loader = EvaluationDataLoader(data_root_dir, pair_list_path, validate_n_batch, opt.num_threads)
 
     def str_time(s):
         hours, remainder = divmod(s, 3600)
@@ -33,9 +50,16 @@ if __name__ == '__main__':
         epoch_start_time.record()
         data_start_time.record()
 
-
         epoch_iter = 0
         data_loader = CreateDataLoader(opt)
+        data_root_dir = os.path.join(opt.data_root, 'train')
+        pair_list_path = 'splits/test.lst'
+        validate_n_batch = 5
+        validation_data_loader = EvaluationDataLoader(data_root_dir, pair_list_path, validate_n_batch, opt.num_threads)
+
+        log.d("Validating")
+        validate(model, validation_data_loader)
+
         dataset = data_loader.load_data()
         dataset_size = len(data_loader)
         print('#training images = %d' % dataset_size)

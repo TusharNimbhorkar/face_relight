@@ -1,6 +1,10 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from commons.common_tools import Logger, BColors
+import numpy as np
+
+log = Logger("Skeleton", tag_color=BColors.Yellow)
 
 def conv3X3(in_planes, out_planes, stride=1):
     """3x3 convolution with padding"""
@@ -171,24 +175,32 @@ class HourglassNet(nn.Module):
 
         self.output = nn.Conv2d(self.ncPre, 1, kernel_size=1, stride=1, padding=0)
 
-    def forward(self, x, target_light, skip_count, oriImg=None):
+    def forward(self, x, target_light, skip_count, ori_img=None, img_other_id=None):
         feat = self.pre_conv(x)
         feat = F.relu(self.pre_bn(feat))
 
         feat,out_feat, out_light = self.HG3(feat, target_light, 0, skip_count)
 
         out_feat_ori = None
-        if not oriImg is None:
-            feat_orig = self.pre_conv(oriImg)
-            feat_orig = F.relu(self.pre_bn(feat_orig))
-            _, out_feat_ori, _ = self.HG3(feat_orig, target_light, 0, skip_count)
+
+        def get_id_feat(img):
+            out_feat_ori = np.nan
+            if not img is None:
+                feat = self.pre_conv(img)
+                feat = F.relu(self.pre_bn(feat))
+                _, out_feat_ori, _ = self.HG3(feat, target_light, 0, skip_count)
+            return out_feat_ori
+
+        out_feat_same_id = get_id_feat(ori_img)
+        out_feat_other_id = get_id_feat(img_other_id)
+
         # y = feat.clone().detach()
         feat = F.relu(self.bn_1(self.conv_1(feat)))
         feat = F.relu(self.bn_2(self.conv_2(feat)))
         feat = F.relu(self.bn_3(self.conv_3(feat)))
         out_img = self.output(feat)
         out_img = torch.sigmoid(out_img)
-        return out_img, out_feat, out_light, out_feat_ori
+        return out_img, out_feat, out_light, out_feat_same_id, out_feat_other_id
 
 
 if __name__ == '__main__':

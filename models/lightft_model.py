@@ -89,7 +89,7 @@ class lightftModel(BaseModel):
     def forward(self):
 
         self.fake_B, self.face_feat_A,self.fake_AL, self.face_feat_B = \
-            self.netG(self.real_A, self.real_BL, 0, oriImg=self.real_D)
+            self.netG(self.real_A, self.real_BL, 0, ori_img=self.real_D)
         # out_img, out_feat, out_light, out_feat_ori
 
 

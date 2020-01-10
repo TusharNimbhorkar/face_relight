@@ -88,10 +88,10 @@ class lightgrad55Model(BaseModel):
             _, _, self.face_feat_B = self.netG(self.real_B, self.real_AL, count_skip)
 		'''
         if epoch<=10:
-        	self.fake_B, _ ,self.fake_AL, _ = self.netG(self.real_A,self.real_BL,count_skip,oriImg=None)
+        	self.fake_B, _ ,self.fake_AL, _ = self.netG(self.real_A,self.real_BL,count_skip,ori_img=None)
 
         if epoch>10:
-            self.fake_B, self.face_feat_A, self.fake_AL, self.face_feat_B = self.netG(self.real_A,self.real_BL,count_skip, oriImg=self.real_D)
+            self.fake_B, self.face_feat_A, self.fake_AL, self.face_feat_B = self.netG(self.real_A,self.real_BL,count_skip, ori_img=self.real_D)
 
     def calc_gradient(self,x):
 

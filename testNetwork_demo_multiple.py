@@ -16,24 +16,26 @@ import numpy as np
 import argparse
 
 from torch.autograd import Variable
+from commons.common_tools import Logger, BColors
 from torchvision.utils import make_grid
 import torch
 import time
 import cv2
-
+from skeleton512 import *
 
 ap = argparse.ArgumentParser()
-ap.add_argument("-f", "--first", required=True,
+ap.add_argument("-w", "--weights_dir", required=True,
 	help="checkpoint")
-ap.add_argument("-s", "--second", required=True,
+ap.add_argument("-s", "--skip", required=True,
 	help="skip")
 args = vars(ap.parse_args())
 
 # load the two input images
 
+log = Logger("Evaluation", tag_color=BColors.Red)
 
-checkpoint_dir_cmd = args["first"]
-skip_c = int(args["second"])
+checkpoint_dir_cmd = args["weights_dir"]
+skip_c = int(args["skip"])
 #imageB = cv2.imread(args["second"])
 
 
@@ -54,10 +56,7 @@ normal = np.concatenate((x[...,None], y[...,None], z[...,None]), axis=2)
 normal = np.reshape(normal, (-1, 3))
 #-----------------------------------------------------------------
 
-modelFolder = 'trained_model/'
-
 # load model
-from skeleton512 import *
 my_network = HourglassNet()
 print(checkpoint_dir_cmd)
 my_network.load_state_dict(torch.load(checkpoint_dir_cmd))
@@ -70,10 +69,10 @@ sh_vals = ['07']#,'09','10']
 
 for sh_v in sh_vals:
 
-	saveFolder = os.path.join('runresult',checkpoint_dir_cmd.split('/')[-2],sh_v)
+	saveFolder = os.path.join('runresult_test',checkpoint_dir_cmd.split('/')[-2],sh_v)
 
 	if not os.path.exists(saveFolder):
-	    os.makedirs(saveFolder)
+		os.makedirs(saveFolder)
 
 	dir_ims = 'test_data/relight_constant'
 	ims = os.listdir(dir_ims)
@@ -99,6 +98,18 @@ for sh_v in sh_vals:
 		inputL = inputL[None,None,...]
 		inputL = Variable(torch.from_numpy(inputL).cuda())
 
+		real_img = "/home/nedko/face_relight/outputs/portrait/aa.jpg"
+		real_img = cv2.imread(real_img)
+		real_img = cv2.resize(real_img, (512, 512))
+		LabR = cv2.cvtColor(real_img, cv2.COLOR_BGR2LAB)
+
+		inputR = LabR[:, :, 0]
+		inputR = inputR.astype(np.float32) / 255.0
+		inputR = inputR.transpose((0, 1))
+		inputR = inputR[None, None, ...]
+		inputR = Variable(torch.from_numpy(inputR).cuda())
+
+		avg_losses = {}
 		for i in range(36):
 			sh = np.loadtxt(os.path.join(lightFolder, 'rotate_light_{:02d}.txt'.format(i)))
 			sh = sh[0:9]
@@ -120,11 +131,24 @@ for sh_v in sh_vals:
 
 			millis_start = int(round(time.time() * 1000))
 
-			outputImg, _, outputSH, _ = my_network(inputL, sh, skip_c)
+			model=my_network
+
+			outputImg, feat_A, outputSH, feat_B = my_network(inputL, sh, skip_c, inputR)
+
+			criterionL1 = torch.nn.L1Loss().cuda()
+			loss_G_feat = criterionL1(feat_A, feat_B) * 0.5
+			log.i("Feature loss:",float(loss_G_feat), np.linalg.norm(feat_A.cpu().detach().numpy()))
+			# model.forward(15)
+			# model.backward_G(15, train_mode=False)
+			# losses = model.get_current_losses()
+			# for name in losses.keys():
+			# 	print(name, losses[name])
+			# 	if name not in avg_losses.keys():
+			# 		avg_losses[name] = 0
+			# 	avg_losses[name] += losses[name]
+
 
 			# outputImg, _, outputSH, _ = my_network(inputL, outputSH, skip_c)
-
-
 
 			millis_after = int(round(time.time() * 1000))
 			elapsed = millis_after - millis_start

@@ -56,19 +56,19 @@ ap = argparse.ArgumentParser()
 # initialize dlib's face detector (HOG-based) and then create
 # the facial landmark predictor
 detector = dlib.get_frontal_face_detector()
-predictor = dlib.shape_predictor('/home/tushar/face_relight/shape_predictor_68_face_landmarks.dat')
+predictor = dlib.shape_predictor('/home/nedko/storage/huawei/models/shape_predictor_68_face_landmarks.dat')
 
 
 
-obj_dir = '/home/tushar/data2/face_rel_multipie'
+# obj_dir = '/home/tushar/data2/face_rel_multipie'
+obj_dir = '/home/nedko/face_relight/test_data/portrait_test'
 objs = sorted(os.listdir(obj_dir))
 
 count = len(objs)
-save_folder = '/home/tushar/face_relight/face_crops'
+save_folder = '/home/nedko/face_relight/outputs/'
 
 if not os.path.exists(save_folder):
     os.makedirs(save_folder)
-
 
 for o in objs:
     save_folder_obj = os.path.join(save_folder,o)
@@ -76,9 +76,16 @@ for o in objs:
         os.makedirs(save_folder_obj)
 
     person_dir = os.path.join(obj_dir,o)
-    center_frame = os.path.join(person_dir,o+'_07.png')
+    #
+    # save_folder_obj = save_folder
+    # person_dir = obj_dir
 
-    print(count, person_dir)
+    if os.path.exists(o+'_07.png'):
+        center_frame = os.path.join(person_dir,o+'_07.png')
+    else:
+        center_frame = os.path.join(person_dir, os.listdir(person_dir)[0])
+
+    print(count, center_frame)
     count = count-1
     # continue
 
@@ -122,6 +129,18 @@ for o in objs:
         yv = np.dot(R_90,y_p)
         print('Center: ', c, 'Size: ', s)
 
+        t_x = 0
+        t_y = 0
+        if c[0]-s/2 < 0:
+            t_x = -c[0]+s/2
+        if c[1]-s/2 < 0:
+            t_y = -c[1]+s/2
+
+        c[0] += t_x
+        c[1] += t_y
+        if t_x != 0 or t_y != 0:
+            image = imutils.translate(image, t_x, t_y)
+
         # image = image[:,:, ::-1]
         # sz = 3
         # to_draw = [e0,e1,m0,m1]
@@ -134,6 +153,9 @@ for o in objs:
 
         # cv2.rectangle(image, (int(c[0]-s/2), int(c[1]-s/2)), (int(c[0] + s/2), int(c[1] + s/2)), (0, 255, 0), 2)
 
+        # plt.imshow(image)
+        # plt.show()
+        # print(int(c[1] - s/2),int(c[1] + s/2), int(c[0] - s/2),int(c[0]+s/2))
         # plt.imshow(image[int(c[1] - s/2):int(c[1] + s/2), int(c[0] - s/2):int(c[0]+s/2)])
         # plt.show()
 

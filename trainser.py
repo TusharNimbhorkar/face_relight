@@ -5,9 +5,11 @@ import torch
 
 from options.train_options import TrainOptions
 from data import CreateDataLoader
+from data.lightDPR7_dataset import lightDPR7Dataset
 from models import create_model
 from util.visualizer import Visualizer
 from commons.common_tools import Logger, BColors
+from commons.common_tools_torch import Chronometer
 from data.evaluation_dataset import EvaluationDataLoader
 import os
 sys.path.append('models')
@@ -90,27 +92,44 @@ if __name__ == '__main__':
         minutes, seconds = divmod(remainder, 60)
         return '{:02}:{:02}'.format(int(hours), int(minutes))
 
-    for epoch in range(1,15):
-        epoch_start_time = torch.cuda.Event(enable_timing=True)
-        epoch_end_time = torch.cuda.Event(enable_timing=True)
+    if opt.epoch != 'latest':
+        start_epoch = int(opt.epoch)+1
+    else:
+        start_epoch = 1
 
-        iter_start_time = torch.cuda.Event(enable_timing=True)
-        iter_end_time = torch.cuda.Event(enable_timing=True)
+    epoch_chron = Chronometer(str(model.device))
+    iter_chron = Chronometer(str(model.device))
+    data_chron = Chronometer(str(model.device))
 
-        data_start_time = torch.cuda.Event(enable_timing=True)
-        data_end_time = torch.cuda.Event(enable_timing=True)
+    data_loader.dataset.use_real_img = True
 
-        epoch_start_time.record()
-        data_start_time.record()
+    for epoch in range(start_epoch,16):
+        # epoch_start_time = torch.cuda.Event(enable_timing=True)
+        # epoch_end_time = torch.cuda.Event(enable_timing=True)
+
+        # iter_start_time = torch.cuda.Event(enable_timing=True)
+        # iter_end_time = torch.cuda.Event(enable_timing=True)
+
+        # data_start_time = torch.cuda.Event(enable_timing=True)
+        # data_end_time = torch.cuda.Event(enable_timing=True)
+
+        epoch_chron.start()
+        data_chron.start()
+        # epoch_start_time.record()
+        # data_start_time.record()
 
 
         epoch_iter = 0
+        if epoch > 10:
+            data_loader.dataset.use_real_img = True
 
         for i, data in enumerate(dataset):
             total_steps += opt.batch_size
             if total_steps % opt.print_freq == 0:
-                iter_start_time.record()
-                data_end_time.record()
+                iter_chron.start()
+                data_chron.start()
+                # iter_start_time.record()
+                # data_end_time.record()
             visualizer.reset()
 
             epoch_iter += opt.batch_size
@@ -126,11 +145,14 @@ if __name__ == '__main__':
 
             if total_steps % opt.print_freq == 0:
                 losses = model.get_current_losses()
-                iter_end_time.record()
-                torch.cuda.synchronize(model.device)
-                t = (iter_start_time.elapsed_time(iter_end_time)/1000) / opt.batch_size
-                t_data = (data_start_time.elapsed_time(data_end_time)/1000) / opt.batch_size
-                t_current = (epoch_start_time.elapsed_time(iter_end_time) / 1000)/epoch_iter
+                # iter_end_time.record()
+                # torch.cuda.synchronize(model.device)
+                # t = (iter_start_time.elapsed_time(iter_end_time)/1000) / opt.batch_size
+                t = iter_chron.stop() / opt.batch_size
+                # t_data = (data_start_time.elapsed_time(data_end_time)/1000) / opt.batch_size
+                t_data = data_chron.stop() / opt.batch_size
+                # t_current = (epoch_start_time.elapsed_time(iter_end_time) / 1000)/epoch_iter
+                t_current = epoch_chron.stop() / epoch_iter
 
                 visualizer.print_current_losses(epoch, epoch_iter, losses, t, t_data, ['Avg Time: %.3f' % t_current,
                                                                                        'Ep Time %s / %s' % (str_time(t_current*epoch_iter),str_time(t_current*(dataset_size)))])
@@ -147,7 +169,8 @@ if __name__ == '__main__':
                 validate(model, validation_data_loader, epoch)
 
             if (total_steps+opt.batch_size) % opt.print_freq == 0:
-                data_start_time.record()
+                data_chron.start()
+                # data_start_time.record()
 
         if epoch % opt.save_epoch_freq == 0:
             print('saving the model at the end of epoch %d, iters %d' % (epoch, total_steps))
@@ -156,8 +179,8 @@ if __name__ == '__main__':
 
         validate(model, validation_data_loader, epoch)
 
-        epoch_end_time.record()
-        torch.cuda.synchronize(model.device)
+        # epoch_end_time.record()
+        # torch.cuda.synchronize(model.device)
         print('End of epoch %d / %d \t Time Taken: %d sec' %
-              (epoch, opt.niter + opt.niter_decay,  epoch_start_time.elapsed_time(epoch_end_time)/1000))
+              (epoch, opt.niter + opt.niter_decay,  epoch_chron.stop())) #epoch_start_time.elapsed_time(epoch_end_time)/1000))
         model.update_learning_rate()

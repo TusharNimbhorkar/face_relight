@@ -3,6 +3,7 @@ import sys
 from util.image_pool import ImagePool
 from .base_model import BaseModel
 from . import networks
+from commons.common_tools import Logger
 
 sys.path.append('.')
 # from relight_model import *
@@ -12,7 +13,10 @@ from torch.autograd import Variable
 import numpy as np
 #
 
+log = Logger("Model")
+
 class lightgrad57Model(BaseModel):
+
     def name(self):
         return 'lightgrad57Model'
 
@@ -37,8 +41,10 @@ class lightgrad57Model(BaseModel):
         else:  # during test time, only load Gs
             self.model_names = ['G']
 
-        self.netG = HourglassNet().cuda()
-        self.netG = torch.nn.DataParallel(self.netG, self.opt.gpu_ids)
+        self.netG = HourglassNet().to(self.device)
+
+        if str(self.device) != 'cpu':
+            self.netG = torch.nn.DataParallel(self.netG, self.opt.gpu_ids)
         self.netG.train(True)
 
         if self.isTrain:
@@ -80,20 +86,20 @@ class lightgrad57Model(BaseModel):
             count_skip = 0
 
         if epoch <= 10:
-            self.fake_B, _, self.fake_AL, _ = self.netG(self.real_A, self.real_BL, count_skip, oriImg=None)
+            self.fake_B, _, self.fake_AL, _, _ = self.netG(self.real_A, self.real_BL, count_skip, ori_img=None)
 
         if epoch > 10:
-            self.fake_B, self.face_feat_A, self.fake_AL, self.face_feat_B = self.netG(self.real_A, self.real_BL,
-                                                                                      count_skip, oriImg=self.real_D)
+            self.fake_B, self.face_feat_A, self.fake_AL, self.face_feat_same_id, self.face_feat_other_id = self.netG(self.real_A, self.real_BL,
+                                                                                                                count_skip, ori_img=self.real_D, img_other_id=self.real_C)
 
     def calc_gradient(self, x):
         a = np.array([[1, 0, -1], [2, 0, -2], [1, 0, -1]])
         conv1 = nn.Conv2d(1, 1, kernel_size=3, stride=1, padding=1, bias=False)
-        conv1.weight = nn.Parameter(torch.from_numpy(a).float().unsqueeze(0).unsqueeze(0).cuda())
+        conv1.weight = nn.Parameter(torch.from_numpy(a).float().unsqueeze(0).unsqueeze(0).to(self.device))
         G_x = conv1(Variable(x)).data.view(self.opt.batch_size, 1, 512, 512)
         b = np.array([[1, 2, 1], [0, 0, 0], [-1, -2, -1]])
         conv2 = nn.Conv2d(1, 1, kernel_size=3, stride=1, padding=1, bias=False)
-        conv2.weight = nn.Parameter(torch.from_numpy(b).float().unsqueeze(0).unsqueeze(0).cuda())
+        conv2.weight = nn.Parameter(torch.from_numpy(b).float().unsqueeze(0).unsqueeze(0).to(self.device))
         G_y = conv2(Variable(x)).data.view(self.opt.batch_size, 1, 512, 512)
         G = torch.sqrt(torch.pow(G_x, 2) + torch.pow(G_y, 2))
 
@@ -140,10 +146,12 @@ class lightgrad57Model(BaseModel):
             self.loss_G = self.loss_L1_add  # self.loss_G_L1 + self.loss_G_MSE + self.loss_G_total_variance
         #
         if epoch > 10:
-            self.loss_G_feat = self.criterionL1(self.face_feat_A, self.face_feat_B) * 0.5
-            self.loss_G = self.loss_G + self.loss_G_feat
+            log.d("LOSS", float(self.criterionL1(self.face_feat_A[0], self.face_feat_same_id[1]) * 0.5), float(self.criterionL1(self.face_feat_A[0], self.face_feat_other_id[0]) * 0.5), np.linalg.norm(self.face_feat_A[0].cpu().detach().numpy()))
+            self.loss_G_feat_min = self.criterionL1(self.face_feat_A, self.face_feat_same_id) * 0.5
+            self.loss_G_feat_max = -self.criterionL1(self.face_feat_A, self.face_feat_other_id) * 0.5
+            self.loss_G = self.loss_G + self.loss_G_feat_min + self.loss_G_feat_max
         else:
-            self.loss_G_feat = 0.0
+            self.loss_G_feat_min = 0.0
 
         if train_mode:
             self.loss_G.backward()
@@ -161,3 +169,4 @@ class lightgrad57Model(BaseModel):
         self.optimizer_G.zero_grad()
         self.backward_G(epoch)
         self.optimizer_G.step()
+

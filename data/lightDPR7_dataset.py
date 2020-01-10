@@ -46,6 +46,11 @@ class lightDPR7Dataset(BaseDataset):
         assert(self.opt.loadSize >= self.opt.fineSize)
 
         self.transform_A = get_simple_transform(grayscale=False)
+        self.use_real_img = False
+
+    def set_use_real_img(self, enabled=True):
+        self.use_real_img = enabled
+
     def __getitem__(self, index):
         # todo: A,B,AL,BL
 
@@ -85,14 +90,15 @@ class lightDPR7Dataset(BaseDataset):
         inputB = inputB[ ... ,None]
 
 
-        orig_im_path = target_path[:-5]+'5.png'
-        orig = cv2.imread(orig_im_path)
-        img_orig = cv2.resize(orig, (512, 512))
-        Lab_orig = cv2.cvtColor(img_orig, cv2.COLOR_BGR2LAB)
-        inputLorig = Lab_orig[:, :, 0]
-        inputorig = inputLorig.astype(np.float32) / 255.0
-        inputorig = inputorig.transpose((0, 1))
-        inputorig = inputorig[..., None]
+        if self.use_real_img:
+            orig_im_path = target_path[:-5]+'5.png'
+            orig = cv2.imread(orig_im_path)
+            img_orig = cv2.resize(orig, (512, 512))
+            Lab_orig = cv2.cvtColor(img_orig, cv2.COLOR_BGR2LAB)
+            inputLorig = Lab_orig[:, :, 0]
+            inputorig = inputLorig.astype(np.float32) / 255.0
+            inputorig = inputorig.transpose((0, 1))
+            inputorig = inputorig[..., None]
 
 
 
@@ -100,7 +106,10 @@ class lightDPR7Dataset(BaseDataset):
         A = self.transform_A(inputA)
         B = self.transform_A(inputB)
         C = self.transform_A(inputC)
-        D = self.transform_A(inputorig)
+        D = np.nan
+
+        if self.use_real_img:
+            D = self.transform_A(inputorig)
 
         del_item = AB_path[0].split('_')[-1][:-4]
         target_item = target_path.split('_')[-1][:-4]
