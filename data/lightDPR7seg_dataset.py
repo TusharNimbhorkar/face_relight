@@ -47,9 +47,6 @@ class lightDPR7segDataset(BaseDataset):
         self.transform_A = get_simple_transform(grayscale=False)
     def __getitem__(self, index):
 
-
-        segment_path = real_im_path = os.path.join(self.opt.dataroot,'segments',"{:05d}".format(real_im_number)+'.png')
-
         real_im_number = random.choice(range(0, self.opt.ffhq))
 
         real_im_path = os.path.join(self.opt.dataroot,'real_im',"{:05d}".format(real_im_number)+'.png')
@@ -64,6 +61,8 @@ class lightDPR7segDataset(BaseDataset):
 
         AB_path = self.list_AB[index]
         segment_path = real_im_path = os.path.join(self.opt.dataroot,'segments',AB_path[0].split('/')[-1].split('_')[0],AB_path[0].split('/')[-1].split('_')[0]+'.png')
+        print(segment_path)
+        print(cv2.imread(segment_path))
         #"{:05d}".format(real_im_number)+'.png')
 
 
