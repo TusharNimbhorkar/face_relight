@@ -61,14 +61,19 @@ class lightDPR7segDataset(BaseDataset):
 
         AB_path = self.list_AB[index]
         segment_path = real_im_path = os.path.join(self.opt.dataroot,'segments',AB_path[0].split('/')[-1].split('_')[0],AB_path[0].split('/')[-1].split('_')[0]+'.png')
-        print(segment_path)
-        print(cv2.imread(segment_path))
+        # print(segment_path)
+        segment_im = cv2.imread(segment_path)
+        segment_im[segment_im==255]=1
+
         #"{:05d}".format(real_im_number)+'.png')
 
 
         A = cv2.imread(AB_path[0])
 
         img_A = cv2.resize(A, (512, 512))
+
+        img_A = np.multiply(img_A,segment_im)
+
         Lab_A = cv2.cvtColor(img_A, cv2.COLOR_BGR2LAB)
         inputLA = Lab_A[:, :, 0]
         inputA = inputLA.astype(np.float32) / 255.0  #totensor also dividing????
@@ -83,6 +88,8 @@ class lightDPR7segDataset(BaseDataset):
 
         B = cv2.imread(target_path)
         img_B = cv2.resize(B, (512, 512))
+        img_B = np.multiply(img_B,segment_im)
+
         Lab_B = cv2.cvtColor(img_B, cv2.COLOR_BGR2LAB)
         inputLB = Lab_B[:, :, 0]
         inputB = inputLB.astype(np.float32) / 255.0
@@ -93,6 +100,8 @@ class lightDPR7segDataset(BaseDataset):
         orig_im_path = target_path[:-5]+'5.png'
         orig = cv2.imread(orig_im_path)
         img_orig = cv2.resize(orig, (512, 512))
+        img_orig = np.multiply(img_orig,segment_im)
+
         Lab_orig = cv2.cvtColor(img_orig, cv2.COLOR_BGR2LAB)
         inputLorig = Lab_orig[:, :, 0]
         inputorig = inputLorig.astype(np.float32) / 255.0
