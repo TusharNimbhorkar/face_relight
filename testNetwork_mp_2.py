@@ -57,7 +57,7 @@ begin
 
 
 def id_to_degrees(id):
-    return (int(id) - 2) * 15
+    return (int(id) - 7) * 15
 
 def mse(imageA, imageB):
 

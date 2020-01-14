@@ -35,8 +35,8 @@ ap.add_argument("-s", "--second", required=True,
                 help="skip")
 args = vars(ap.parse_args())
 
-sh_poly_path = 'models/poly.joblib'
-sh_linear_path = 'models/linear.joblib'
+sh_poly_path = 'models/poly_to_7.joblib'
+sh_linear_path = 'models/linear_to_7.joblib'
 
 # load the two input images
 device = "cpu"
@@ -56,7 +56,8 @@ begin
 
 
 def id_to_degrees(id):
-    return (int(id) - 2) * 15
+    (int(id) - 7) * 15
+    return
 
 def mse(imageA, imageB):
 
@@ -155,9 +156,9 @@ sh_vals = ['07']
 # test_dir = '/home/tushar/face_relight/substet_eval/mpie'
 
 
-test_dir = '/home/tushar/face_relight/substet_eval/mpie_singel'
+# test_dir = '/home/tushar/face_relight/substet_eval/mpie_singel'
 
-# test_dir = '/home/nedko/face_relight/outputs/mpie'
+test_dir = '/home/nedko/face_relight/outputs/mpie'
 # test_dir1 = '/home/tushar/face_relight/substet_eval/transfer_batch_1xhalf'
 # test_dir = '/home/tushar/face_relight/substet_eval/transfer_batch_1xhalf'
 # test_dir1 = '/home/tushar/face_relight/substet_eval/face_crops_face_rel_full'
