@@ -9,6 +9,8 @@ import sys
 
 sys.path.append('models')
 sys.path.append('utils')
+from sklearn.preprocessing import PolynomialFeatures
+from sklearn import linear_model
 
 from utils_SH import *
 
@@ -24,6 +26,7 @@ import torch
 import time
 import cv2
 import matplotlib.pyplot as plt
+import joblib
 
 ap = argparse.ArgumentParser()
 ap.add_argument("-f", "--first", required=True,
@@ -32,8 +35,13 @@ ap.add_argument("-s", "--second", required=True,
                 help="skip")
 args = vars(ap.parse_args())
 
-# load the two input images
+sh_poly_path = 'models/poly.joblib'
+sh_linear_path = 'models/linear.joblib'
 
+# load the two input images
+device = "cpu"
+from_id = 4
+to_id = 7
 
 checkpoint_dir_cmd = args["first"]
 # checkpoint_dir_cmd = 'models/trained/trained_model_03.t7'#args["first"]
@@ -45,6 +53,11 @@ skip_c = int(args["second"])
 
 begin
 '''
+
+
+def id_to_degrees(id):
+    return (int(id) - 2) * 15
+
 def mse(imageA, imageB):
 
     err = np.sum((imageA.astype("float") - imageB.astype("float")) ** 2)
@@ -127,7 +140,7 @@ my_network.train(False)
 '''
 print(checkpoint_dir_cmd)
 my_network.load_state_dict(torch.load(checkpoint_dir_cmd))
-my_network.cuda()
+my_network.to(device)
 my_network.train(False)
 
 lightFolder = 'test_data/01/'
@@ -166,13 +179,27 @@ overall_error_1 = 0.0
 
 lowest_error = 9999999
 max_mse = 0
+
+if from_id == 7:
+    pose = id_to_degrees(to_id)
+elif to_id == 7:
+    pose = id_to_degrees(from_id)
+else:
+    raise ValueError()
+
+poly = joblib.load(sh_poly_path)
+lin = joblib.load(sh_linear_path)
+feat = poly.transform([[pose]])
+intensity_mul = torch.from_numpy(lin.predict(feat)).to(device).type(torch.FloatTensor)
+print('TEST: ', intensity_mul)
+
 for per in persons:
     if per in old_people:
         person_dir = os.path.join(test_dir, per)
         # from
         side_im = os.path.join(person_dir, per + '_07.png')
         # To
-        front_im = os.path.join(person_dir, per + '_05.png')
+        front_im = os.path.join(person_dir, per + '_0%d.png' % to_id)
 
 
         exists_ims_side = cv2.imread(side_im) is not None
@@ -206,7 +233,7 @@ for per in persons:
                 inputL = inputL.astype(np.float32) / 255.0
                 inputL = inputL.transpose((0, 1))
                 inputL = inputL[None, None, ...]
-                inputL = Variable(torch.from_numpy(inputL).cuda())
+                inputL = Variable(torch.from_numpy(inputL).to(device))
 
                 im_path = side_im
                 img1 = cv2.imread(im_path)
@@ -219,7 +246,7 @@ for per in persons:
                 inputL1 = inputL1.astype(np.float32) / 255.0
                 inputL1 = inputL1.transpose((0, 1))
                 inputL1 = inputL1[None, None, ...]
-                inputL1 = Variable(torch.from_numpy(inputL1).cuda())
+                inputL1 = Variable(torch.from_numpy(inputL1).to(device))
 
                 for i in range(1):
                     sh = np.loadtxt(os.path.join(lightFolder, 'rotate_light_{:02d}.txt'.format(i)))
@@ -238,7 +265,7 @@ for per in persons:
                     shading = shading * valid
 
                     sh = np.reshape(sh, (1, 9, 1, 1)).astype(np.float32)
-                    sh = Variable(torch.from_numpy(sh).cuda())
+                    sh = Variable(torch.from_numpy(sh).to(device))
 
                     _, _, outputSH, _ = my_network(inputL1, sh, skip_c)
 
