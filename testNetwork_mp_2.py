@@ -35,13 +35,14 @@ ap.add_argument("-s", "--second", required=True,
                 help="skip")
 args = vars(ap.parse_args())
 
-sh_poly_path = 'models/poly.joblib'
-sh_linear_path = 'models/linear.joblib'
+
+sh_poly_path = 'models/poly_%s_7.joblib'
+sh_linear_path = 'models/linear_%s_7.joblib'
 
 # load the two input images
 device = "cpu"
-from_id = 4
-to_id = 7
+from_id = 7
+to_id = 4
 
 checkpoint_dir_cmd = args["first"]
 # checkpoint_dir_cmd = 'models/trained/trained_model_03.t7'#args["first"]
@@ -182,15 +183,20 @@ max_mse = 0
 
 if from_id == 7:
     pose = id_to_degrees(to_id)
+    sh_poly_path = sh_poly_path % 'from'
+    sh_linear_path = sh_linear_path % 'from'
 elif to_id == 7:
     pose = id_to_degrees(from_id)
+    sh_poly_path = sh_poly_path % 'to'
+    sh_linear_path = sh_linear_path % 'to'
 else:
     raise ValueError()
+
 
 poly = joblib.load(sh_poly_path)
 lin = joblib.load(sh_linear_path)
 feat = poly.transform([[pose]])
-intensity_mul = torch.from_numpy(lin.predict(feat)).to(device).type(torch.FloatTensor)
+intensity_mul = lin.predict(feat)[0][0]
 print('TEST: ', intensity_mul)
 
 for per in persons:
