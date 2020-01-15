@@ -140,6 +140,7 @@ class lightgrad57Model(BaseModel):
             self.loss_G = self.loss_L1_add  # self.loss_G_L1 + self.loss_G_MSE + self.loss_G_total_variance
         #
         if epoch > 10:
+            # TODO: change this below loss to l2
             self.loss_G_feat = self.criterionL1(self.face_feat_A, self.face_feat_B) * 0.5
             self.loss_G = self.loss_G + self.loss_G_feat
         else:
