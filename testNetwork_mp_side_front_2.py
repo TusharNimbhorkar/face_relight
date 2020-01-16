@@ -378,7 +378,7 @@ for ii in range(len(from_id_list)):
                     segment_im[:, :, 1] = np.copy(first_channel)
                     segment_im[:, :, 2] = np.copy(first_channel)
                     segment_im[segment_im > 0] = 1
-                    resize = False
+                    resize = True
                     if resize:
                         img_side_copy = cv2.resize(img_side_copy,(128,128))
                         segment_im = cv2.resize(segment_im,(128,128))
