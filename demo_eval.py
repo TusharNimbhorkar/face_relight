@@ -124,19 +124,11 @@ for ii in range(len(from_id_list)):
     lin = joblib.load(sh_linear_path)
     feat = poly.transform([[pose]])
     intensity_mul = lin.predict(feat)[0][0]
-    # print('TEST: ', intensity_mul)
-
-
-
     sh_constant_ = intensity_mul
 
     front_number = IMS[ii]
-    overall_error_2 = 0.0
-    number = 0.0
-    number_seg = 0.0
-    overall_error_1 = 0.0
-    lowest_error = 9999999
-    max_mse = 0
+    number_files = 0.0
+    overall_error = 0.0
 
     for per in persons:
         
@@ -145,10 +137,15 @@ for ii in range(len(from_id_list)):
         if args['frontal']:            
             side_im = os.path.join(person_dir, per + '_07.png')
             front_im = os.path.join(person_dir, per + front_number)
+            from_sh = '_07.png'
+            to_sh = front_number
+            print('pose',pose)
 
         else:
             side_im = os.path.join(person_dir, per + front_number)        
             front_im = os.path.join(person_dir, per + '_07.png')
+            from_sh = front_number
+            to_sh = '_07.png'
 
 
         exists_ims_side = cv2.imread(side_im) is not None
@@ -249,18 +246,15 @@ for ii in range(len(from_id_list)):
                     segment_im = cv2.resize(segment_im,(128,128))
                     resultLab = cv2.resize(resultLab,(128,128))
 
-                current_mse_all = mse_all_seg(np.multiply(img_side_copy,segment_im), np.multiply(resultLab,segment_im),segment_im)
-                overall_error_1 = overall_error_1 + current_mse_all
-                number_seg=number_seg+1
-                
-                
+                current_mse = mse_all_seg(np.multiply(img_side_copy,segment_im), np.multiply(resultLab,segment_im),segment_im)
+                overall_error = overall_error + current_mse
+                number_files=number_files+1
 
 
-
+    print('RMSE Score for transfering light from ',from_sh,' to ', to_sh )
     print(front_number,sh_constant_)
-    print("number of files: ",number_seg)
-    # print("\nrmse(al): ", (overall_error_2/number))
-    print("rmse(al_segment): ", (overall_error_1/number_seg))
+    print("number of files: ",number_files)
+    print("rmse(al_segment): ", (overall_error/number_files))
 
 
 
