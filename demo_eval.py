@@ -251,8 +251,7 @@ for ii in range(len(from_id_list)):
                 number_files=number_files+1
 
 
-    print('RMSE Score for transfering light from ',from_sh,' to ', to_sh )
-    print(front_number,sh_constant_)
+    print('RMSE Score for transfering light of ',from_sh,' to ', to_sh )
     print("number of files: ",number_files)
     print("rmse(al_segment): ", (overall_error/number_files))
 
