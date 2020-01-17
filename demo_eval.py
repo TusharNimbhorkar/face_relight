@@ -5,9 +5,6 @@
 import sys
 
 sys.path.append('models')
-sys.path.append('utils')
-
-# from utils_SH import *
 
 # other modules
 import os
