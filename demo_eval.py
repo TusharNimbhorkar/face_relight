@@ -6,8 +6,7 @@ import sys
 
 sys.path.append('models')
 sys.path.append('utils')
-# from sklearn.preprocessing import PolynomialFeatures
-# from sklearn import linear_model
+
 from utils_SH import *
 
 # other modules
@@ -15,13 +14,9 @@ import os
 import numpy as np
 import argparse
 import math
-
 from torch.autograd import Variable
-# from torchvision.utils import make_grid
 import torch
-import time
 import cv2
-# import matplotlib.pyplot as plt
 import joblib
 
 
@@ -29,7 +24,7 @@ ap = argparse.ArgumentParser()
 ap.add_argument('--frontal', dest='frontal', action='store_true')
 ap.set_defaults(feature=True)
 args = vars(ap.parse_args())
-print(args['frontal'])
+
 checkpoint_dir_cmd = 'models/trained/14_net_G_dpr7_mseBS20.pth'
 
 '''
@@ -251,8 +246,7 @@ for ii in range(len(from_id_list)):
                 number_files=number_files+1
 
 
-    print('RMSE Score for transfering light of ',from_sh,' to ', to_sh )
-    print("number of files: ",number_files)
+    print('\nRMSE Score for transfering light of ',from_sh,' to ', to_sh )
     print("rmse(al_segment): ", (overall_error/number_files))
 
 
