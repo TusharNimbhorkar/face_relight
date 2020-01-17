@@ -26,26 +26,15 @@ import joblib
 
 
 ap = argparse.ArgumentParser()
-ap.add_argument("-f", "--frontalize",type=bool,default=False,
-                help="checkpoint")
 
-ap.add_argument("-n", "--non_frontalize",type=bool,default=False,
-                help="checkpoint")
 
-ap.add_argument('--feature', dest='feature', action='store_true')
-ap.add_argument('--no-feature', dest='feature', action='store_false')
+ap.add_argument('--frontal', dest='frontal', action='store_true')
 ap.set_defaults(feature=True)
 
 
 args = vars(ap.parse_args())
 
-# load the two input images
-
-print(args['frontalize'])
-print(args['non_frontalize'])
-print(args['feature'])
-print(args['no-feature'])
-# checkpoint_dir_cmd = args["first"]
+print(args['frontal'])
 
 checkpoint_dir_cmd = 'models/trained/14_net_G_dpr7_mseBS20.pth'
 
@@ -71,9 +60,7 @@ def mse_all(i1,i2):
 def mse_seg(imageA, imageB,seg):
 
     err = np.sum((imageA.astype("float") - imageB.astype("float")) ** 2)
-    # print(float(np.sum(seg[:,:,0])))
     err /= float(np.sum(seg[:,:,0]))
-    # err /= float(imageA.shape[0] * imageA.shape[1])
     rmse = math.sqrt(err)
     return rmse
 
@@ -127,9 +114,12 @@ for ii in range(len(from_id_list)):
     # from_id = from_id_list[ii]
 
     # to_id = from_id_list[ii]
-
-    from_id = 7
-    to_id = from_id_list[ii]
+    if args['frontal']:            
+        from_id = 7
+        to_id = from_id_list[ii]
+    else:
+        from_id = from_id_list[ii]
+        to_id = 7
 
 
     if from_id == 7:
@@ -162,31 +152,17 @@ for ii in range(len(from_id_list)):
     lowest_error = 9999999
     max_mse = 0
 
-    ##############################################################
-    # img_dirs = '/home/tushar/data2/face-parsing.PyTorch/res/mpie_segment/'
-    # people_ = os.listdir(img_dirs)
-    # peoples = []
-    # for jj in sorted(people_):
-    #     os.path.join(img_dirs, jj, jj + '_07.png')
-    #     im1_ = cv2.imread(os.path.join(img_dirs, jj, jj + '_07.png'), 0)
-    #     im2_ = cv2.imread(os.path.join(img_dirs, jj, jj + front_number), 0)
-    #     bool_compare = (im1_ == im2_).astype(np.int)
-    #     value = (bool_compare.shape[0] * bool_compare.shape[1]) - np.sum(bool_compare)
-    #     if value > 10000:
-    #         peoples.append(jj)
-    ##############################################################
-
-
     for per in persons:
         
         person_dir = os.path.join(test_dir, per)
         # from
-        side_im = os.path.join(person_dir, per + '_07.png')
-        # side_im = os.path.join(person_dir, per + front_number)
+        if args['frontal']:            
+            side_im = os.path.join(person_dir, per + '_07.png')
+            front_im = os.path.join(person_dir, per + front_number)
 
-        # To
-        front_im = os.path.join(person_dir, per + front_number)
-        # front_im = os.path.join(person_dir, per + '_07.png')
+        else:
+            side_im = os.path.join(person_dir, per + front_number)        
+            front_im = os.path.join(person_dir, per + '_07.png')
 
 
         exists_ims_side = cv2.imread(side_im) is not None
