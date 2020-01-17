@@ -137,15 +137,15 @@ for ii in range(len(from_id_list)):
         if args['frontal']:            
             side_im = os.path.join(person_dir, per + '_07.png')
             front_im = os.path.join(person_dir, per + front_number)
-            from_sh = '_07.png'
-            to_sh = front_number
-            print('pose',pose)
+            from_sh = 0
+            to_sh = pose
+            # print('pose',pose)
 
         else:
             side_im = os.path.join(person_dir, per + front_number)        
             front_im = os.path.join(person_dir, per + '_07.png')
-            from_sh = front_number
-            to_sh = '_07.png'
+            from_sh = pose
+            to_sh = 0
 
 
         exists_ims_side = cv2.imread(side_im) is not None
