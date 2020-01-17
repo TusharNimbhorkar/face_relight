@@ -252,15 +252,13 @@ for ii in range(len(from_id_list)):
                 current_mse_all = mse_all_seg(np.multiply(img_side_copy,segment_im), np.multiply(resultLab,segment_im),segment_im)
                 overall_error_1 = overall_error_1 + current_mse_all
                 number_seg=number_seg+1
-                current_mse_all = mse_all(img_side_copy, resultLab)
-                overall_error_2 = overall_error_2 + current_mse_all
-                number = number+1
+                
                 
 
 
 
     print(front_number,sh_constant_)
-    print("number of files: ",number)
+    print("number of files: ",number_seg)
     # print("\nrmse(al): ", (overall_error_2/number))
     print("rmse(al_segment): ", (overall_error_1/number_seg))
 
