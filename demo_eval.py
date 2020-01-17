@@ -6,8 +6,8 @@ import sys
 
 sys.path.append('models')
 sys.path.append('utils')
-from sklearn.preprocessing import PolynomialFeatures
-from sklearn import linear_model
+# from sklearn.preprocessing import PolynomialFeatures
+# from sklearn import linear_model
 from utils_SH import *
 
 # other modules
@@ -17,30 +17,23 @@ import argparse
 import math
 
 from torch.autograd import Variable
-from torchvision.utils import make_grid
+# from torchvision.utils import make_grid
 import torch
 import time
 import cv2
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 import joblib
 
 
 ap = argparse.ArgumentParser()
-
-
 ap.add_argument('--frontal', dest='frontal', action='store_true')
 ap.set_defaults(feature=True)
-
-
 args = vars(ap.parse_args())
-
 print(args['frontal'])
-
 checkpoint_dir_cmd = 'models/trained/14_net_G_dpr7_mseBS20.pth'
 
 '''
-
-begin
+functions to calculate mean squared error
 '''
 def mse(imageA, imageB):
 
@@ -94,11 +87,8 @@ my_network.cuda()
 my_network.train(False)
 
 lightFolder = 'test_data/01/'
-
 test_dir = '/home/tushar/data2/data/mpie'
-
 persons = os.listdir(test_dir)
-
 sh_poly_path_temp = 'models/poly_%s_7.joblib'
 sh_linear_path_temp = 'models/linear_%s_7.joblib'
 
@@ -106,14 +96,10 @@ sh_linear_path_temp = 'models/linear_%s_7.joblib'
 # load the two input images
 from_id_list = [8,9,10,6,5,4]
 IMS = ['_08.png','_09.png','_10.png','_06.png','_05.png','_04.png',]
-
 device = "cuda"
 
-
 for ii in range(len(from_id_list)):
-    # from_id = from_id_list[ii]
 
-    # to_id = from_id_list[ii]
     if args['frontal']:            
         from_id = 7
         to_id = from_id_list[ii]
