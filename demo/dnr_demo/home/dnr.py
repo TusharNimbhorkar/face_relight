@@ -63,15 +63,14 @@ def init_gpu(data_path, model_path):
         sh_lookup = sh_lookups['horizontal']
 
 @shared_task
-def prediction_task(data_path, x,y):
+def prediction_task(data_path, img_path, x,y):
     global sh_lookup, base_model
     worker_device = get_device()
 
     sh = sh_lookup[x]
 
     filename_uuid = str(uuid.uuid1())
-    input_path = osp.join(data_path, 'output')
-    input_img_path = (input_path, filename_uuid + '.png')
+    input_img_path = img_path
     # --------------------------------------------------
     # rendering half-sphere
     sh_mul = 0.8
@@ -108,12 +107,12 @@ def prediction_task(data_path, x,y):
 
 # replace this function with your own
 # returns the classification result of a given image_path
-def process_image(x_id, y_id=0):
+def process_image(img_path, x_id, y_id=0):
 
     # global data_path, src_data_path, model_path
     #
     data_path = osp.abspath('../data/')
-    task = prediction_task.delay(data_path, x_id, y_id)
+    task = prediction_task.delay(data_path, img_path, x_id, y_id)
 
     return task.get()
 
