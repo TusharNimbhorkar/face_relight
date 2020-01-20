@@ -1,0 +1,20 @@
+{% load static %}
+<!doctype html>
+<html>
+    <head>
+        <title>Novel Viewpoint Generation</title>
+    </head>
+    <style>
+        img {
+            width: 400px;
+        }
+    </style>
+    <body>
+        <form method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+            {{ form.as_table }}
+            <button type="submit">Upload</button>
+            </form>
+        <img src="media/out.png"><br>
+    </body>
+</html>
