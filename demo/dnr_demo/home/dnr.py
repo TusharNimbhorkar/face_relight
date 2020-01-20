@@ -15,7 +15,6 @@ import uuid
 
 from models.skeleton512 import HourglassNet
 import numpy as np
-import torch
 
 # only load these modules for Celery workers, to not slow down django
 if settings.IS_CELERY_WORKER:
@@ -62,57 +61,47 @@ def init_gpu(data_path, model_path):
                 sh_lookups[dir].append(sh)
 
         sh_lookup = sh_lookups['horizontal']
-        # # --------------------------------------------------
-        # # rendering half-sphere
-        # sh = np.squeeze(sh)
-        # shading = get_shading(normal, sh)
-        # value = np.percentile(shading, 95)
-        # ind = shading > value
-        # shading[ind] = value
-        # shading = (shading - np.min(shading)) / (np.max(shading) - np.min(shading))
-        # shading = (shading * 255.0).astype(np.uint8)
-        # shading = np.reshape(shading, (256, 256))
-        # shading = shading * valid
-        #
-        # sh = np.reshape(sh, (1, 9, 1, 1)).astype(np.float32)
-        # sh = Variable(torch.from_numpy(sh).cuda())
-        #
-        # millis_start = int(round(time.time() * 1000))
-        #
-        # outputImg, _, outputSH, _ = my_network(inputL, sh, skip_c)
-        #
-        # # outputImg, _, outputSH, _ = my_network(inputL, outputSH, skip_c)
-        #
-        # millis_after = int(round(time.time() * 1000))
-        # elapsed = millis_after - millis_start
-        # print('MILISECONDS:  ', elapsed)
-        # time_avg += elapsed
-        # count = count + 1
-        # outputImg = outputImg[0].cpu().data.numpy()
-        # outputImg = outputImg.transpose((1, 2, 0))
-        # outputImg = np.squeeze(outputImg)  # *1.45
-        # outputImg = (outputImg * 255.0).astype(np.uint8)
-        # Lab[:, :, 0] = outputImg
-        # resultLab = cv2.cvtColor(Lab, cv2.COLOR_LAB2BGR)
-        # resultLab = cv2.resize(resultLab, (col, row))
-        # cv2.imwrite(os.path.join(saveFolder, im[:-4] + '_{:02d}.jpg'.format(i)), resultLab)
 
 @shared_task
 def prediction_task(data_path, x,y):
+    global sh_lookup, base_model
     worker_device = get_device()
 
     sh = sh_lookup[x]
 
     filename_uuid = str(uuid.uuid1())
-    print("Out size:", base_model.out_size)
-    _, pred = base_model()
+    input_path = osp.join(data_path, 'output')
+    input_img_path = (input_path, filename_uuid + '.png')
+    # --------------------------------------------------
+    # rendering half-sphere
+    sh_mul = 0.8
+    sh = np.squeeze(sh) * sh_mul
+    sh = np.reshape(sh, (1, 9, 1, 1)).astype(np.float32)
+    sh = Variable(torch.from_numpy(sh).to(worker_device))
 
-    pred = (1+pred.cpu().detach())/2
-    pred = np.transpose(pred.numpy()[0]*255, (1,2,0))
-    # pred = np.zeros((512,512,3))
+    img = cv2.imread(input_img_path)
+    row, col, _ = img.shape
+    img = cv2.resize(img, (512, 512))
+    Lab = cv2.cvtColor(img, cv2.COLOR_BGR2LAB)
+
+    inputL = Lab[:, :, 0]
+    inputL = inputL.astype(np.float32) / 255.0
+    inputL = inputL.transpose((0, 1))
+    inputL = inputL[None, None, ...]
+    inputL = Variable(torch.from_numpy(inputL).to(worker_device))
+
+    outputImg, _, outputSH, _ = base_model(inputL, sh, 0)
+
+    outputImg = outputImg[0].cpu().data.numpy()
+    outputImg = outputImg.transpose((1, 2, 0))
+    outputImg = np.squeeze(outputImg)  # *1.45
+    outputImg = (outputImg * 255.0).astype(np.uint8)
+    Lab[:, :, 0] = outputImg
+    resultLab = cv2.cvtColor(Lab, cv2.COLOR_LAB2BGR)
+    resultLab = cv2.resize(resultLab, (col, row))
 
     filename = filename_uuid +".png"
-    cv2.imwrite(osp.join(data_path,'out/'+filename), pred[:,:,::-1])
+    cv2.imwrite(osp.join(data_path,'output/'+filename), resultLab)
 
     return filename
 
