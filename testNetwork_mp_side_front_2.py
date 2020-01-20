@@ -151,6 +151,7 @@ old_people = os.listdir(test_dir1)
 
 
 persons = os.listdir(test_dir)
+# persons = sorted(persons)
 
 
 # sh_costant_list = [0.9,1.1,1.2,1.3,1.4,1.5,1.6]
@@ -201,7 +202,7 @@ for ii in range(len(from_id_list)):
     lin = joblib.load(sh_linear_path)
     feat = poly.transform([[pose]])
     intensity_mul = lin.predict(feat)[0][0]
-    print('TEST: ', intensity_mul)
+    # print('TEST: ', intensity_mul)
 
 
 
@@ -235,8 +236,9 @@ for ii in range(len(from_id_list)):
             peoples.append(jj)
     ##############################################################
 
+    out_path = "outputs/gen/"
 
-    for per in persons:
+    for per in persons[:10]:
         
         person_dir = os.path.join(test_dir, per)
         # from
@@ -269,8 +271,8 @@ for ii in range(len(from_id_list)):
                 img = cv2.imread(im_path)
                 img_front_copy = cv2.imread(im_path)
                 row, col, _ = img.shape
-                img = cv2.resize(img, (512, 512))
-                Lab = cv2.cvtColor(img, cv2.COLOR_BGR2LAB)
+                img_res = cv2.resize(img, (512, 512))
+                Lab = cv2.cvtColor(img_res, cv2.COLOR_BGR2LAB)
 
                 inputL = Lab[:, :, 0]
                 inputL = inputL.astype(np.float32) / 255.0
@@ -282,8 +284,8 @@ for ii in range(len(from_id_list)):
                 img1 = cv2.imread(im_path)
                 img_side_copy = cv2.imread(im_path)
                 row1, col1, _ = img1.shape
-                img1 = cv2.resize(img1, (512, 512))
-                Lab1 = cv2.cvtColor(img1, cv2.COLOR_BGR2LAB)
+                img1_res = cv2.resize(img1, (512, 512))
+                Lab1 = cv2.cvtColor(img1_res, cv2.COLOR_BGR2LAB)
 
                 inputL1 = Lab1[:, :, 0]
                 inputL1 = inputL1.astype(np.float32) / 255.0
@@ -316,6 +318,7 @@ for ii in range(len(from_id_list)):
                     # outputImg, _, _, _ = my_network(inputL, outputSH, skip_c)
                     outputImg, _, _, _ = my_network(inputL, outputSH*sh_constant_, skip_c)
 
+                    out_per = os.path.join(out_path, per + '_%02d_%02d.jpg' % (to_id, from_id))
                     '''sh_viz'''
                     y = torch.Tensor.cpu(outputSH).detach().numpy()
                     sh = np.squeeze(y)
@@ -340,6 +343,10 @@ for ii in range(len(from_id_list)):
                     # #cv2.imwrite(os.path.join(saveFolder, side_im[:-4] + '_{:02d}.jpg'.format(i)), resultLab)
                     # cv2.imwrite(os.path.join('07_10.jpg'.format(i)), resultLab)
 
+                    os.makedirs(out_per, exist_ok=True)
+                    cv2.imwrite(os.path.join(out_per, per + '_%02d_%02d.jpg' % (to_id, from_id)), resultLab)
+                    cv2.imwrite(os.path.join(out_per, per + '_%02d_%02d_src.jpg' % (to_id, from_id)), img)
+                    cv2.imwrite(os.path.join(out_per, per + '_%02d_%02d_tgt.jpg' % (to_id, from_id)), img1)
                     #######################################################################
                     segment_path_ear = os.path.join('/home/tushar/data2/face-parsing.PyTorch/res/', 'mpie_segment',
                                                     per,
@@ -385,6 +392,7 @@ for ii in range(len(from_id_list)):
                         resultLab = cv2.resize(resultLab,(128,128))
 
                     current_mse_all = mse_all_seg(np.multiply(img_side_copy,segment_im), np.multiply(resultLab,segment_im),segment_im)
+                    print("RMSE: ", current_mse_all, per)
                     if current_mse_all>max_mse:
                         max_mse=current_mse_all
                         # print('max  ',per, '  err  ',max_mse)
