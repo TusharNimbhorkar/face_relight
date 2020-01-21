@@ -11,7 +11,7 @@ input[type=range].control-slider::-webkit-slider-runnable-track {
   height: 8px;
   cursor: pointer;
   box-shadow: 0px 0px 0px #000000, 0px 0px 0px #0d0d0d;
-  background: #3071a9;
+  background: #3d0088;
   border-radius: 25px;
   border: 0px solid #010101;
 }
@@ -56,13 +56,13 @@ input[type=range].control-slider::-ms-track {
   color: transparent;
 }
 input[type=range].control-slider::-ms-fill-lower {
-  background: #255681;
+  background: #3d0088;
   border: 0px solid #010101;
   border-radius: 50px;
   box-shadow: 0px 0px 0px #000000, 0px 0px 0px #0d0d0d;
 }
 input[type=range].control-slider::-ms-fill-upper {
-  background: #3071a9;
+  background: #3d0088;
   border: 0px solid #010101;
   border-radius: 50px;
   box-shadow: 0px 0px 0px #000000, 0px 0px 0px #0d0d0d;
