@@ -18,6 +18,12 @@ import uuid
 from models.skeleton512 import HourglassNet
 import numpy as np
 
+
+from .segment_model import BiSeNet
+import numpy as np
+from PIL import Image
+import torchvision.transforms as transforms
+
 # only load these modules for Celery workers, to not slow down django
 if settings.IS_CELERY_WORKER:
     import numpy as np
@@ -28,6 +34,8 @@ sh_lookups = None
 sh_lookup = None
 predictor = None
 detector = None
+segment_model = None
+segment_norm = None
 
 def get_device():
     worker_id = current_process().index
@@ -36,13 +44,14 @@ def get_device():
     else:
         device = "cpu"
 
+    # device = "cuda:0"
     return device
 
 def init_gpu(data_path, model_path):
-    global base_model, sh_lookup, sh_lookups, detector, predictor
-    if base_model is None:
-        device = get_device()
+    global base_model, sh_lookup, sh_lookups, detector, predictor, segment_model, segment_norm
 
+    device = get_device()
+    if base_model is None:
         base_model = HourglassNet()
         base_model.load_state_dict(torch.load(model_path))
         base_model.to(device)
@@ -73,6 +82,20 @@ def init_gpu(data_path, model_path):
         lmarks_model_path = osp.join(data_path, 'model', 'shape_predictor_68_face_landmarks.dat')
         predictor = dlib.shape_predictor(lmarks_model_path)
 
+    if segment_model is None:
+        n_classes = 19
+        segment_model = BiSeNet(n_classes=n_classes)
+        segment_model.to(device)
+        segment_model_path = osp.join(data_path, 'model', 'face_parsing.pth')
+        segment_model.load_state_dict(torch.load(segment_model_path))
+        segment_model.eval()
+
+    if segment_norm is None:
+        segment_norm = transforms.Compose([
+            transforms.ToTensor(),
+            transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
+        ])
+
 def R(theta):
     return np.array([[np.cos(theta), -np.sin(theta)],[np.sin(theta), np.cos(theta)]])
 
@@ -102,6 +125,37 @@ def shape_to_np(shape, dtype="int"):
     # return the list of (x, y)-coordinates
     return coords
 
+def vis_parsing_maps(im, parsing_anno, stride,h=None,w=None):
+
+    im = np.array(im)
+    vis_im = im.copy().astype(np.uint8)
+    vis_parsing_anno = parsing_anno.copy().astype(np.uint8)
+    vis_parsing_anno = cv2.resize(vis_parsing_anno, None, fx=stride, fy=stride, interpolation=cv2.INTER_NEAREST)
+    vis_parsing_anno_color = np.zeros((vis_parsing_anno.shape[0], vis_parsing_anno.shape[1], 3)) + 255
+    num_of_class = np.max(vis_parsing_anno)
+    vis_parsing_anno_color = vis_parsing_anno_color.astype(np.uint8)
+    vis_im = cv2.addWeighted(cv2.cvtColor(vis_im, cv2.COLOR_RGB2BGR), 0.4, vis_parsing_anno_color, 0.6, 0)
+    # MASK
+    vis_parsing_anno = cv2.resize(vis_parsing_anno,(w,h))
+    vis_parsing_anno[vis_parsing_anno==16]=0
+    vis_parsing_anno[vis_parsing_anno==16]=0
+    vis_parsing_anno[vis_parsing_anno>0]=1
+    return vis_parsing_anno
+
+
+def segment(img_, device):
+    with torch.no_grad():
+
+        h, w, _ = img_.shape
+        image = cv2.resize(img_, (512, 512), interpolation=cv2.INTER_AREA)
+        img = segment_norm(image)
+        img = torch.unsqueeze(img, 0)
+        img = img.to(device)
+        out = segment_model(img)[0]
+        parsing = out.squeeze(0).cpu().numpy().argmax(0)
+        output_img = vis_parsing_maps(image, parsing, stride=1,h=h,w=w)
+    return output_img
+
 def handleOutput(outputImg, Lab, col, row, filepath):
     outputImg = outputImg.transpose((1, 2, 0))
     outputImg = np.squeeze(outputImg)  # *1.45
@@ -117,11 +171,14 @@ def handleOutput(outputImg, Lab, col, row, filepath):
     return True
 
 
-def preprocess(img):
+def preprocess(img, device):
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     rects, scores, idx = detector.run(gray, 1, 1)
 
     if len(rects) > 0:
+
+        mask = segment(np.array(img), device)
+
         rect_id = np.argmax(scores)
         rect = rects[rect_id]
         # rect = rects[0]
@@ -147,13 +204,15 @@ def preprocess(img):
         c0_ps = np.max([0, int(c[0] + s / 2)])
 
         img = img[int(c1_ms):int(c1_ps), int(c0_ms):int(c0_ps)]
+        mask = mask[int(c1_ms):int(c1_ps), int(c0_ms):int(c0_ps)]
 
         row, col, _ = img.shape
         img = cv2.resize(img, (512, 512))
     else:
         img = None
+        mask = None
 
-    return img
+    return img, mask
 
 @shared_task
 def prediction_task_sh_mul(data_path, img_path, preset_name, sh_id):
@@ -164,9 +223,9 @@ def prediction_task_sh_mul(data_path, img_path, preset_name, sh_id):
     out_dir = osp.join(data_path, 'output', dir_uuid)
     os.makedirs(out_dir, exist_ok=True)
 
-    img = cv2.imread(img_path)
+    img_orig = cv2.imread(img_path)
 
-    img = preprocess(img)
+    img, mask = preprocess(img_orig, worker_device)
     is_face_found = img is not None
 
     if not is_face_found:
@@ -177,6 +236,7 @@ def prediction_task_sh_mul(data_path, img_path, preset_name, sh_id):
             cv2.imwrite,
             [osp.join(out_dir, 'ori.jpg'), img]
         )
+
 
         row, col, _ = img.shape
         Lab = cv2.cvtColor(img, cv2.COLOR_BGR2LAB)
@@ -216,14 +276,13 @@ def prediction_task(data_path, img_path, sh_mul=None):
     dir_uuid = str(uuid.uuid1())
     out_dir = osp.join(data_path, 'output', dir_uuid)
     os.makedirs(out_dir, exist_ok=True)
-    is_face_found = True
 
     if sh_mul == None:
         sh_mul = 0.7
 
     img = cv2.imread(img_path)
 
-    img = preprocess(img)
+    img, mask = preprocess(img, worker_device)
     is_face_found = img is not None
 
     if not is_face_found:
@@ -297,69 +356,10 @@ def worker_process_init_(**kwargs):
     model_path = osp.join(data_path, "model/14_net_G_dpr7_mseBS20.pth")
     init_gpu(data_path, model_path)  # make sure all models are initialized upon starting the worker
     # prediction_task_sh_mul(data_path, '../../test_data/portrait_/AJ.jpg', 'horizontal', 7)
-    prediction_task(data_path, '../../test_data/portrait_/AJ.jpg')
+    prediction_task(data_path, '../../test_data/portrait/aa.jpg')
     # prediction_task(data_path, '../../test_data/01/rotate_light_00.png')
 
 
-
-#
-#
-# #!/usr/bin/python
-# # -*- encoding: utf-8 -*-
-#
-# from model import BiSeNet
-#
-# import torch
-#
-# import os
-# import os.path as osp
-# import numpy as np
-# from PIL import Image
-# import torchvision.transforms as transforms
-# import cv2
-#
-# def vis_parsing_maps(im, parsing_anno, stride,h=None,w=None):
-#
-#     im = np.array(im)
-#     vis_im = im.copy().astype(np.uint8)
-#     vis_parsing_anno = parsing_anno.copy().astype(np.uint8)
-#     vis_parsing_anno = cv2.resize(vis_parsing_anno, None, fx=stride, fy=stride, interpolation=cv2.INTER_NEAREST)
-#     vis_parsing_anno_color = np.zeros((vis_parsing_anno.shape[0], vis_parsing_anno.shape[1], 3)) + 255
-#     num_of_class = np.max(vis_parsing_anno)
-#     vis_parsing_anno_color = vis_parsing_anno_color.astype(np.uint8)
-#     vis_im = cv2.addWeighted(cv2.cvtColor(vis_im, cv2.COLOR_RGB2BGR), 0.4, vis_parsing_anno_color, 0.6, 0)
-#     # MASK
-#     vis_parsing_anno = cv2.resize(vis_parsing_anno,(w,h))
-#     vis_parsing_anno[vis_parsing_anno==16]=0
-#     vis_parsing_anno[vis_parsing_anno==16]=0
-#     vis_parsing_anno[vis_parsing_anno>0]=1
-#     return vis_parsing_anno
-#
-#
-# def evaluate(img):
-#
-#     n_classes = 19
-#     net = BiSeNet(n_classes=n_classes)
-#     net.cuda()
-#     save_pth = osp.join('cp', '79999_iter.pth')
-#     net.load_state_dict(torch.load(save_pth))
-#     net.eval()
-#
-#     to_tensor = transforms.Compose([
-#         transforms.ToTensor(),
-#         transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
-#     ])
-#     with torch.no_grad():
-#
-#         w, h = img.size
-#         image = img.resize((512, 512), Image.BILINEAR)
-#         img = to_tensor(image)
-#         img = torch.unsqueeze(img, 0)
-#         img = img.cuda()
-#         out = net(img)[0]
-#         parsing = out.squeeze(0).cpu().numpy().argmax(0)
-#         output_img = vis_parsing_maps(image, parsing, stride=1,h=h,w=w)
-#     return output_img
 #
 #
 # if __name__ == "__main__":
