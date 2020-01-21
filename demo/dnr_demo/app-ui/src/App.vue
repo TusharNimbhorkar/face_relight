@@ -35,6 +35,7 @@
         </div>
         <div class="content">
           <button class="button sm-text menu" @click="isMenuShow=!isMenuShow"><i class="fa fa-bars"></i> Menu</button>
+          <div class="sm-text title">Face <span class="gradient">ReLight</span></div>
           <section id="examples" class="examples-section">
             <div id="example-images">
               <div class="image-section with-face-relight-output">

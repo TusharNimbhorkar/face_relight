@@ -327,11 +327,14 @@ hr {
       right: 0;
       left: 0;
       margin-left: auto;
+      margin-top: -2rem;
 
       .nav {
         width: 270px;
         margin-right: 1rem;
         margin-left: auto;
+        margin-top: 2rem;
+
       }
     }
   }
@@ -774,17 +777,30 @@ footer .button {
 
 
 /* Sidebar ------------------------------------------------------- */
-.sidebar {
-  .title {
-    font-size: 2em;
-
-    .gradient {
-      background: linear-gradient(to right, #000000 0%, #7300ff 100%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-    }
+.title {
+  font-size: 2em;
+  font-weight: 600;
+  letter-spacing: -0.05em;
+  
+  .nav-link {
+    line-height: 1;
   }
 
+  .gradient {
+    background: linear-gradient(to right, #000000 0%, #7300ff 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  &.sm-text {
+    position: absolute;
+    top: 30px;
+    right: 16px;
+    font-size: 1.6rem;
+  }
+}
+
+.sidebar {
   .divider{
     color: transparent;
     border-top: 1px solid #99999c;
