@@ -226,13 +226,23 @@ def preprocess(img, device):
         xv /= np.linalg.norm(xv)
         yv = np.dot(R_90, y_p)
 
+
+
         c1_ms = np.max([0, int(c[1] - s / 2)])
         c1_ps = np.max([0, int(c[1] + s / 2)])
         c0_ms = np.max([0, int(c[0] - s / 2)])
         c0_ps = np.max([0, int(c[0] + s / 2)])
 
+
+        # c1_ms = np.max([0, -int(c[1] - s / 2)])
+        # c1_ps = np.max([0, -int(c[1] + s / 2)])
+        # c0_ms = np.max([0, -int(c[0] - s / 2)])
+        # c0_ps = np.max([0, -int(c[0] + s / 2)])
+
         img = img[int(c1_ms):int(c1_ps), int(c0_ms):int(c0_ps)]
         mask = mask[int(c1_ms):int(c1_ps), int(c0_ms):int(c0_ps)]
+
+        cv2.copyMakeBorder(img, top, bottom, left, right, borderType, value)
 
         row, col, _ = img.shape
     else:
@@ -255,8 +265,8 @@ def prediction_task_sh_mul(data_path, img_path, preset_name, sh_id, upload_id=No
 
     img_orig = cv2.imread(img_path)
 
-    img, mask = preprocess(img_orig, worker_device)
-    is_face_found = img is not None
+    img_p, mask = preprocess(img_orig, worker_device)
+    is_face_found = img_p is not None
 
     if not is_face_found:
         print('FACE NOTE FOUND! Input image path:', img_path)
@@ -264,11 +274,12 @@ def prediction_task_sh_mul(data_path, img_path, preset_name, sh_id, upload_id=No
         pool = ThreadPool(processes=8)
         pool.apply_async(
             cv2.imwrite,
-            [osp.join(out_dir, 'ori.jpg'), img]
+            [osp.join(out_dir, 'ori.jpg'), img_p]
         )
 
 
-        row, col, _ = img.shape
+        row, col, _ = img_p.shape
+        img = cv2.resize(img_p, (512, 512))
         Lab = cv2.cvtColor(img, cv2.COLOR_BGR2LAB)
 
         inputL = Lab[:, :, 0]
@@ -291,7 +302,7 @@ def prediction_task_sh_mul(data_path, img_path, preset_name, sh_id, upload_id=No
 
             pool.apply_async(
                 handleOutput,
-                [outputImg, Lab, col, row, filepath,mask,img]
+                [outputImg, Lab, col, row, filepath,mask,img_p]
             )
 
         pool.close()
