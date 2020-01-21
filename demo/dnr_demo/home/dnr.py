@@ -306,9 +306,9 @@ def prediction_task(data_path, img_path, sh_mul=None):
     if sh_mul == None:
         sh_mul = 0.7
 
-    img = cv2.imread(img_path)
+    img_orig = cv2.imread(img_path)
 
-    img, mask = preprocess(img, worker_device)
+    img, mask = preprocess(img_orig, worker_device)
     is_face_found = img is not None
 
     if not is_face_found:
@@ -346,7 +346,7 @@ def prediction_task(data_path, img_path, sh_mul=None):
 
                 pool.apply_async(
                         handleOutput,
-                        [outputImg, Lab, col, row, filepath]
+                        [outputImg, Lab, col, row, filepath, mask, img_orig]
                     )
                 # cv2.imwrite(osp.join(out_dir, filename), resultLab)
 
