@@ -59,7 +59,8 @@
                       </td>
                       <td class="get-pallete">
                         <div class="control-wrapper">
-                          <button class="button" @click="selectOrbit('horizontal')" :class="{selected:selectedOrbit == 'horizontal'}">
+                          <button class="button" @click="selectOrbit('horizontal')" :class="{selected:selectedOrbit == 'horizontal'}"
+                            :disabled="isBusy">
                             <span class="sm-text">HRZ</span>
                             <span class="m-text">Horizontal</span>
                           </button>
@@ -68,7 +69,8 @@
                             Over
                           </button> -->
                            | 
-                          <button class="button" @click="selectOrbit('around')" :class="{selected:selectedOrbit == 'around'}">
+                          <button class="button" @click="selectOrbit('around')" :class="{selected:selectedOrbit == 'around'}"
+                            :disabled="isBusy">
                             Around
                           </button>
                         </div>
@@ -102,7 +104,7 @@
                             :min="minRangeSH" :max="maxRangeSH" step="0.1" v-model="shMul" 
                           >
                           <button class="button special default-hidden" :class="{'show': isShowingAdvanceOption}" 
-                          @click="handleUpdateSHMul()" :disabled="!isShowingSHPreview"> Apply </button>
+                          @click="handleUpdateSHMul()" :disabled="!isShowingSHPreview || isBusy"> Apply </button>
                           
                         </div>
                       </td>
