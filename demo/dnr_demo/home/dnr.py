@@ -186,7 +186,7 @@ def prediction_task_sh_mul(data_path, img_path, preset_name, sh_id):
         inputL = inputL.transpose((0, 1))
         inputL = inputL[None, None, ...]
 
-        for sh_mul in np.arange(0.5, 1.6, 0.1):
+        for sh_mul in np.arange(0.5, 1.1, 0.1):
             sh = np.squeeze(sh_lookups[preset_name][sh_id])
             sh = np.reshape(sh, (1, 9, 1, 1)).astype(np.float32) * sh_mul
             sh = torch.autograd.Variable(torch.from_numpy(sh).to(worker_device))
