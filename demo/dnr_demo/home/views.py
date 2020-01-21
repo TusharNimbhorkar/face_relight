@@ -26,14 +26,14 @@ def handle_uploaded_file(f):
         for chunk in f.chunks():
             destination.write(chunk)
 
-    img = np.array(cv2.imread(filepath))
+    # img = np.array(cv2.imread(filepath))
+    #
+    # if img.shape[0]<img.shape[1]:
+    #     img = imutils.resize(img, width=1024)
+    # else:
+    #     img = imutils.resize(img, width=1024)
 
-    if img.shape[0]<img.shape[1]:
-        img = imutils.resize(img, width=1024)
-    else:
-        img = imutils.resize(img, width=1024)
-
-    cv2.imwrite(filepath, img)
+    # cv2.imwrite(filepath, img)
     return filepath, file_id
 
 
