@@ -116,29 +116,12 @@ def handleOutput(outputImg, Lab, col, row, filepath):
     cv2.imwrite(filepath, resultLab)
     return True
 
-@shared_task
-def prediction_task(data_path, img_path, sh_mul=None):
-    global sh_lookup, base_model
-    worker_device = get_device()
 
-    dir_uuid = str(uuid.uuid1())
-    out_dir = osp.join(data_path, 'output', dir_uuid)
-    os.makedirs(out_dir, exist_ok=True)
-    is_face_found = True
-
-    if sh_mul == None:
-        sh_mul = 0.8
-
-    img = cv2.imread(img_path)
+def preprocess(img):
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     rects, scores, idx = detector.run(gray, 1, 1)
 
-    if len(rects) == 0:
-        is_face_found = False
-        print('FACE NOTE FOUND! Input image path:', img_path)
-    else:
-
-        pool = ThreadPool(processes=8)
+    if len(rects) > 0:
         rect_id = np.argmax(scores)
         rect = rects[rect_id]
         # rect = rects[0]
@@ -165,6 +148,89 @@ def prediction_task(data_path, img_path, sh_mul=None):
 
         img = img[int(c1_ms):int(c1_ps), int(c0_ms):int(c0_ps)]
 
+        row, col, _ = img.shape
+        img = cv2.resize(img, (512, 512))
+    else:
+        img = None
+
+    return img
+
+@shared_task
+def prediction_task_sh_mul(data_path, img_path, preset_name, sh_id):
+    global sh_lookup, base_model
+    worker_device = get_device()
+
+    dir_uuid = str(uuid.uuid1())
+    out_dir = osp.join(data_path, 'output', dir_uuid)
+    os.makedirs(out_dir, exist_ok=True)
+
+    img = cv2.imread(img_path)
+
+    img = preprocess(img)
+    is_face_found = img is not None
+
+    if not is_face_found:
+        print('FACE NOTE FOUND! Input image path:', img_path)
+    else:
+        pool = ThreadPool(processes=8)
+        pool.apply_async(
+            cv2.imwrite,
+            [osp.join(out_dir, 'ori.jpg'), img]
+        )
+
+        row, col, _ = img.shape
+        Lab = cv2.cvtColor(img, cv2.COLOR_BGR2LAB)
+
+        inputL = Lab[:, :, 0]
+        inputL = inputL.astype(np.float32) / 255.0
+        inputL = inputL.transpose((0, 1))
+        inputL = inputL[None, None, ...]
+
+        for sh_mul in np.arange(0.5, 1.6, 0.1):
+            sh = np.squeeze(sh_lookups[preset_name][sh_id])
+            sh = np.reshape(sh, (1, 9, 1, 1)).astype(np.float32) * sh_mul
+            sh = torch.autograd.Variable(torch.from_numpy(sh).to(worker_device))
+
+            t_inputL = torch.autograd.Variable(torch.from_numpy(inputL).to(worker_device))
+            outputImg, _, outputSH, _ = base_model(t_inputL, sh, 0)
+
+            outputImg = outputImg[0].cpu().data.numpy()
+            filename = preset_name + '_' + str(sh_id) + '_' + ("%.2f" % sh_mul) + '.jpg'
+            filepath = osp.join(out_dir, filename)
+
+            pool.apply_async(
+                handleOutput,
+                [outputImg, Lab, col, row, filepath]
+            )
+
+        pool.close()
+        pool.join()
+
+    return [dir_uuid, is_face_found]
+
+@shared_task
+def prediction_task(data_path, img_path, sh_mul=None):
+    global sh_lookup, base_model
+    worker_device = get_device()
+
+    dir_uuid = str(uuid.uuid1())
+    out_dir = osp.join(data_path, 'output', dir_uuid)
+    os.makedirs(out_dir, exist_ok=True)
+    is_face_found = True
+
+    if sh_mul == None:
+        sh_mul = 0.7
+
+    img = cv2.imread(img_path)
+
+    img = preprocess(img)
+    is_face_found = img is not None
+
+    if not is_face_found:
+        print('FACE NOTE FOUND! Input image path:', img_path)
+    else:
+
+        pool = ThreadPool(processes=8)
         pool.apply_async(
             cv2.imwrite,
             [osp.join(out_dir, 'ori.jpg'), img]
@@ -209,10 +275,15 @@ def prediction_task(data_path, img_path, sh_mul=None):
 # returns the classification result of a given image_path
 def process_image(img_path):
 
-    # global data_path, src_data_path, model_path
-    #
     data_path = osp.abspath('../data/')
     task = prediction_task.delay(data_path, img_path)
+
+    return task.get()
+
+def process_image_sh_mul(img_path, preset_name, sh_id):
+
+    data_path = osp.abspath('../data/')
+    task = prediction_task_sh_mul.delay(data_path, img_path, preset_name, sh_id)
 
     return task.get()
 
@@ -225,6 +296,7 @@ def worker_process_init_(**kwargs):
     data_path = osp.abspath('../data/')
     model_path = osp.join(data_path, "model/14_net_G_dpr7_mseBS20.pth")
     init_gpu(data_path, model_path)  # make sure all models are initialized upon starting the worker
+    # prediction_task_sh_mul(data_path, '../../test_data/portrait_/AJ.jpg', 'horizontal', 7)
     prediction_task(data_path, '../../test_data/portrait_/AJ.jpg')
     # prediction_task(data_path, '../../test_data/01/rotate_light_00.png')
 
