@@ -41,7 +41,7 @@
               <div class="image-section with-face-relight-output">
                 <div class="image-wrap">
 
-                  <img class="target-image cover" :src="imgURL" :class="{'hide': imgIndex!=selectedValue}" @click="selectOrbit('none')" v-for="(imgURL, imgIndex) in getSelectedModelRange" :key="imgIndex+imgURL">
+                  <img class="target-image cover" :src="imgURL" :class="{'hide': imgIndex!=selectedValue}" @click="selectOrbit('none')" v-for="(imgURL, imgIndex) in imageList" :key="imgIndex+imgURL">
                   <img class="target-image" :src="getOriginalImage">
                   
                   <div class="sh-preview" v-if="isShowingSHPreview">
@@ -150,6 +150,7 @@
   export default {
     data() {
       return {
+        imageList: [],
         minRangeSH: 0.5,
         maxRangeSH: 1.0,
         examples: ['sample_grlee', 'sample_paris','sample_AJ', 'sample_a1', 'sample_aa', 'sample_Faycey', 'sample_kat', 'sample_mal', 'sample_maja'],
@@ -164,7 +165,6 @@
         selectedSHMul: 0.7,
         shMul: 0.7,
         isShowingAdvanceOption: false,
-        timestamp: new Date()
       }
     },
     components: {
@@ -177,6 +177,7 @@
         this.maxRange = range[type].maxRange
         this.isShowingSHPreview = false
         this.isShowingAdvanceOption = false
+        this.updateImageList();
       },
       selectExample(id) {
         this.selectedModel = id
@@ -258,10 +259,12 @@
             }
           ).then((results) => {
             // this.selectedModel = results.data.upload_id;
-            this.timestamp = new Date()
-            this.isBusy = false;
-            this.isShowingAdvanceOption = false
-            this.isShowingSHPreview = false
+            this.updateImageList()
+            setTimeout(()=> {
+              this.isBusy = false;
+              this.isShowingAdvanceOption = false
+              this.isShowingSHPreview = false
+            }, 500)
           })
           .catch((error) => {
             console.log('err', error)
@@ -279,16 +282,26 @@
         if (!this.isBusy) {
           this.isBusy = true;
         
+          let id = this.selectedOrbit==='over' ? this.maxRange - this.selectedValue : this.selectedValue;
+          if (this.selectedOrbit === 'around') {
+            id = this.maxRange - this.selectedValue - 16;
+            if (id < 0) {
+              id += this.maxRange
+            }
+          }
+          
           axios.post( '/create-sh-previews',{
               file_id: this.selectedModel,
-              sh_id: +this.selectedValue,
+              sh_id: +id,
               preset_name: this.selectedOrbit,
             }
           ).then((results) => {
-            // this.selectedModel = results.data.upload_id;            
-            this.timestamp = new Date()
-            this.isBusy = false;
-            this.isShowingAdvanceOption = true
+            // this.selectedModel = results.data.upload_id;   
+            this.updateImageList();         
+            setTimeout(()=> {
+              this.isBusy = false;
+              this.isShowingAdvanceOption = true
+            }, 500)
           })
           .catch((error) => {
             console.log('err', error)
@@ -301,19 +314,18 @@
             this.isBusy = false;
           });
         }
-      }
-    },
-    computed: { 
-      getSelectedModelRange() {        
+      },
+      updateImageList() {        
         const list = new Array(this.maxRange + 1)
 
         for (let val=this.minRange ; val <= this.maxRange; val++) {
           list[val] = this.generateImageURL(val)
         }
 
-        console.log(this.timestamp)
-        return list
+        this.imageList = list
       },
+    },
+    computed: { 
       getOriginalImage() {
         return `${MEDIA_ROOT}/${this.selectedModel}/ori.jpg`
       },
