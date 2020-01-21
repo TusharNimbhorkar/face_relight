@@ -26,9 +26,9 @@ def home(request):
 
         if form.is_valid():
             filepath = handle_uploaded_file(request.FILES['file'])
-            result = process_image(filepath)
+            result, is_face_found = process_image(filepath)
 
-            return JsonResponse({"filename": result})
+            return JsonResponse({"filename": result, "is_face_found":is_face_found})
 
         return HttpResponseBadRequest()
     else:
