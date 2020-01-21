@@ -128,6 +128,7 @@ def shape_to_np(shape, dtype="int"):
 def vis_parsing_maps(im, parsing_anno, stride,h=None,w=None):
 
     im = np.array(im)
+    alpha_2 = np.copy(im)
     vis_im = im.copy().astype(np.uint8)
     vis_parsing_anno = parsing_anno.copy().astype(np.uint8)
     vis_parsing_anno = cv2.resize(vis_parsing_anno, None, fx=stride, fy=stride, interpolation=cv2.INTER_NEAREST)
@@ -138,8 +139,12 @@ def vis_parsing_maps(im, parsing_anno, stride,h=None,w=None):
     # MASK
     vis_parsing_anno = cv2.resize(vis_parsing_anno,(w,h))
     vis_parsing_anno[vis_parsing_anno==16]=0
-    vis_parsing_anno[vis_parsing_anno==16]=0
-    vis_parsing_anno[vis_parsing_anno>0]=1
+    vis_parsing_anno[vis_parsing_anno>0]=255
+
+    # alpha_2 = cv2.imread(segment_path_ear)
+    alpha_2[:,:,0] = np.copy(vis_parsing_anno)
+    alpha_2[:,:,1] = np.copy(vis_parsing_anno)
+    alpha_2[:,:,2] = np.copy(vis_parsing_anno)
     return vis_parsing_anno
 
 
@@ -156,7 +161,7 @@ def segment(img_, device):
         output_img = vis_parsing_maps(image, parsing, stride=1,h=h,w=w)
     return output_img
 
-def handleOutput(outputImg, Lab, col, row, filepath):
+def handleOutput(outputImg, Lab, col, row, filepath,mask,img_orig):
     outputImg = outputImg.transpose((1, 2, 0))
     outputImg = np.squeeze(outputImg)  # *1.45
     outputImg = (outputImg * 255.0).astype(np.uint8)
@@ -167,7 +172,28 @@ def handleOutput(outputImg, Lab, col, row, filepath):
     resultLab = cv2.resize(resultLab, (col, row))
 
     os.makedirs(os.path.dirname(filepath), exist_ok=True)
-    cv2.imwrite(filepath, resultLab)
+    # do something here
+    # make a gauss blur
+    alpha_2 = cv2.GaussianBlur(mask,(29,29),15,15)
+    # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!  TODO add original image which will be background  CHECK AGAIN  !!!!!!!!!!!
+    background = np.copy(img_orig)
+    foreground = np.copy(resultLab)
+    foreground = foreground.astype(float)
+    background = background.astype(float)
+
+    # Normalize the alpha mask to keep intensity between 0 and 1
+    alpha_2 = alpha_2.astype(float) / 255
+
+    # Multiply the foreground with the alpha matte
+    foreground = cv2.multiply(alpha_2, foreground)
+
+    # Multiply the background with ( 1 - alpha )
+    background = cv2.multiply(1 - alpha_2, background)
+
+    # Add the masked foreground and background.
+    outImage = cv2.add(foreground, background)
+
+    cv2.imwrite(filepath, outImage)
     return True
 
 
@@ -260,7 +286,7 @@ def prediction_task_sh_mul(data_path, img_path, preset_name, sh_id):
 
             pool.apply_async(
                 handleOutput,
-                [outputImg, Lab, col, row, filepath]
+                [outputImg, Lab, col, row, filepath,mask,img_orig]
             )
 
         pool.close()
