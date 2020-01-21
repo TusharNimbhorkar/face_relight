@@ -220,4 +220,4 @@ def worker_process_init_(**kwargs):
     model_path = osp.join(data_path, "model/14_net_G_dpr7_mseBS20.pth")
     init_gpu(data_path, model_path)  # make sure all models are initialized upon starting the worker
     # prediction_task(data_path, '../../test_data/portrait_/a1.jpeg')
-    prediction_task(data_path, '../../test_data/01/rotate_light_00.png')
+    # prediction_task(data_path, '../../test_data/01/rotate_light_00.png')
