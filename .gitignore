@@ -116,3 +116,7 @@ venv.bak/
 
 # mypy
 .mypy_cache/
+
+demo/data/uploads
+demo/data/output/*
+!demo/data/output/sample_*

@@ -10,6 +10,7 @@ import os
 sys.path.append("../..")
 sys.path.append("../../model")
 import cv2
+from multiprocessing.pool import ThreadPool
 
 import uuid
 
@@ -62,6 +63,20 @@ def init_gpu(data_path, model_path):
 
         sh_lookup = sh_lookups['horizontal']
 
+def handleOutput(outputImg, Lab, col, row, filepath):
+    outputImg = outputImg.transpose((1, 2, 0))
+    outputImg = np.squeeze(outputImg)  # *1.45
+    outputImg = (outputImg * 255.0).astype(np.uint8)
+
+    t_Lab = Lab.copy()
+    t_Lab[:, :, 0] = outputImg
+    resultLab = cv2.cvtColor(t_Lab, cv2.COLOR_LAB2BGR)
+    resultLab = cv2.resize(resultLab, (col, row))
+
+    os.makedirs(os.path.dirname(filepath), exist_ok=True)
+    cv2.imwrite(filepath, resultLab)
+    return True
+
 @shared_task
 def prediction_task(data_path, img_path):
     global sh_lookup, base_model
@@ -70,6 +85,22 @@ def prediction_task(data_path, img_path):
     dir_uuid = str(uuid.uuid1())
     out_dir = osp.join(data_path, 'output', dir_uuid)
     os.makedirs(out_dir, exist_ok=True)
+    pool = ThreadPool(processes=8)
+
+    img = cv2.imread(img_path)
+    pool.apply_async(
+        cv2.imwrite,
+        [ osp.join(out_dir, 'ori.jpg'), img]
+    )
+
+    row, col, _ = img.shape
+    img = cv2.resize(img, (512, 512))
+    Lab = cv2.cvtColor(img, cv2.COLOR_BGR2LAB)
+
+    inputL = Lab[:, :, 0]
+    inputL = inputL.astype(np.float32) / 255.0
+    inputL = inputL.transpose((0, 1))
+    inputL = inputL[None, None, ...]
 
     for preset_id, sh_presets in sh_lookups.items():
         for i, sh in enumerate(sh_presets):
@@ -78,29 +109,22 @@ def prediction_task(data_path, img_path):
             sh = np.reshape(sh, (1, 9, 1, 1)).astype(np.float32)
             sh = torch.autograd.Variable(torch.from_numpy(sh).to(worker_device))
 
-            img = cv2.imread(img_path)
-            row, col, _ = img.shape
-            img = cv2.resize(img, (512, 512))
-            Lab = cv2.cvtColor(img, cv2.COLOR_BGR2LAB)
+            t_inputL = torch.autograd.Variable(torch.from_numpy(inputL).to(worker_device))
 
-            inputL = Lab[:, :, 0]
-            inputL = inputL.astype(np.float32) / 255.0
-            inputL = inputL.transpose((0, 1))
-            inputL = inputL[None, None, ...]
-            inputL = torch.autograd.Variable(torch.from_numpy(inputL).to(worker_device))
-
-            outputImg, _, outputSH, _ = base_model(inputL, sh, 0)
+            outputImg, _, outputSH, _ = base_model(t_inputL, sh, 0)
 
             outputImg = outputImg[0].cpu().data.numpy()
-            outputImg = outputImg.transpose((1, 2, 0))
-            outputImg = np.squeeze(outputImg)  # *1.45
-            outputImg = (outputImg * 255.0).astype(np.uint8)
-            Lab[:, :, 0] = outputImg
-            resultLab = cv2.cvtColor(Lab, cv2.COLOR_LAB2BGR)
-            resultLab = cv2.resize(resultLab, (col, row))
+            filename = preset_id + '_' + str(i) + '.jpg'
+            filepath = osp.join(out_dir, filename)
 
-            filename = preset_id + '_' + str(i) + '.png'
-            cv2.imwrite(osp.join(out_dir, filename), resultLab)
+            pool.apply_async(
+                    handleOutput,
+                    [outputImg, Lab, col, row, filepath]
+                )
+            # cv2.imwrite(osp.join(out_dir, filename), resultLab)
+
+    pool.close()
+    pool.join()
 
     return dir_uuid
 

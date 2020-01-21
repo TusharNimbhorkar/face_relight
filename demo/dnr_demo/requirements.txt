@@ -5,3 +5,4 @@ django-redis
 redis
 pillow
 torch
+humanhash3

@@ -30,159 +30,40 @@
 	<script src="https://cdn.jsdelivr.net/npm/js-cookie@2/src/js.cookie.min.js"></script>
 
 	<script>
-	   function makeid(length) {
-			var result           = '';
-			var characters       = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-			var charactersLength = characters.length;
-			for ( var i = 0; i < length; i++ ) {
-				result += characters.charAt(Math.floor(Math.random() * charactersLength));
-			}
-			return result;
-		}
-	   
 	    var isBusy = false
 	   	$(document).ready(function() {
-			function showImgResult(placeholder, url, params) {
-				$.get(url, function () {
-					var result = document.createElement("DIV");
-
-					var img = document.createElement("IMG");
-					img.src = url;
-
-					var tag = document.createElement("DIV")
-					$(tag).text(`Vertical angle:${params.theta}, Horizontal angle:${params.phi}, Distance:${params.r}`)
 					
-					result.append(tag)
-					result.append(img)
+				$('#submit_button').bind('click', function () {
+					if (isBusy) {
+						return false;
+					}
 
-					$(placeholder).replaceWith(result);  
-				})
-           	}
+					isBusy = true;
+					
+					var fileInput = document.getElementById('file');
+					var file = fileInput.files[0];
+					var formData = new FormData();
+					formData.append('file', file);
 
-            function showMultiImgResult(placeholder, urls, displayName, params) {
-					var result = document.createElement("DIV");
-					result.setAttribute('class', 'row');
+					var xhr = new XMLHttpRequest();
+					// Add any event handlers here...
+					xhr.open('POST', '/', true);
+					xhr.send(formData);
 
-					var tag = document.createElement("DIV")
-					$(tag).text(`${displayName} Presets`)
-
-					result.append(tag);
-
-                    var result_cols = [];
-                    var imgs = [];
-                    for (let i = 0; i < urls.length; i++) {
-                        var col = document.createElement("DIV");
-                        var img = document.createElement("IMG");
-                        col.setAttribute('class', 'column');
-
-
-                        col.append(img);
-    					result.append(col);
-                        result_cols.push(img);
-
-                        $.get(urls[i], function () {
-                            result_cols[i].src = urls[i];
-
-                        })
-
-                    }
-
-
-					$(placeholder).replaceWith(result);
-
-           	}
-
-           	var onPresetClick = function() {
-				if (isBusy) {
-					return false;
-				}
-
-                var button_id = this.id;
-				var serviceName = "";
-				var displayName = "";
-
-				if(button_id === "zalando_button")
-                {
-                    serviceName = "zalando"
-                    displayName = "Zalando"
-                }
-				else if(button_id === 'boldotcom_button'){
-				    serviceName = "bol.com"
-                    displayName = "Bol.com"
-                }
-
-				isBusy = true;
-				var params = {
-					theta: $('#id_theta').val(),
-					phi: $('#id_phi').val(),
-					r:$('#id_r').val(),
-                    isPreset: Boolean(1),
-                    presetName: String(serviceName)
-				};
-
-				var id = makeid(10);
-				var placeholder = document.createElement("DIV")
-				placeholder.setAttribute('id', `result_${id}`);
-				$(placeholder).text(`Processing :: ${displayName} Presets`)
-
-				$('#results').prepend(placeholder);
-
-				// show the loading and replacement
-				$.post('/', params, function (data) {
-					showMultiImgResult(placeholder, data.filename, displayName, params);
 					isBusy = false;
-				})
-			}
-		
-			$('#submit_button').bind('click', function () {
-				if (isBusy) {
-					return false;
-				}
+				});
 
-				isBusy = true;
-				var params = {
-					theta: $('#id_theta').val(),
-					phi: $('#id_phi').val(),
-					r:$('#id_r').val(),
-                    isPreset: Boolean(0),
-                    presetName: String("None")
-				}
-
-				var id = makeid(10);
-				var placeholder = document.createElement("DIV")
-				placeholder.setAttribute('id', `result_${id}`);
-				$(placeholder).text(`Processing :: Theta:${params.theta}, Phi:${params.phi}, R:${params.r}`)
-
-				$('#results').prepend(placeholder);
-
-				// show the loading and replacement
-				$.post('/', params, function (data) {
-					showImgResult(placeholder, data.filename, params);
-					isBusy = false;
-				})
-			});
-
-            $('#zalando_button').bind('click', onPresetClick);
-            $('#boldotcom_button').bind('click', onPresetClick);
 	   	});
 	</script>
     </head>
     <body>
 
-	<label for="id_theta">Vertical angle:</label>
-	<input type="number" name="theta" value="90" step="any" id="id_theta" required="" min="0" max="90" style="width: 80px;">
-
-	<label for="id_phi">Horizontal angle:</label>
-	<input type="number" name="phi" value="90" step="any" id="id_phi" required="" style="width: 80px;">
-
-	<label for="id_r">Distance:</label>
-	<input type="number" name="r" value="30" step="any" id="id_r" required=""  min="0.01" style="width: 80px;">
+	<label for="file">Select image file:</label>
+	<input type="file" name="file" id="file" required>
 
         <!-- {{ form.as_table }} -->
 	<button type="submit" id="submit_button">Upload</button>
 
-    <button type="submit" id="zalando_button" >Zalando</button>
-    <button type="submit" id="boldotcom_button" >bol.com</button>
 	<div id="results"></div>
     </body>
 </html>
