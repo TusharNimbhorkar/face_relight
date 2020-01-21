@@ -256,7 +256,7 @@ def prediction_task(data_path, img_path, sh_mul=None):
                 outputImg, _, outputSH, _ = base_model(t_inputL, sh, 0)
 
                 outputImg = outputImg[0].cpu().data.numpy()
-                filename = preset_id + '_' + str(i) + '_' + str(sh_mul) + '.jpg'
+                filename = preset_id + '_' + str(i) + '_' + ("%.2f" % sh_mul) + '.jpg'
                 filepath = osp.join(out_dir, filename)
 
                 pool.apply_async(
