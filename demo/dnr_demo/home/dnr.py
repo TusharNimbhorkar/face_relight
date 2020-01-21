@@ -16,12 +16,10 @@ from multiprocessing.pool import ThreadPool
 import uuid
 
 from models.skeleton512 import HourglassNet
-import numpy as np
 
 
 from .segment_model import BiSeNet
 import numpy as np
-from PIL import Image
 import torchvision.transforms as transforms
 
 # only load these modules for Celery workers, to not slow down django
@@ -388,12 +386,3 @@ def worker_process_init_(**kwargs):
     # prediction_task_sh_mul(data_path, '../../test_data/portrait_/AJ.jpg', 'horizontal', 7)
     # prediction_task(data_path, '../../test_data/portrait/aa.jpg')
     # prediction_task(data_path, '../../test_data/01/rotate_light_00.png')
-
-
-#
-#
-# if __name__ == "__main__":
-#     image_path = 'data/aa.jpg'
-#     img = Image.open(osp.join(image_path))
-#     segment = evaluate(image=img)
-
