@@ -22,7 +22,7 @@
                 <div>
                   <h3>Examples</h3>
                   <div class="gallery">
-                    <div class="gallery-item" v-for="item in examples" v-bind:key="item" @click="selectExample(item)">
+                    <div class="gallery-item" v-for="item in examples" :key="item" @click="selectExample(item)">
                       <div class="gallery-item-image"
                           :style="{'background-image': `url(/media/output/${item}/ori.jpg)`}">
                       </div>
@@ -41,8 +41,8 @@
               <div class="image-section with-face-relight-output">
                 <div class="image-wrap">
                   <button class="run-functions-button hide">...</button>
-                  <img class="target-image" :src="getSelectedModel.active" @click="selectOrbit('none')">
 
+                  <img class="target-image" :src="imgURL" :id="imgIndex" :class="{'hide': imgIndex!=selectedValue}" @click="selectOrbit('none')" v-for="(imgURL, imgIndex) in getSelectedModelRange" :key="imgURL">
                   <div class="image-wrap-cover" :class="{'show': isBusy}">{{isBusy}}</div>
                 </div>
                 <div class="face-relight-output" style="display: block;">
@@ -56,9 +56,14 @@
                           <button class="button" @click="selectOrbit('horizontal')" :class="{selected:selectedOrbit == 'horizontal'}">
                             <span class="sm-text">HRZ</span>
                             <span class="m-text">Horizontal</span>
-                          </button> | 
+                          </button>
+                           <!-- | 
                           <button class="button" @click="selectOrbit('over')" :class="{selected:selectedOrbit == 'over'}">
                             Over
+                          </button> -->
+                           | 
+                          <button class="button" @click="selectOrbit('around')" :class="{selected:selectedOrbit == 'around'}">
+                            Around
                           </button>
                         </div>
                       </td>
@@ -88,7 +93,9 @@
 
 <script>
   const MEDIA_ROOT = '/media/output'
-  import axios from 'axios';
+  import axios from 'axios'
+  import Swal from 'sweetalert2'
+  
   const range = {
     'horizontal': {
       minRange: 0,
@@ -97,8 +104,13 @@
     },
     'over': {
       minRange: 0,
-      maxRange: 34,
+      maxRange: 35,
       midRange: 16
+    },
+    'around': {
+      minRange: 0,
+      maxRange: 69,
+      midRange: 32
     },
     'none': {
       minRange:0,
@@ -112,7 +124,7 @@
     props: ['id'],
     data() {
       return {
-        examples: ['sample_AJ', 'sample_a1', 'sample_aa', 'sample_Faycey', 'sample_kat', 'sample_mal'],
+        examples: ['sample_grlee', 'sample_paris','sample_AJ', 'sample_a1', 'sample_aa', 'sample_Faycey', 'sample_kat', 'sample_mal'],
         selectedModel: 'sample_AJ',
         selectedOrbit: defaultOrbit,
         selectedValue: range[defaultOrbit].midRange,
@@ -151,24 +163,68 @@
               responseType: 'json'
             }
           ).then((results) => {
-            this.selectExample(results.data.filename);
-            this.isBusy = false;
+
+            if (!!results.data.is_face_found) {
+              this.selectExample(results.data.filename);
+              this.isBusy = false;
+            } else {
+              Swal.fire({
+                icon: 'error',
+                title: 'We could not detect a face in this picture',
+                text: 'Please upload an image with atleast on visible face',
+              });
+              this.isBusy = false;
+            }
           })
           .catch((results) => {
-            console.log('FAILURE!!');
+            Swal.fire({
+                icon: 'error',
+                title: 'Oops...',
+                text: 'Server is having a difficulty processing your file, please try again in a few minutes...',
+              });
+
             this.isBusy = false;
           });
         }
+      },
+      generateImageURL(val) {
+        const defaultURL = `${MEDIA_ROOT}/${this.selectedModel}/ori.jpg`;
+        let id = this.selectedOrbit==='over' ? this.maxRange - val : val;
+        if (this.selectedOrbit === 'around') {
+          id = this.maxRange - val - 16;
+          if (id < 0) {
+            id += this.maxRange
+          }
+        }
+                
+        return this.selectedOrbit==='none' ? defaultURL : `${MEDIA_ROOT}/${this.selectedModel}/${this.selectedOrbit}_${id}.jpg`
       }
     },
-    computed: {
-      getSelectedModel() {
-        const defaultURL = `${MEDIA_ROOT}/${this.selectedModel}/ori.jpg`;
-        const id = this.selectedOrbit=='over' ? this.maxRange - this.selectedValue : this.selectedValue;
-        return {
-          active: this.selectedOrbit=='none' ? defaultURL : `${MEDIA_ROOT}/${this.selectedModel}/${this.selectedOrbit}_${id}.jpg`
+    computed: { 
+      getSelectedModelRange() {        
+        const list = new Array(this.maxRange + 1)
+
+        for (let val=this.minRange ; val <= this.maxRange; val++) {
+          list[val] = this.generateImageURL(val)
         }
-      }
+
+        console.log(list)
+        return list
+      },
+      // getSelectedModel() {
+      //   const defaultURL = `${MEDIA_ROOT}/${this.selectedModel}/ori.jpg`;
+      //   let id = this.selectedOrbit==='over' ? this.maxRange - this.selectedValue : this.selectedValue;
+      //   if (this.selectedOrbit === 'around') {
+      //     id = this.maxRange - this.selectedValue - 16;
+      //     if (id < 0) {
+      //       id += this.maxRange
+      //     }
+      //   }
+                
+      //   return {
+      //     active: this.selectedOrbit==='none' ? defaultURL : `${MEDIA_ROOT}/${this.selectedModel}/${this.selectedOrbit}_${id}.jpg`
+      //   }
+      // }
     },
     mounted() {
       const scope = this;

@@ -687,6 +687,10 @@ footer .button {
   display: block;
   width: 100%;
   border-radius: var(--border-radius-xl) var(--border-radius-xl) 0 0;
+
+  &.hide {
+    display: none !important;
+  }
 }
 
 .face-relight-output {
