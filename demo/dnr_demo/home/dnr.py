@@ -195,7 +195,7 @@ def handleOutput(outputImg, Lab, col, row, filepath,mask,img_orig):
     # Add the masked foreground and background.
     outImage = cv2.add(foreground, background)
 
-    cv2.imwrite(filepath, img_orig)
+    cv2.imwrite(filepath, outImage)
     return True
 
 
