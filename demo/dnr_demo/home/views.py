@@ -28,7 +28,8 @@ def home(request):
             filepath = handle_uploaded_file(request.FILES['file'])
             result, is_face_found = process_image(filepath)
 
-            # result, is_face_found = process_image(filepath, preset_name, sh_id)
+            # result, is_face_found = process_image(filepath, sh_mul)
+            # result, is_face_found = process_image_sh_mul(filepath, preset_name, sh_id)
 
             return JsonResponse({"filename": result, "is_face_found":is_face_found})
 
