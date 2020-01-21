@@ -6,3 +6,4 @@ redis
 pillow
 torch
 humanhash3
+djangorestframework
