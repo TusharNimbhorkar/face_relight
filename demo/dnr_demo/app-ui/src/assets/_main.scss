@@ -839,3 +839,19 @@ footer .button {
 table {
   width: 100%;
 }
+
+@media(max-width: 720px) {
+  .face-relight-output {
+    padding: 0.8rem;
+  }
+
+  .with-face-relight-output { 
+    .get-pallete {
+      width: 60% !important;
+    }
+
+    .control-wrapper {
+      margin: 0 0rem 0.6rem;
+    }
+  }
+}

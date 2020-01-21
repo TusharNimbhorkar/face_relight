@@ -53,11 +53,11 @@
                       <td class="get-pallete">
                         <div class="control-wrapper">
                           <button class="button" @click="selectOrbit('horizontal')" :class="{selected:selectedOrbit == 'horizontal'}">
-                            <span class="sm-text">H</span>
+                            <span class="sm-text">HRZ</span>
                             <span class="m-text">Horizontal</span>
                           </button> | 
                           <button class="button" @click="selectOrbit('over')" :class="{selected:selectedOrbit == 'over'}">
-                            <span class="sm-text">O</span>
+                            <span class="sm-text">OVR</span>
                             <span class="m-text">Over</span>
                           </button>
                         </div>
@@ -134,6 +134,7 @@
       selectExample(id) {
         this.selectedModel = id
         this.selectOrbit('none')
+        this.isMenuShow = false
       },
       handleFileUpload() {
         const file = this.$refs.file.files[0];
