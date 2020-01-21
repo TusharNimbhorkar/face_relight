@@ -22,7 +22,7 @@
                 <div>
                   <h3>Examples</h3>
                   <div class="gallery">
-                    <div class="gallery-item" v-for="item in examples" v-bind:key="item" @click="selectExample(item)">
+                    <div class="gallery-item" v-for="item in examples" :key="item" @click="selectExample(item)">
                       <div class="gallery-item-image"
                           :style="{'background-image': `url(/media/output/${item}/ori.jpg)`}">
                       </div>
@@ -41,8 +41,8 @@
               <div class="image-section with-face-relight-output">
                 <div class="image-wrap">
                   <button class="run-functions-button hide">...</button>
-                  <img class="target-image" :src="getSelectedModel.active" @click="selectOrbit('none')">
 
+                  <img class="target-image" :src="imgURL" :id="imgIndex" :class="{'hide': imgIndex!=selectedValue}" @click="selectOrbit('none')" v-for="(imgURL, imgIndex) in getSelectedModelRange" :key="imgURL">
                   <div class="image-wrap-cover" :class="{'show': isBusy}">{{isBusy}}</div>
                 </div>
                 <div class="face-relight-output" style="display: block;">
@@ -124,7 +124,7 @@
     props: ['id'],
     data() {
       return {
-        examples: ['sample_AJ', 'sample_a1', 'sample_aa', 'sample_Faycey', 'sample_kat', 'sample_mal'],
+        examples: ['sample_grlee', 'sample_paris','sample_AJ', 'sample_a1', 'sample_aa', 'sample_Faycey', 'sample_kat', 'sample_mal'],
         selectedModel: 'sample_AJ',
         selectedOrbit: defaultOrbit,
         selectedValue: range[defaultOrbit].midRange,
@@ -187,25 +187,44 @@
           });
         }
       },
-    },
-    computed: { 
-      getSelectedModelRange() {
-        return []
-      },
-      getSelectedModel() {
+      generateImageURL(val) {
         const defaultURL = `${MEDIA_ROOT}/${this.selectedModel}/ori.jpg`;
-        let id = this.selectedOrbit==='over' ? this.maxRange - this.selectedValue : this.selectedValue;
+        let id = this.selectedOrbit==='over' ? this.maxRange - val : val;
         if (this.selectedOrbit === 'around') {
-          id = this.maxRange - this.selectedValue - 16;
+          id = this.maxRange - val - 16;
           if (id < 0) {
             id += this.maxRange
           }
         }
                 
-        return {
-          active: this.selectedOrbit==='none' ? defaultURL : `${MEDIA_ROOT}/${this.selectedModel}/${this.selectedOrbit}_${id}.jpg`
-        }
+        return this.selectedOrbit==='none' ? defaultURL : `${MEDIA_ROOT}/${this.selectedModel}/${this.selectedOrbit}_${id}.jpg`
       }
+    },
+    computed: { 
+      getSelectedModelRange() {        
+        const list = new Array(this.maxRange + 1)
+
+        for (let val=this.minRange ; val <= this.maxRange; val++) {
+          list[val] = this.generateImageURL(val)
+        }
+
+        console.log(list)
+        return list
+      },
+      // getSelectedModel() {
+      //   const defaultURL = `${MEDIA_ROOT}/${this.selectedModel}/ori.jpg`;
+      //   let id = this.selectedOrbit==='over' ? this.maxRange - this.selectedValue : this.selectedValue;
+      //   if (this.selectedOrbit === 'around') {
+      //     id = this.maxRange - this.selectedValue - 16;
+      //     if (id < 0) {
+      //       id += this.maxRange
+      //     }
+      //   }
+                
+      //   return {
+      //     active: this.selectedOrbit==='none' ? defaultURL : `${MEDIA_ROOT}/${this.selectedModel}/${this.selectedOrbit}_${id}.jpg`
+      //   }
+      // }
     },
     mounted() {
       const scope = this;
