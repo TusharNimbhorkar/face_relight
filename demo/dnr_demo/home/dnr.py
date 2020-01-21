@@ -117,7 +117,7 @@ def handleOutput(outputImg, Lab, col, row, filepath):
     return True
 
 @shared_task
-def prediction_task(data_path, img_path):
+def prediction_task(data_path, img_path, sh_mul=None):
     global sh_lookup, base_model
     worker_device = get_device()
 
@@ -126,12 +126,12 @@ def prediction_task(data_path, img_path):
     os.makedirs(out_dir, exist_ok=True)
     is_face_found = True
 
+    if sh_mul == None:
+        sh_mul = 0.8
+
     img = cv2.imread(img_path)
-
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-
-    rects = detector(gray, 1)
-
+    rects, scores, idx = detector.run(gray, 1, 1)
 
     if len(rects) == 0:
         is_face_found = False
@@ -139,10 +139,12 @@ def prediction_task(data_path, img_path):
     else:
 
         pool = ThreadPool(processes=8)
-        rect = rects[0]
+        rect_id = np.argmax(scores)
+        rect = rects[rect_id]
+        # rect = rects[0]
         shape = predictor(gray, rect)
         shape = shape_to_np(shape)
-        (x, y, w, h) = rect_to_bb(rect)
+        # (x, y, w, h) = rect_to_bb(rect)
         e0 = np.array(shape[38])
         e1 = np.array(shape[43])
         m0 = np.array(shape[48])
@@ -156,7 +158,12 @@ def prediction_task(data_path, img_path):
         xv /= np.linalg.norm(xv)
         yv = np.dot(R_90, y_p)
 
-        img = img[int(c[1] - s / 2):int(c[1] + s / 2), int(c[0] - s / 2):int(c[0] + s / 2)]
+        c1_ms = np.max([0, int(c[1] - s / 2)])
+        c1_ps = np.max([0, int(c[1] + s / 2)])
+        c0_ms = np.max([0, int(c[0] - s / 2)])
+        c0_ps = np.max([0, int(c[0] + s / 2)])
+
+        img = img[int(c1_ms):int(c1_ps), int(c0_ms):int(c0_ps)]
 
         pool.apply_async(
             cv2.imwrite,
@@ -174,7 +181,6 @@ def prediction_task(data_path, img_path):
 
         for preset_id, sh_presets in sh_lookups.items():
             for i, sh in enumerate(sh_presets):
-                sh_mul = 0.8
                 sh = np.squeeze(sh) * sh_mul
                 sh = np.reshape(sh, (1, 9, 1, 1)).astype(np.float32)
                 sh = torch.autograd.Variable(torch.from_numpy(sh).to(worker_device))
@@ -219,5 +225,5 @@ def worker_process_init_(**kwargs):
     data_path = osp.abspath('../data/')
     model_path = osp.join(data_path, "model/14_net_G_dpr7_mseBS20.pth")
     init_gpu(data_path, model_path)  # make sure all models are initialized upon starting the worker
-    # prediction_task(data_path, '../../test_data/portrait_/a1.jpeg')
+    prediction_task(data_path, '../../test_data/portrait_/AJ.jpg')
     # prediction_task(data_path, '../../test_data/01/rotate_light_00.png')
