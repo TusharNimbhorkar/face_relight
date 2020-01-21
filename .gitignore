@@ -18,7 +18,7 @@ subset_eval*
 substet_eval*
 multipie*
 mp_subset*
-*.pth
+#*.pth
 face_crops*
 .Python
 build/
