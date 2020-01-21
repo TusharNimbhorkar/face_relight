@@ -56,9 +56,14 @@
                           <button class="button" @click="selectOrbit('horizontal')" :class="{selected:selectedOrbit == 'horizontal'}">
                             <span class="sm-text">HRZ</span>
                             <span class="m-text">Horizontal</span>
-                          </button> | 
+                          </button>
+                           <!-- | 
                           <button class="button" @click="selectOrbit('over')" :class="{selected:selectedOrbit == 'over'}">
                             Over
+                          </button> -->
+                           | 
+                          <button class="button" @click="selectOrbit('around')" :class="{selected:selectedOrbit == 'around'}">
+                            Around
                           </button>
                         </div>
                       </td>
@@ -88,7 +93,9 @@
 
 <script>
   const MEDIA_ROOT = '/media/output'
-  import axios from 'axios';
+  import axios from 'axios'
+  import Swal from 'sweetalert2'
+  
   const range = {
     'horizontal': {
       minRange: 0,
@@ -97,8 +104,13 @@
     },
     'over': {
       minRange: 0,
-      maxRange: 34,
+      maxRange: 35,
       midRange: 16
+    },
+    'around': {
+      minRange: 0,
+      maxRange: 69,
+      midRange: 32
     },
     'none': {
       minRange:0,
@@ -151,22 +163,47 @@
               responseType: 'json'
             }
           ).then((results) => {
-            this.selectExample(results.data.filename);
-            this.isBusy = false;
+
+            if (!!results.data.is_face_found) {
+              this.selectExample(results.data.filename);
+              this.isBusy = false;
+            } else {
+              Swal.fire({
+                icon: 'error',
+                title: 'We could not detect a face in this picture',
+                text: 'Please upload an image with atleast on visible face',
+              });
+              this.isBusy = false;
+            }
           })
           .catch((results) => {
-            console.log('FAILURE!!');
+            Swal.fire({
+                icon: 'error',
+                title: 'Oops...',
+                text: 'Server is having a difficulty processing your file, please try again in a few minutes...',
+              });
+
             this.isBusy = false;
           });
         }
-      }
+      },
     },
-    computed: {
+    computed: { 
+      getSelectedModelRange() {
+        return []
+      },
       getSelectedModel() {
         const defaultURL = `${MEDIA_ROOT}/${this.selectedModel}/ori.jpg`;
-        const id = this.selectedOrbit=='over' ? this.maxRange - this.selectedValue : this.selectedValue;
+        let id = this.selectedOrbit==='over' ? this.maxRange - this.selectedValue : this.selectedValue;
+        if (this.selectedOrbit === 'around') {
+          id = this.maxRange - this.selectedValue - 16;
+          if (id < 0) {
+            id += this.maxRange
+          }
+        }
+                
         return {
-          active: this.selectedOrbit=='none' ? defaultURL : `${MEDIA_ROOT}/${this.selectedModel}/${this.selectedOrbit}_${id}.jpg`
+          active: this.selectedOrbit==='none' ? defaultURL : `${MEDIA_ROOT}/${this.selectedModel}/${this.selectedOrbit}_${id}.jpg`
         }
       }
     },
