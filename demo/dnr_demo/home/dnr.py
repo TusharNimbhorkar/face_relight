@@ -11,6 +11,7 @@ import dlib
 sys.path.append("../..")
 sys.path.append("../../model")
 import cv2
+import imutils
 from multiprocessing.pool import ThreadPool
 
 import uuid
@@ -181,6 +182,7 @@ def handleOutput(outputImg, Lab, col, row, filepath,mask,img_orig):
     # make a gauss blur
 
     # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!  TODO add original image which will be background  CHECK AGAIN  !!!!!!!!!!!
+
     background = np.copy(img_orig)
     foreground = np.copy(resultLab)
     foreground = foreground.astype(float)
@@ -200,11 +202,22 @@ def handleOutput(outputImg, Lab, col, row, filepath,mask,img_orig):
 
 
 def preprocess(img, device):
-    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    img = np.array(img)
+    orig_size = img.shape
+
+    if np.max(img.shape[:2]) > 1024:
+        if img.shape[0] < img.shape[1]:
+            img_res = imutils.resize(img, width=1024)
+        else:
+            img_res = imutils.resize(img, width=1024)
+    else:
+        img_res = img
+
+    resize_ratio = orig_size[0]/img_res.shape[0]
+    gray = cv2.cvtColor(img_res, cv2.COLOR_BGR2GRAY)
     rects, scores, idx = detector.run(gray, 1, 1)
 
     if len(rects) > 0:
-
         mask = segment(np.array(img), device)
 
         rect_id = np.argmax(scores)
@@ -226,7 +239,9 @@ def preprocess(img, device):
         xv /= np.linalg.norm(xv)
         yv = np.dot(R_90, y_p)
 
-
+        s *= resize_ratio
+        c[0] *= resize_ratio
+        c[1] *= resize_ratio
 
         c1_ms = np.max([0, int(c[1] - s / 2)])
         c1_ps = np.min([img.shape[0], int(c[1] + s / 2)])
@@ -245,7 +260,10 @@ def preprocess(img, device):
         img = cv2.copyMakeBorder(img, top, bottom, left, right, cv2.BORDER_CONSTANT, value=[255,255,255])
         mask = cv2.copyMakeBorder(mask, top, bottom, left, right, cv2.BORDER_CONSTANT, 0)
 
-        row, col, _ = img.shape
+
+        if np.max(img.shape[:2]) > 1024:
+            img = cv2.resize(img, (1024,1024))
+            mask = cv2.resize(mask, (1024,1024))
     else:
         img = None
         mask = None
