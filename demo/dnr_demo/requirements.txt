@@ -3,7 +3,6 @@ Celery
 django-tables2
 django-redis
 redis
-pillow
-torch
+pillow==6.2.1
 humanhash3
 djangorestframework
