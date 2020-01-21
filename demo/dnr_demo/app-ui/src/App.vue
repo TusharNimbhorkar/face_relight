@@ -192,7 +192,7 @@
         this.shMul = this.selectedSHMul
       },
       checkForSHPreview() {
-        if (!this.isShowingSHPreview) {
+        if (!this.isShowingSHPreview && this.selectedOrbit!=='none') {
           this.isShowingSHPreview = true
           this.handleSHPreviewGeneration()
         }
