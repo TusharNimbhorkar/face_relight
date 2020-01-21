@@ -124,14 +124,9 @@ def prediction_task(data_path, img_path):
     dir_uuid = str(uuid.uuid1())
     out_dir = osp.join(data_path, 'output', dir_uuid)
     os.makedirs(out_dir, exist_ok=True)
-    pool = ThreadPool(processes=8)
     is_face_found = True
 
     img = cv2.imread(img_path)
-    pool.apply_async(
-        cv2.imwrite,
-        [ osp.join(out_dir, 'ori.jpg'), img]
-    )
 
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
@@ -143,6 +138,7 @@ def prediction_task(data_path, img_path):
         print('FACE NOTE FOUND! Input image path:', img_path)
     else:
 
+        pool = ThreadPool(processes=8)
         rect = rects[0]
         shape = predictor(gray, rect)
         shape = shape_to_np(shape)
@@ -161,6 +157,11 @@ def prediction_task(data_path, img_path):
         yv = np.dot(R_90, y_p)
 
         img = img[int(c[1] - s / 2):int(c[1] + s / 2), int(c[0] - s / 2):int(c[0] + s / 2)]
+
+        pool.apply_async(
+            cv2.imwrite,
+            [osp.join(out_dir, 'ori.jpg'), img]
+        )
 
         row, col, _ = img.shape
         img = cv2.resize(img, (512, 512))
@@ -192,8 +193,8 @@ def prediction_task(data_path, img_path):
                     )
                 # cv2.imwrite(osp.join(out_dir, filename), resultLab)
 
-    pool.close()
-    pool.join()
+        pool.close()
+        pool.join()
 
     return [dir_uuid, is_face_found]
 
