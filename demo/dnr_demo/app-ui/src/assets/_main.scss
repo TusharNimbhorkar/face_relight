@@ -842,7 +842,7 @@ table {
 
 @media(max-width: 720px) {
   .face-relight-output {
-    padding: 0.8rem;
+    padding: 0.6rem 1rem 0.2rem;
   }
 
   .with-face-relight-output { 
@@ -851,7 +851,26 @@ table {
     }
 
     .control-wrapper {
-      margin: 0 0rem 0.6rem;
+      margin: 0;
     }
+
+    .button {
+      padding: 0.2rem 1.2rem;
+    }
+  }
+  
+  .function-title {
+    margin-top: 0.5rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .menu {
+    margin: 1rem 0 0 0;
+    text-align: left;
+    padding: 0.2rem 1rem;
+  }
+
+  section {
+    padding: 1rem 0 0;
   }
 }

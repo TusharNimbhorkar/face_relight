@@ -57,8 +57,7 @@
                             <span class="m-text">Horizontal</span>
                           </button> | 
                           <button class="button" @click="selectOrbit('over')" :class="{selected:selectedOrbit == 'over'}">
-                            <span class="sm-text">OVR</span>
-                            <span class="m-text">Over</span>
+                            Over
                           </button>
                         </div>
                       </td>
