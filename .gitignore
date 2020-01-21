@@ -119,4 +119,3 @@ venv.bak/
 
 demo/data/uploads
 demo/data/output/*
-!demo/data/output/sample_*
