@@ -229,9 +229,9 @@ def preprocess(img, device):
 
 
         c1_ms = np.max([0, int(c[1] - s / 2)])
-        c1_ps = np.max([img.shape[0], int(c[1] + s / 2)])
+        c1_ps = np.min([img.shape[0], int(c[1] + s / 2)])
         c0_ms = np.max([0, int(c[0] - s / 2)])
-        c0_ps = np.max([img.shape[1], int(c[0] + s / 2)])
+        c0_ps = np.min([img.shape[1], int(c[0] + s / 2)])
 
 
         top = -np.min([0, int(c[1] - s / 2)])
@@ -405,5 +405,5 @@ def worker_process_init_(**kwargs):
     model_path = osp.join(data_path, "model/14_net_G_dpr7_mseBS20.pth")
     init_gpu(data_path, model_path)  # make sure all models are initialized upon starting the worker
     # prediction_task_sh_mul(data_path, '../../test_data/portrait_/AJ.jpg', 'horizontal', 7)
-    prediction_task(data_path, '../../test_data/portrait_/AJ.jpg')
+    # prediction_task(data_path, '../../test_data/portrait_/AJ.jpg')
     # prediction_task(data_path, '../../test_data/01/rotate_light_00.png')

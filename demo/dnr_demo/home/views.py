@@ -12,6 +12,9 @@ from . import models
 from django.conf import settings
 import os 
 import humanhash
+import imutils
+import numpy as np
+import cv2
 
 def handle_uploaded_file(f):
     file_id = humanhash.uuid()[0]
@@ -22,6 +25,15 @@ def handle_uploaded_file(f):
     with open(filepath, 'wb+') as destination:
         for chunk in f.chunks():
             destination.write(chunk)
+
+    img = np.array(cv2.imread(filepath))
+
+    if img.shape[0]<img.shape[1]:
+        img = imutils.resize(img, width=1024)
+    else:
+        img = imutils.resize(img, width=1024)
+
+    cv2.imwrite(filepath, img)
     return filepath, file_id
 
 

@@ -6,3 +6,4 @@ redis
 pillow==6.2.1
 humanhash3
 djangorestframework
+imutils
