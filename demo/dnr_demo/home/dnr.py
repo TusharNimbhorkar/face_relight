@@ -195,7 +195,7 @@ def handleOutput(outputImg, Lab, col, row, filepath,mask,img_orig):
     # Add the masked foreground and background.
     outImage = cv2.add(foreground, background)
 
-    cv2.imwrite(filepath, outImage)
+    cv2.imwrite(filepath, img_orig)
     return True
 
 
@@ -229,20 +229,21 @@ def preprocess(img, device):
 
 
         c1_ms = np.max([0, int(c[1] - s / 2)])
-        c1_ps = np.max([0, int(c[1] + s / 2)])
+        c1_ps = np.max([img.shape[0], int(c[1] + s / 2)])
         c0_ms = np.max([0, int(c[0] - s / 2)])
-        c0_ps = np.max([0, int(c[0] + s / 2)])
+        c0_ps = np.max([img.shape[1], int(c[0] + s / 2)])
 
 
-        # c1_ms = np.max([0, -int(c[1] - s / 2)])
-        # c1_ps = np.max([0, -int(c[1] + s / 2)])
-        # c0_ms = np.max([0, -int(c[0] - s / 2)])
-        # c0_ps = np.max([0, -int(c[0] + s / 2)])
+        top = -np.min([0, int(c[1] - s / 2)])
+        bottom = -np.min([0, img.shape[0] - int(c[1] + s / 2)])
+        left = -np.min([0, int(c[0] - s / 2)])
+        right = -np.min([0, img.shape[1] - int(c[0] + s / 2)])
 
         img = img[int(c1_ms):int(c1_ps), int(c0_ms):int(c0_ps)]
         mask = mask[int(c1_ms):int(c1_ps), int(c0_ms):int(c0_ps)]
 
-        cv2.copyMakeBorder(img, top, bottom, left, right, borderType, value)
+        img = cv2.copyMakeBorder(img, top, bottom, left, right, cv2.BORDER_CONSTANT, value=[255,255,255])
+        mask = cv2.copyMakeBorder(mask, top, bottom, left, right, cv2.BORDER_CONSTANT, 0)
 
         row, col, _ = img.shape
     else:
@@ -366,7 +367,6 @@ def prediction_task(data_path, img_path, sh_mul=None, upload_id=None):
                 outputImg, _, outputSH, _ = base_model(t_inputL, sh, 0)
                 outputImg = outputImg[0].cpu().data.numpy()
 
-                print('PRINT', mask.shape, img_p.shape)
                 pool.apply_async(
                         handleOutput,
                         [outputImg, Lab, col, row, filepath, mask, img_p]
@@ -405,5 +405,5 @@ def worker_process_init_(**kwargs):
     model_path = osp.join(data_path, "model/14_net_G_dpr7_mseBS20.pth")
     init_gpu(data_path, model_path)  # make sure all models are initialized upon starting the worker
     # prediction_task_sh_mul(data_path, '../../test_data/portrait_/AJ.jpg', 'horizontal', 7)
-    # prediction_task(data_path, '../../test_data/portrait/aa.jpg')
+    prediction_task(data_path, '../../test_data/portrait_/AJ.jpg')
     # prediction_task(data_path, '../../test_data/01/rotate_light_00.png')
