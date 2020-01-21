@@ -138,20 +138,18 @@ def vis_parsing_maps(im, parsing_anno, stride,h=None,w=None):
     vis_parsing_anno = cv2.resize(vis_parsing_anno,(w,h))
     vis_parsing_anno[vis_parsing_anno==16]=0
     vis_parsing_anno[vis_parsing_anno>0]=255
+    th, im_th = cv2.threshold(vis_parsing_anno, 0, 255, cv2.THRESH_BINARY_INV)
+    h, w = im_th.shape[:2]
+    mask = np.zeros((h + 2, w + 2), np.uint8)
+    im_floodfill = im_th.copy()
+    cv2.floodFill(im_floodfill, mask, (0, 0), 255)
+    cv2.floodFill(im_floodfill, mask, (w-1, 0), 255)
+    cv2.floodFill(im_floodfill, mask, (0, h-1), 255)
+    cv2.floodFill(im_floodfill, mask, (w-1, h-1), 255)
 
-	th, im_th = cv2.threshold(vis_parsing_anno, 0, 255, cv2.THRESH_BINARY_INV);
-	# plt.imshow(im_th)
-	h, w = im_th.shape[:2]
-	mask = np.zeros((h + 2, w + 2), np.uint8)
-	im_floodfill = im_th.copy()
-	cv2.floodFill(im_floodfill, mask, (0, 0), 255);
-	cv2.floodFill(im_floodfill, mask, (w-1, 0), 255);
-	cv2.floodFill(im_floodfill, mask, (0, h-1), 255);
-	cv2.floodFill(im_floodfill, mask, (w-1, h-1), 255);
-
-	mask = mask[0:0+h, 0:0+w]
-	vis_parsing_anno = cv2.bitwise_not(mask)
-	vis_parsing_anno[vis_parsing_anno==254]=0
+    mask = mask[0:0+h, 0:0+w]
+    vis_parsing_anno = cv2.bitwise_not(mask)
+    vis_parsing_anno[vis_parsing_anno==254]=0
 
     alpha_2[:,:,0] = np.copy(vis_parsing_anno)
     alpha_2[:,:,1] = np.copy(vis_parsing_anno)
