@@ -92,8 +92,8 @@
   const range = {
     'horizontal': {
       minRange: 0,
-      maxRange: 70,
-      midRange: 34
+      maxRange: 52,
+      midRange: 25
     },
     'over': {
       minRange: 0,
