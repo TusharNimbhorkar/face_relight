@@ -14,7 +14,7 @@
               <li class="nav-list-item divider">-----</li>
               <li class="nav-list-item">
                 <label class="button">Try your image
-                  <input type="file" class="hidden_input" ref="file" @change="handleFileUpload()" accept="image/png, image/jpeg, image/jpg"/>
+                  <input type="file" class="hidden_input" ref="file" @change="handleFileUpload()" :disabled="isBusy" accept="image/png, image/jpeg, image/jpg"/>
                 </label>
               </li>
               <li class="nav-list-item divider">-----</li>
@@ -49,7 +49,7 @@
                     <img class="target-image cover" :src="getPreviewSH">
                   </div>
 
-                  <div class="image-wrap-cover" :class="{'show': isBusy}">{{isBusy}}</div>
+                  <div class="image-wrap-cover" :class="{'show': isBusy}" v-if="isBusy" >{{isBusy}}</div>
                 </div>
                 <div class="face-relight-output" style="display: block;">
                   <table>
@@ -59,7 +59,8 @@
                       </td>
                       <td class="get-pallete">
                         <div class="control-wrapper">
-                          <button class="button" @click="selectOrbit('horizontal')" :class="{selected:selectedOrbit == 'horizontal'}">
+                          <button class="button" @click="selectOrbit('horizontal')" :class="{selected:selectedOrbit == 'horizontal'}"
+                            :disabled="isBusy">
                             <span class="sm-text">HRZ</span>
                             <span class="m-text">Horizontal</span>
                           </button>
@@ -68,7 +69,8 @@
                             Over
                           </button> -->
                            | 
-                          <button class="button" @click="selectOrbit('around')" :class="{selected:selectedOrbit == 'around'}">
+                          <button class="button" @click="selectOrbit('around')" :class="{selected:selectedOrbit == 'around'}"
+                            :disabled="isBusy">
                             Around
                           </button>
                         </div>
@@ -80,7 +82,7 @@
                       </td>
                       <td class="get-pallete">
                         <div class="control-wrapper">
-                          <input type="range" class="control-slider" 
+                          <input type="range" class="control-slider" :disabled="isBusy"
                             :min="minRange" :max="maxRange" step="1" v-model="selectedValue" @focus="resetSH()"
                           >
                         </div>
@@ -98,10 +100,11 @@
                           </div>
                             
                           <input type="range" class="control-slider default-hidden" :class="{'show': isShowingAdvanceOption}" 
+                            :disabled="isBusy"
                             :min="minRangeSH" :max="maxRangeSH" step="0.1" v-model="shMul" 
                           >
                           <button class="button special default-hidden" :class="{'show': isShowingAdvanceOption}" 
-                          @click="handleUpdateSHMul()" :disabled="!isShowingSHPreview"> Apply </button>
+                          @click="handleUpdateSHMul()" :disabled="!isShowingSHPreview || isBusy"> Apply </button>
                           
                         </div>
                       </td>
@@ -192,7 +195,7 @@
         this.shMul = this.selectedSHMul
       },
       checkForSHPreview() {
-        if (!this.isShowingSHPreview) {
+        if (!this.isShowingSHPreview && this.selectedOrbit!=='none') {
           this.isShowingSHPreview = true
           this.handleSHPreviewGeneration()
         }
