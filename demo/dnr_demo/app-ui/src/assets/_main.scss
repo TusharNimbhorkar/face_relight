@@ -232,6 +232,7 @@ button:hover {cursor: pointer;}
   white-space: nowrap;
   font-weight: var(--bold);
   background-color: white;
+  transition: all 0.35s;
 
   &.selected {
     background: #3d0088 !important;
@@ -691,6 +692,13 @@ footer .button {
   &.hide {
     display: none !important;
   }
+
+  &.cover {
+    position: absolute;
+    left: 0;
+    top: 0;
+    z-index: 1;
+  }
 }
 
 .face-relight-output {
@@ -892,5 +900,63 @@ table {
 
   section {
     padding: 1rem 0 0;
+  }
+}
+
+.special.button {
+  margin-left: 1rem;
+  margin-right: -1rem;
+  font-size: 0.7rem;
+
+  &[disabled] {
+    color: var(--muted-color);
+    border-color: var(--muted-color);
+    cursor: auto;
+  }
+  &:hover[disabled] {
+    background: transparent;
+  }
+}
+
+.sh-preview {
+  position: absolute;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  left: 0;
+  z-index: 1000;
+
+  .message {
+    width: 300px;
+    display: block;
+    text-align: center;
+    margin: 1.2rem auto;
+    padding: 5px 0;
+    font-size: 0.9rem;
+    color: var(--muted-color);
+    background: rgba(255,255,255,0.8);
+    border-radius: 4px;
+    border: 1px solid var(--muted-color);
+  }
+
+  .target-image.cover {
+    z-index: -1 !important;
+  }
+}
+
+.default-hidden { 
+  display: none;
+
+  &.show {
+    display: block;
+  }
+}
+
+.extra-option-button {
+  cursor: pointer;
+  text-decoration: underline;
+
+  &:hover {
+    color: var(--link-color);
   }
 }

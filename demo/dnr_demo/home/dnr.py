@@ -242,11 +242,14 @@ def preprocess(img, device):
     return img, mask
 
 @shared_task
-def prediction_task_sh_mul(data_path, img_path, preset_name, sh_id):
+def prediction_task_sh_mul(data_path, img_path, preset_name, sh_id, upload_id=None):
     global sh_lookup, base_model
     worker_device = get_device()
 
-    dir_uuid = str(uuid.uuid1())
+    dir_uuid = upload_id
+    if dir_uuid == None:
+        dir_uuid = str(uuid.uuid1())
+
     out_dir = osp.join(data_path, 'output', dir_uuid)
     os.makedirs(out_dir, exist_ok=True)
 
@@ -273,7 +276,8 @@ def prediction_task_sh_mul(data_path, img_path, preset_name, sh_id):
         inputL = inputL.transpose((0, 1))
         inputL = inputL[None, None, ...]
 
-        for sh_mul in np.arange(0.5, 1.1, 0.1):
+        for sh_iter in range(50, 105, 10):
+            sh_mul = sh_iter * .01
             sh = np.squeeze(sh_lookups[preset_name][sh_id])
             sh = np.reshape(sh, (1, 9, 1, 1)).astype(np.float32) * sh_mul
             sh = torch.autograd.Variable(torch.from_numpy(sh).to(worker_device))
@@ -296,11 +300,14 @@ def prediction_task_sh_mul(data_path, img_path, preset_name, sh_id):
     return [dir_uuid, is_face_found]
 
 @shared_task
-def prediction_task(data_path, img_path, sh_mul=None):
+def prediction_task(data_path, img_path, sh_mul=None, upload_id=None):
     global sh_lookup, base_model
     worker_device = get_device()
 
-    dir_uuid = str(uuid.uuid1())
+    dir_uuid = upload_id
+    if dir_uuid == None:
+        dir_uuid = str(uuid.uuid1())
+
     out_dir = osp.join(data_path, 'output', dir_uuid)
     os.makedirs(out_dir, exist_ok=True)
 
@@ -333,6 +340,12 @@ def prediction_task(data_path, img_path, sh_mul=None):
 
         for preset_id, sh_presets in sh_lookups.items():
             for i, sh in enumerate(sh_presets):
+                filename = preset_id + '_' + str(i) + '_' + ("%.2f" % sh_mul) + '.jpg'
+                filepath = osp.join(out_dir, filename)
+
+                if os.path.exists(filepath):
+                    continue
+
                 sh = np.squeeze(sh) * sh_mul
                 sh = np.reshape(sh, (1, 9, 1, 1)).astype(np.float32)
                 sh = torch.autograd.Variable(torch.from_numpy(sh).to(worker_device))
@@ -340,10 +353,7 @@ def prediction_task(data_path, img_path, sh_mul=None):
                 t_inputL = torch.autograd.Variable(torch.from_numpy(inputL).to(worker_device))
 
                 outputImg, _, outputSH, _ = base_model(t_inputL, sh, 0)
-
                 outputImg = outputImg[0].cpu().data.numpy()
-                filename = preset_id + '_' + str(i) + '_' + ("%.2f" % sh_mul) + '.jpg'
-                filepath = osp.join(out_dir, filename)
 
                 print('PRINT', mask.shape, img_p.shape)
                 pool.apply_async(
@@ -360,17 +370,17 @@ def prediction_task(data_path, img_path, sh_mul=None):
 
 # replace this function with your own
 # returns the classification result of a given image_path
-def process_image(img_path):
+def process_image(img_path, sh_mul=None, upload_id=None):
 
     data_path = osp.abspath('../data/')
-    task = prediction_task.delay(data_path, img_path)
+    task = prediction_task.delay(data_path, img_path, sh_mul, upload_id)
 
     return task.get()
 
-def process_image_sh_mul(img_path, preset_name, sh_id):
+def process_image_sh_mul(img_path, preset_name, sh_id, upload_id=None):
 
     data_path = osp.abspath('../data/')
-    task = prediction_task_sh_mul.delay(data_path, img_path, preset_name, sh_id)
+    task = prediction_task_sh_mul.delay(data_path, img_path, preset_name, sh_id, upload_id)
 
     return task.get()
 

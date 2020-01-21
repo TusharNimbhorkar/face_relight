@@ -22,7 +22,7 @@
                 <div>
                   <h3>Examples</h3>
                   <div class="gallery">
-                    <div class="gallery-item" v-for="item in examples" :key="item" @click="selectExample(item)">
+                    <div class="gallery-item" v-for="(item, exampleIndex) in examples" :key="exampleIndex+item" @click="selectExample(item)">
                       <div class="gallery-item-image"
                           :style="{'background-image': `url(/media/output/${item}/ori.jpg)`}">
                       </div>
@@ -40,9 +40,15 @@
             <div id="example-images">
               <div class="image-section with-face-relight-output">
                 <div class="image-wrap">
-                  <button class="run-functions-button hide">...</button>
 
-                  <img class="target-image" :src="imgURL" :id="imgIndex" :class="{'hide': imgIndex!=selectedValue}" @click="selectOrbit('none')" v-for="(imgURL, imgIndex) in getSelectedModelRange" :key="imgURL">
+                  <img class="target-image cover" :src="imgURL" :class="{'hide': imgIndex!=selectedValue}" @click="selectOrbit('none')" v-for="(imgURL, imgIndex) in getSelectedModelRange" :key="imgIndex+imgURL">
+                  <img class="target-image" :src="getOriginalImage">
+                  
+                  <div class="sh-preview" v-if="isShowingSHPreview">
+                    <div class="message">This is just a preview, click "apply" to implement the changes on all sequences</div>
+                    <img class="target-image cover" :src="getPreviewSH">
+                  </div>
+
                   <div class="image-wrap-cover" :class="{'show': isBusy}">{{isBusy}}</div>
                 </div>
                 <div class="face-relight-output" style="display: block;">
@@ -75,8 +81,28 @@
                       <td class="get-pallete">
                         <div class="control-wrapper">
                           <input type="range" class="control-slider" 
-                            :min="minRange" :max="maxRange" step="1" v-model="selectedValue"
+                            :min="minRange" :max="maxRange" step="1" v-model="selectedValue" @focus="resetSH()"
                           >
+                        </div>
+                      </td>
+                    </tr>
+                     <tr :style="{'opacity': selectedOrbit==='none' ? 0.2: 1.0}">
+                      <td>
+                        <h3 class="function-title" v-if="isShowingAdvanceOption">Intensity</h3>
+                      </td>
+                      <td class="get-pallete">
+                        <div class="control-wrapper">
+                          <div class="extra-option-button default-hidden" :class="{'show': !isShowingAdvanceOption}"
+                            @click="checkForSHPreview">
+                            show extra options
+                          </div>
+                            
+                          <input type="range" class="control-slider default-hidden" :class="{'show': isShowingAdvanceOption}" 
+                            :min="minRangeSH" :max="maxRangeSH" step="0.1" v-model="shMul" 
+                          >
+                          <button class="button special default-hidden" :class="{'show': isShowingAdvanceOption}" 
+                          @click="handleUpdateSHMul()" :disabled="!isShowingSHPreview"> Apply </button>
+                          
                         </div>
                       </td>
                     </tr>
@@ -95,6 +121,7 @@
   const MEDIA_ROOT = '/media/output'
   import axios from 'axios'
   import Swal from 'sweetalert2'
+  import Vue from 'vue'
   
   const range = {
     'horizontal': {
@@ -121,17 +148,23 @@
 
   const defaultOrbit = 'none';
   export default {
-    props: ['id'],
     data() {
       return {
-        examples: ['sample_grlee', 'sample_paris','sample_AJ', 'sample_a1', 'sample_aa', 'sample_Faycey', 'sample_kat', 'sample_mal'],
+        minRangeSH: 0.5,
+        maxRangeSH: 1.0,
+        examples: ['sample_grlee', 'sample_paris','sample_AJ', 'sample_a1', 'sample_aa', 'sample_Faycey', 'sample_kat', 'sample_mal', 'sample_maja'],
         selectedModel: 'sample_AJ',
         selectedOrbit: defaultOrbit,
         selectedValue: range[defaultOrbit].midRange,
         minRange: range[defaultOrbit].minRange,
         maxRange: range[defaultOrbit].maxRange,
         isMenuShow: false,
-        isBusy: false
+        isShowingSHPreview: false,
+        isBusy: false,
+        selectedSHMul: 0.7,
+        shMul: 0.7,
+        isShowingAdvanceOption: false,
+        timestamp: new Date()
       }
     },
     components: {
@@ -142,11 +175,26 @@
         this.selectedValue = range[type].midRange
         this.minRange = range[type].minRange
         this.maxRange = range[type].maxRange
+        this.isShowingSHPreview = false
+        this.isShowingAdvanceOption = false
       },
       selectExample(id) {
         this.selectedModel = id
         this.selectOrbit('none')
         this.isMenuShow = false
+      },
+      resetSH() {
+        this.isShowingSHPreview = false
+        this.isShowingAdvanceOption = false
+
+        this.isShowingSHPreview=false
+        this.shMul = this.selectedSHMul
+      },
+      checkForSHPreview() {
+        if (!this.isShowingSHPreview) {
+          this.isShowingSHPreview = true
+          this.handleSHPreviewGeneration()
+        }
       },
       handleFileUpload() {
         const file = this.$refs.file.files[0];
@@ -163,9 +211,8 @@
               responseType: 'json'
             }
           ).then((results) => {
-
             if (!!results.data.is_face_found) {
-              this.selectExample(results.data.filename);
+              this.selectExample(results.data.upload_id);
               this.isBusy = false;
             } else {
               Swal.fire({
@@ -176,7 +223,8 @@
               this.isBusy = false;
             }
           })
-          .catch((results) => {
+          .catch((error) => {
+            console.log('err', error)
             Swal.fire({
                 icon: 'error',
                 title: 'Oops...',
@@ -197,7 +245,62 @@
           }
         }
                 
-        return this.selectedOrbit==='none' ? defaultURL : `${MEDIA_ROOT}/${this.selectedModel}/${this.selectedOrbit}_${id}.jpg`
+        return this.selectedOrbit==='none' ? defaultURL : `${MEDIA_ROOT}/${this.selectedModel}/${this.selectedOrbit}_${id}_${(+this.selectedSHMul).toFixed(2)}.jpg`
+      },
+      handleUpdateSHMul() {               
+        if (!this.isBusy) {
+          this.isBusy = true;
+          this.selectedSHMul = this.shMul
+        
+          axios.post( '/create-sh-presets',{
+              file_id: this.selectedModel,
+              sh_mul: +this.selectedSHMul
+            }
+          ).then((results) => {
+            // this.selectedModel = results.data.upload_id;
+            this.timestamp = new Date()
+            this.isBusy = false;
+            this.isShowingAdvanceOption = false
+            this.isShowingSHPreview = false
+          })
+          .catch((error) => {
+            console.log('err', error)
+            Swal.fire({
+                icon: 'error',
+                title: 'Oops...',
+                text: 'Server is having a difficulty processing your file, please try again in a few minutes...',
+              });
+
+            this.isBusy = false;
+          });
+        }
+      },
+      handleSHPreviewGeneration() {
+        if (!this.isBusy) {
+          this.isBusy = true;
+        
+          axios.post( '/create-sh-previews',{
+              file_id: this.selectedModel,
+              sh_id: +this.selectedValue,
+              preset_name: this.selectedOrbit,
+            }
+          ).then((results) => {
+            // this.selectedModel = results.data.upload_id;            
+            this.timestamp = new Date()
+            this.isBusy = false;
+            this.isShowingAdvanceOption = true
+          })
+          .catch((error) => {
+            console.log('err', error)
+            Swal.fire({
+                icon: 'error',
+                title: 'Oops...',
+                text: 'Server is having a difficulty processing your request, please try again...',
+              });
+
+            this.isBusy = false;
+          });
+        }
       }
     },
     computed: { 
@@ -208,23 +311,23 @@
           list[val] = this.generateImageURL(val)
         }
 
-        console.log(list)
+        console.log(this.timestamp)
         return list
       },
-      // getSelectedModel() {
-      //   const defaultURL = `${MEDIA_ROOT}/${this.selectedModel}/ori.jpg`;
-      //   let id = this.selectedOrbit==='over' ? this.maxRange - this.selectedValue : this.selectedValue;
-      //   if (this.selectedOrbit === 'around') {
-      //     id = this.maxRange - this.selectedValue - 16;
-      //     if (id < 0) {
-      //       id += this.maxRange
-      //     }
-      //   }
-                
-      //   return {
-      //     active: this.selectedOrbit==='none' ? defaultURL : `${MEDIA_ROOT}/${this.selectedModel}/${this.selectedOrbit}_${id}.jpg`
-      //   }
-      // }
+      getOriginalImage() {
+        return `${MEDIA_ROOT}/${this.selectedModel}/ori.jpg`
+      },
+      getPreviewSH() {
+        let id = this.selectedOrbit==='over' ? this.maxRange - this.selectedValue : this.selectedValue;
+        if (this.selectedOrbit === 'around') {
+          id = this.maxRange - this.selectedValue - 16;
+          if (id < 0) {
+            id += this.maxRange
+          }
+        }
+
+        return `${MEDIA_ROOT}/${this.selectedModel}/${this.selectedOrbit}_${id}_${(+this.shMul).toFixed(2)}.jpg`
+      }
     },
     mounted() {
       const scope = this;
