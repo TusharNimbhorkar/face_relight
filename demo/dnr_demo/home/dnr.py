@@ -128,13 +128,13 @@ def vis_parsing_maps(im, parsing_anno, stride,h=None,w=None):
 
     im = np.array(im)
     alpha_2 = np.zeros((h,w,3))
-    vis_im = im.copy().astype(np.uint8)
+    # vis_im = im.copy().astype(np.uint8)
     vis_parsing_anno = parsing_anno.copy().astype(np.uint8)
     vis_parsing_anno = cv2.resize(vis_parsing_anno, None, fx=stride, fy=stride, interpolation=cv2.INTER_NEAREST)
-    vis_parsing_anno_color = np.zeros((vis_parsing_anno.shape[0], vis_parsing_anno.shape[1], 3)) + 255
-    num_of_class = np.max(vis_parsing_anno)
-    vis_parsing_anno_color = vis_parsing_anno_color.astype(np.uint8)
-    vis_im = cv2.addWeighted(cv2.cvtColor(vis_im, cv2.COLOR_RGB2BGR), 0.4, vis_parsing_anno_color, 0.6, 0)
+    # vis_parsing_anno_color = np.zeros((vis_parsing_anno.shape[0], vis_parsing_anno.shape[1], 3)) + 255
+    # num_of_class = np.max(vis_parsing_anno)
+    # vis_parsing_anno_color = vis_parsing_anno_color.astype(np.uint8)
+    # vis_im = cv2.addWeighted(cv2.cvtColor(vis_im, cv2.COLOR_RGB2BGR), 0.4, vis_parsing_anno_color, 0.6, 0)
     # MASK
     vis_parsing_anno = cv2.resize(vis_parsing_anno,(w,h))
     vis_parsing_anno[vis_parsing_anno==16]=0
@@ -151,7 +151,7 @@ def vis_parsing_maps(im, parsing_anno, stride,h=None,w=None):
         labels, stats = cv2.connectedComponentsWithStats(mask, 4)[1:3]  # step 4
         largest_label = 1 + np.argmax(stats[1:, cv2.CC_STAT_AREA])  # step 5
         new_img[labels == largest_label] = val
-
+    print(np.unique(new_img))
     vis_parsing_anno = new_img.copy()
     # alpha_2 = cv2.imread(segment_path_ear)
     alpha_2[:,:,0] = np.copy(vis_parsing_anno)
