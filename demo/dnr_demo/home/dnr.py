@@ -11,7 +11,6 @@ import dlib
 sys.path.append("../..")
 sys.path.append("../../model")
 import cv2
-import imutils
 from multiprocessing.pool import ThreadPool
 
 import uuid
@@ -139,19 +138,8 @@ def vis_parsing_maps(im, parsing_anno, stride,h=None,w=None):
     vis_parsing_anno = cv2.resize(vis_parsing_anno,(w,h))
     vis_parsing_anno[vis_parsing_anno==16]=0
     vis_parsing_anno[vis_parsing_anno>0]=255
-    th, im_th = cv2.threshold(vis_parsing_anno, 0, 255, cv2.THRESH_BINARY_INV)
-    h, w = im_th.shape[:2]
-    mask = np.zeros((h + 2, w + 2), np.uint8)
-    im_floodfill = im_th.copy()
-    cv2.floodFill(im_floodfill, mask, (0, 0), 255)
-    cv2.floodFill(im_floodfill, mask, (w-1, 0), 255)
-    cv2.floodFill(im_floodfill, mask, (0, h-1), 255)
-    cv2.floodFill(im_floodfill, mask, (w-1, h-1), 255)
 
-    mask = mask[0:0+h, 0:0+w]
-    vis_parsing_anno = cv2.bitwise_not(mask)
-    vis_parsing_anno[vis_parsing_anno==254]=0
-
+    # alpha_2 = cv2.imread(segment_path_ear)
     alpha_2[:,:,0] = np.copy(vis_parsing_anno)
     alpha_2[:,:,1] = np.copy(vis_parsing_anno)
     alpha_2[:,:,2] = np.copy(vis_parsing_anno)
@@ -166,6 +154,7 @@ def vis_parsing_maps(im, parsing_anno, stride,h=None,w=None):
 
 def segment(img_, device):
     with torch.no_grad():
+
         h, w, _ = img_.shape
         image = cv2.resize(img_, (512, 512), interpolation=cv2.INTER_AREA)
         img = segment_norm(image)
@@ -176,7 +165,7 @@ def segment(img_, device):
         output_img = vis_parsing_maps(image, parsing, stride=1,h=h,w=w)
     return output_img
 
-def handleOutput(outputImg, Lab, col, row, filepath, mask, img_p, img_orig, loc):
+def handleOutput(outputImg, Lab, col, row, filepath,mask,img_orig):
 
     outputImg = outputImg.transpose((1, 2, 0))
     outputImg = np.squeeze(outputImg)  # *1.45
@@ -192,8 +181,7 @@ def handleOutput(outputImg, Lab, col, row, filepath, mask, img_p, img_orig, loc)
     # make a gauss blur
 
     # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!  TODO add original image which will be background  CHECK AGAIN  !!!!!!!!!!!
-
-    background = np.copy(img_p)
+    background = np.copy(img_orig)
     foreground = np.copy(resultLab)
     foreground = foreground.astype(float)
     background = background.astype(float)
@@ -207,32 +195,16 @@ def handleOutput(outputImg, Lab, col, row, filepath, mask, img_p, img_orig, loc)
     # Add the masked foreground and background.
     outImage = cv2.add(foreground, background)
 
-    # img_orig[loc[0]:loc[0]+outImage.shape[0], loc[1]:loc[1]+outImage.shape[1]] = outImage
-
-    print()
     cv2.imwrite(filepath, outImage)
     return True
 
 
 def preprocess(img, device):
-    img = np.array(img)
-    orig_size = img.shape
-
-    if np.max(img.shape[:2]) > 1024:
-        if img.shape[0] < img.shape[1]:
-            img_res = imutils.resize(img, width=1024)
-        else:
-            img_res = imutils.resize(img, width=1024)
-    else:
-        img_res = img
-
-    resize_ratio = orig_size[0]/img_res.shape[0]
-    gray = cv2.cvtColor(img_res, cv2.COLOR_BGR2GRAY)
+    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     rects, scores, idx = detector.run(gray, 1, 1)
 
-    loc = [0,0]
-
     if len(rects) > 0:
+
         mask = segment(np.array(img), device)
 
         rect_id = np.argmax(scores)
@@ -254,9 +226,7 @@ def preprocess(img, device):
         xv /= np.linalg.norm(xv)
         yv = np.dot(R_90, y_p)
 
-        s *= resize_ratio
-        c[0] *= resize_ratio
-        c[1] *= resize_ratio
+
 
         c1_ms = np.max([0, int(c[1] - s / 2)])
         c1_ps = np.min([img.shape[0], int(c[1] + s / 2)])
@@ -269,24 +239,18 @@ def preprocess(img, device):
         left = -np.min([0, int(c[0] - s / 2)])
         right = -np.min([0, img.shape[1] - int(c[0] + s / 2)])
 
-        loc[0] = int(c1_ms)
-        loc[1] = int(c0_ms)
-
         img = img[int(c1_ms):int(c1_ps), int(c0_ms):int(c0_ps)]
         mask = mask[int(c1_ms):int(c1_ps), int(c0_ms):int(c0_ps)]
 
         img = cv2.copyMakeBorder(img, top, bottom, left, right, cv2.BORDER_CONSTANT, value=[255,255,255])
         mask = cv2.copyMakeBorder(mask, top, bottom, left, right, cv2.BORDER_CONSTANT, 0)
 
-
-        if np.max(img.shape[:2]) > 1024:
-            img = cv2.resize(img, (1024,1024))
-            mask = cv2.resize(mask, (1024,1024))
+        row, col, _ = img.shape
     else:
         img = None
         mask = None
 
-    return img, mask, loc
+    return img, mask
 
 @shared_task
 def prediction_task_sh_mul(data_path, img_path, preset_name, sh_id, upload_id=None):
@@ -302,7 +266,7 @@ def prediction_task_sh_mul(data_path, img_path, preset_name, sh_id, upload_id=No
 
     img_orig = cv2.imread(img_path)
 
-    img_p, mask, loc = preprocess(img_orig, worker_device)
+    img_p, mask = preprocess(img_orig, worker_device)
     is_face_found = img_p is not None
 
     if not is_face_found:
@@ -313,6 +277,7 @@ def prediction_task_sh_mul(data_path, img_path, preset_name, sh_id, upload_id=No
             cv2.imwrite,
             [osp.join(out_dir, 'ori.jpg'), img_p]
         )
+
 
         row, col, _ = img_p.shape
         img = cv2.resize(img_p, (512, 512))
@@ -338,7 +303,7 @@ def prediction_task_sh_mul(data_path, img_path, preset_name, sh_id, upload_id=No
 
             pool.apply_async(
                 handleOutput,
-                [outputImg, Lab, col, row, filepath,mask,img_p, img_orig, loc]
+                [outputImg, Lab, col, row, filepath,mask,img_p]
             )
 
         pool.close()
@@ -363,7 +328,7 @@ def prediction_task(data_path, img_path, sh_mul=None, upload_id=None):
 
     img_orig = cv2.imread(img_path)
 
-    img_p, mask, loc = preprocess(img_orig, worker_device)
+    img_p, mask = preprocess(img_orig, worker_device)
     is_face_found = img_p is not None
 
     if not is_face_found:
@@ -404,7 +369,7 @@ def prediction_task(data_path, img_path, sh_mul=None, upload_id=None):
 
                 pool.apply_async(
                         handleOutput,
-                        [outputImg, Lab, col, row, filepath, mask, img_p, img_orig, loc]
+                        [outputImg, Lab, col, row, filepath, mask, img_p]
                     )
                 # cv2.imwrite(osp.join(out_dir, filename), resultLab)
 
@@ -435,9 +400,10 @@ def process_image_sh_mul(img_path, preset_name, sh_id, upload_id=None):
 
 @worker_process_init.connect
 def worker_process_init_(**kwargs):
+
     data_path = osp.abspath('../data/')
     model_path = osp.join(data_path, "model/14_net_G_dpr7_mseBS20.pth")
     init_gpu(data_path, model_path)  # make sure all models are initialized upon starting the worker
     # prediction_task_sh_mul(data_path, '../../test_data/portrait_/AJ.jpg', 'horizontal', 7)
-    # prediction_task(data_path, '../../test_data/portrait_/mal.jpg')
+    # prediction_task(data_path, '../../test_data/portrait_/AJ.jpg')
     # prediction_task(data_path, '../../test_data/01/rotate_light_00.png')
