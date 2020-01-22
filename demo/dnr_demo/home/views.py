@@ -15,6 +15,7 @@ import humanhash
 import imutils
 import numpy as np
 import cv2
+import shutil
 
 def handle_uploaded_file(f):
     file_id = humanhash.uuid()[0]
@@ -97,3 +98,19 @@ def create_sh_presets(request):
 
     return HttpResponseNotFound('<h1>Page not found</h1>')
     
+# '/regenerate-gallery'
+def regenerate_gallery(request):
+    original_gallery_dir = os.path.join(settings.MEDIA_ROOT, 'gallery_images')
+    output_dir = os.path.join(settings.MEDIA_ROOT, 'output')
+
+    for filename in os.listdir(original_gallery_dir):
+        filepath = os.path.join(original_gallery_dir, filename)
+        if os.path.isfile(filepath):
+            image_id = 'sample_%s' % os.path.splitext(filename)[0]
+
+            if os.path.exists(os.path.join(output_dir, image_id)):
+                shutil.rmtree(os.path.join(output_dir, image_id))
+
+            process_image(filepath, upload_id=image_id)
+    
+    return JsonResponse({"done": True})
