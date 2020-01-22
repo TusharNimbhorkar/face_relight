@@ -11,6 +11,7 @@ import dlib
 sys.path.append("../..")
 sys.path.append("../../model")
 import cv2
+import imutils
 from multiprocessing.pool import ThreadPool
 
 import uuid
@@ -137,6 +138,7 @@ def vis_parsing_maps(im, parsing_anno, stride,h=None,w=None):
     # MASK
     vis_parsing_anno = cv2.resize(vis_parsing_anno,(w,h))
     vis_parsing_anno[vis_parsing_anno==16]=0
+    vis_parsing_anno[vis_parsing_anno==14]=0
     vis_parsing_anno[vis_parsing_anno>0]=255
 
     # alpha_2 = cv2.imread(segment_path_ear)
@@ -165,7 +167,7 @@ def segment(img_, device):
         output_img = vis_parsing_maps(image, parsing, stride=1,h=h,w=w)
     return output_img
 
-def handleOutput(outputImg, Lab, col, row, filepath,mask,img_orig):
+def handleOutput(outputImg, Lab, col, row, filepath, mask, img_p, img_orig, loc, crop_sz, border):
 
     outputImg = outputImg.transpose((1, 2, 0))
     outputImg = np.squeeze(outputImg)  # *1.45
@@ -181,7 +183,8 @@ def handleOutput(outputImg, Lab, col, row, filepath,mask,img_orig):
     # make a gauss blur
 
     # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!  TODO add original image which will be background  CHECK AGAIN  !!!!!!!!!!!
-    background = np.copy(img_orig)
+
+    background = np.copy(img_p)
     foreground = np.copy(resultLab)
     foreground = foreground.astype(float)
     background = background.astype(float)
@@ -195,13 +198,35 @@ def handleOutput(outputImg, Lab, col, row, filepath,mask,img_orig):
     # Add the masked foreground and background.
     outImage = cv2.add(foreground, background)
 
-    cv2.imwrite(filepath, outImage)
+
+    outImage = cv2.resize(outImage, (crop_sz[1], crop_sz[0]))
+
+    top, bottom, left, right = border
+    outImage = outImage[top:-bottom,left:-right]
+
+    img_orig[loc[0]:loc[0]+outImage.shape[0], loc[1]:loc[1]+outImage.shape[1]] = outImage
+
+    cv2.imwrite(filepath, img_orig)
     return True
 
 
 def preprocess(img, device):
-    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    img = np.array(img)
+    orig_size = img.shape
+
+    if np.max(img.shape[:2]) > 1024:
+        if img.shape[0] < img.shape[1]:
+            img_res = imutils.resize(img, width=1024)
+        else:
+            img_res = imutils.resize(img, width=1024)
+    else:
+        img_res = img
+
+    resize_ratio = orig_size[0]/img_res.shape[0]
+    gray = cv2.cvtColor(img_res, cv2.COLOR_BGR2GRAY)
     rects, scores, idx = detector.run(gray, 1, 1)
+
+    loc = [0,0]
 
     if len(rects) > 0:
 
@@ -226,7 +251,9 @@ def preprocess(img, device):
         xv /= np.linalg.norm(xv)
         yv = np.dot(R_90, y_p)
 
-
+        s *= resize_ratio
+        c[0] *= resize_ratio
+        c[1] *= resize_ratio
 
         c1_ms = np.max([0, int(c[1] - s / 2)])
         c1_ps = np.min([img.shape[0], int(c[1] + s / 2)])
@@ -239,18 +266,28 @@ def preprocess(img, device):
         left = -np.min([0, int(c[0] - s / 2)])
         right = -np.min([0, img.shape[1] - int(c[0] + s / 2)])
 
+        loc[0] = int(c1_ms)
+        loc[1] = int(c0_ms)
+
         img = img[int(c1_ms):int(c1_ps), int(c0_ms):int(c0_ps)]
         mask = mask[int(c1_ms):int(c1_ps), int(c0_ms):int(c0_ps)]
 
         img = cv2.copyMakeBorder(img, top, bottom, left, right, cv2.BORDER_CONSTANT, value=[255,255,255])
         mask = cv2.copyMakeBorder(mask, top, bottom, left, right, cv2.BORDER_CONSTANT, 0)
 
-        row, col, _ = img.shape
+        border = [top, bottom, left, right]
+
+        crop_sz = img.shape
+        if np.max(img.shape[:2]) > 1024:
+            img = cv2.resize(img, (1024,1024))
+            mask = cv2.resize(mask, (1024,1024))
     else:
         img = None
         mask = None
+        crop_sz = None
+        border = None
 
-    return img, mask
+    return img, mask, loc, crop_sz, border
 
 @shared_task
 def prediction_task_sh_mul(data_path, img_path, preset_name, sh_id, upload_id=None):
@@ -266,7 +303,7 @@ def prediction_task_sh_mul(data_path, img_path, preset_name, sh_id, upload_id=No
 
     img_orig = cv2.imread(img_path)
 
-    img_p, mask = preprocess(img_orig, worker_device)
+    img_p, mask, loc, crop_sz, border = preprocess(img_orig, worker_device)
     is_face_found = img_p is not None
 
     if not is_face_found:
@@ -275,7 +312,7 @@ def prediction_task_sh_mul(data_path, img_path, preset_name, sh_id, upload_id=No
         pool = ThreadPool(processes=8)
         pool.apply_async(
             cv2.imwrite,
-            [osp.join(out_dir, 'ori.jpg'), img_p]
+            [osp.join(out_dir, 'ori.jpg'), img_orig]
         )
 
 
@@ -303,7 +340,7 @@ def prediction_task_sh_mul(data_path, img_path, preset_name, sh_id, upload_id=No
 
             pool.apply_async(
                 handleOutput,
-                [outputImg, Lab, col, row, filepath,mask,img_p]
+                [outputImg, Lab, col, row, filepath,mask,img_p, img_orig, loc, crop_sz, border]
             )
 
         pool.close()
@@ -328,7 +365,7 @@ def prediction_task(data_path, img_path, sh_mul=None, upload_id=None):
 
     img_orig = cv2.imread(img_path)
 
-    img_p, mask = preprocess(img_orig, worker_device)
+    img_p, mask, loc, crop_sz, border = preprocess(img_orig, worker_device)
     is_face_found = img_p is not None
 
     if not is_face_found:
@@ -338,7 +375,7 @@ def prediction_task(data_path, img_path, sh_mul=None, upload_id=None):
         pool = ThreadPool(processes=8)
         pool.apply_async(
             cv2.imwrite,
-            [osp.join(out_dir, 'ori.jpg'), img_p]
+            [osp.join(out_dir, 'ori.jpg'), img_orig]
         )
 
         row, col, _ = img_p.shape
@@ -369,7 +406,7 @@ def prediction_task(data_path, img_path, sh_mul=None, upload_id=None):
 
                 pool.apply_async(
                         handleOutput,
-                        [outputImg, Lab, col, row, filepath, mask, img_p]
+                        [outputImg, Lab, col, row, filepath, mask, img_p, img_orig, loc, crop_sz, border]
                     )
                 # cv2.imwrite(osp.join(out_dir, filename), resultLab)
 
@@ -405,5 +442,5 @@ def worker_process_init_(**kwargs):
     model_path = osp.join(data_path, "model/14_net_G_dpr7_mseBS20.pth")
     init_gpu(data_path, model_path)  # make sure all models are initialized upon starting the worker
     # prediction_task_sh_mul(data_path, '../../test_data/portrait_/AJ.jpg', 'horizontal', 7)
-    # prediction_task(data_path, '../../test_data/portrait_/AJ.jpg')
+    # prediction_task(data_path, '../../test_data/portrait_/mal.jpg')
     # prediction_task(data_path, '../../test_data/01/rotate_light_00.png')
