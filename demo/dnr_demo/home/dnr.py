@@ -177,7 +177,7 @@ def segment(img_, device):
         output_img = vis_parsing_maps(image, parsing, stride=1,h=h,w=w)
     return output_img
 
-def handleOutput(outputImg, Lab, col, row, filepath, mask, img_p, img_orig, loc, crop_sz):
+def handleOutput(outputImg, Lab, col, row, filepath, mask, img_p, img_orig, loc, crop_sz, border):
 
     outputImg = outputImg.transpose((1, 2, 0))
     outputImg = np.squeeze(outputImg)  # *1.45
@@ -210,6 +210,10 @@ def handleOutput(outputImg, Lab, col, row, filepath, mask, img_p, img_orig, loc,
 
 
     outImage = cv2.resize(outImage, (crop_sz[1], crop_sz[0]))
+
+    top, bottom, left, right = border
+    outImage = outImage[top:-bottom,left:-right]
+
     img_orig[loc[0]:loc[0]+outImage.shape[0], loc[1]:loc[1]+outImage.shape[1]] = outImage
 
     cv2.imwrite(filepath, img_orig)
@@ -280,6 +284,8 @@ def preprocess(img, device):
         img = cv2.copyMakeBorder(img, top, bottom, left, right, cv2.BORDER_CONSTANT, value=[255,255,255])
         mask = cv2.copyMakeBorder(mask, top, bottom, left, right, cv2.BORDER_CONSTANT, 0)
 
+        border = [top, bottom, left, right]
+
         crop_sz = img.shape
         if np.max(img.shape[:2]) > 1024:
             img = cv2.resize(img, (1024,1024))
@@ -287,8 +293,10 @@ def preprocess(img, device):
     else:
         img = None
         mask = None
+        crop_sz = None
+        border = None
 
-    return img, mask, loc, crop_sz
+    return img, mask, loc, crop_sz, border
 
 @shared_task
 def prediction_task_sh_mul(data_path, img_path, preset_name, sh_id, upload_id=None):
@@ -304,7 +312,7 @@ def prediction_task_sh_mul(data_path, img_path, preset_name, sh_id, upload_id=No
 
     img_orig = cv2.imread(img_path)
 
-    img_p, mask, loc, crop_sz = preprocess(img_orig, worker_device)
+    img_p, mask, loc, crop_sz, border = preprocess(img_orig, worker_device)
     is_face_found = img_p is not None
 
     if not is_face_found:
@@ -340,7 +348,7 @@ def prediction_task_sh_mul(data_path, img_path, preset_name, sh_id, upload_id=No
 
             pool.apply_async(
                 handleOutput,
-                [outputImg, Lab, col, row, filepath,mask,img_p, img_orig, loc, crop_sz]
+                [outputImg, Lab, col, row, filepath,mask,img_p, img_orig, loc, crop_sz, border]
             )
 
         pool.close()
@@ -365,7 +373,7 @@ def prediction_task(data_path, img_path, sh_mul=None, upload_id=None):
 
     img_orig = cv2.imread(img_path)
 
-    img_p, mask, loc, crop_sz = preprocess(img_orig, worker_device)
+    img_p, mask, loc, crop_sz, border = preprocess(img_orig, worker_device)
     is_face_found = img_p is not None
 
     if not is_face_found:
@@ -406,7 +414,7 @@ def prediction_task(data_path, img_path, sh_mul=None, upload_id=None):
 
                 pool.apply_async(
                         handleOutput,
-                        [outputImg, Lab, col, row, filepath, mask, img_p, img_orig, loc, crop_sz]
+                        [outputImg, Lab, col, row, filepath, mask, img_p, img_orig, loc, crop_sz, border]
                     )
                 # cv2.imwrite(osp.join(out_dir, filename), resultLab)
 
