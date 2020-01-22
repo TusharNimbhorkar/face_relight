@@ -12,6 +12,6 @@ os.environ.setdefault('DJANGO_SETTINGS_MODULE', '{}.celery_settings'.format(this
 
 from django.conf import settings  # import the custom celery settings
 
-app = Celery(this_module, backend='redis', broker='redis://localhost:6379/0')
+app = Celery(this_module, backend='redis', broker='redis://localhost:6379/1')
 app.config_from_object(settings, namespace='CELERY')
 app.autodiscover_tasks()
