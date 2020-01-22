@@ -151,9 +151,7 @@ def vis_parsing_maps(im, parsing_anno, stride,h=None,w=None):
         labels, stats = cv2.connectedComponentsWithStats(mask, 4)[1:3]  # step 4
         largest_label = 1 + np.argmax(stats[1:, cv2.CC_STAT_AREA])  # step 5
         new_img[labels == largest_label] = val
-    print('=='*250)
-    # print(new_img.shape)
-    print('=='*250)
+    
     vis_parsing_anno = new_img.copy()
 
     # alpha_2 = cv2.imread(segment_path_ear)
@@ -230,7 +228,7 @@ def preprocess(img, device):
 
     resize_ratio = orig_size[0]/img_res.shape[0]
     gray = cv2.cvtColor(img_res, cv2.COLOR_BGR2GRAY)
-    rects, scores, idx = detector.run(gray, 1, 1)
+    rects, scores, idx = detector.run(gray, 1, -1)
 
     loc = [0,0]
 
