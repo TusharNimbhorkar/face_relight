@@ -106,7 +106,7 @@ def regenerate_gallery(request):
     for filename in os.listdir(original_gallery_dir):
         filepath = os.path.join(original_gallery_dir, filename)
         if os.path.isfile(filepath):
-            image_id = os.path.splitext(filename)[0]
+            image_id = 'sample_%s' % os.path.splitext(filename)[0]
 
             if os.path.exists(os.path.join(output_dir, image_id)):
                 shutil.rmtree(os.path.join(output_dir, image_id))
