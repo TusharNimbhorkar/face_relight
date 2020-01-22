@@ -141,6 +141,18 @@ def vis_parsing_maps(im, parsing_anno, stride,h=None,w=None):
     vis_parsing_anno[vis_parsing_anno==14]=0
     vis_parsing_anno[vis_parsing_anno>0]=255
 
+    kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (7, 7))
+    closing = cv2.morphologyEx(vis_parsing_anno, cv2.MORPH_CLOSE, kernel)
+    closing = cv2.morphologyEx(closing, cv2.MORPH_OPEN, kernel)
+
+    new_img = np.zeros_like(closing)  # step 1
+    for val in np.unique(closing)[1:]:  # step 2
+        mask = np.uint8(closing == val)  # step 3
+        labels, stats = cv2.connectedComponentsWithStats(mask, 4)[1:3]  # step 4
+        largest_label = 1 + np.argmax(stats[1:, cv2.CC_STAT_AREA])  # step 5
+        new_img[labels == largest_label] = val
+
+    vis_parsing_anno = new_img.copy()
     # alpha_2 = cv2.imread(segment_path_ear)
     alpha_2[:,:,0] = np.copy(vis_parsing_anno)
     alpha_2[:,:,1] = np.copy(vis_parsing_anno)
