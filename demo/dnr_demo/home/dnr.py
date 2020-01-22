@@ -226,9 +226,10 @@ def handleOutput(outputImg, Lab, col, row, filepath, mask, img_p, img_orig, loc,
 
     outImage = outImage[top:bottom,left:right]
 
-    img_orig[loc[0]:loc[0]+outImage.shape[0], loc[1]:loc[1]+outImage.shape[1]] = outImage
+    img_overlayed = np.copy(img_orig)
+    img_overlayed[loc[0]:loc[0]+outImage.shape[0], loc[1]:loc[1]+outImage.shape[1]] = outImage
 
-    cv2.imwrite(filepath, img_orig)
+    cv2.imwrite(filepath, img_overlayed)
     return True
 
 
