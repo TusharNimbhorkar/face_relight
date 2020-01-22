@@ -140,6 +140,8 @@ def vis_parsing_maps(im, parsing_anno, stride,h=None,w=None):
     vis_parsing_anno[vis_parsing_anno==16]=0
     vis_parsing_anno[vis_parsing_anno==14]=0
     vis_parsing_anno[vis_parsing_anno>0]=255
+    vis_parsing_anno = cv2.GaussianBlur(vis_parsing_anno,(9,9),15,15)
+
     th, im_th = cv2.threshold(vis_parsing_anno, 0, 255, cv2.THRESH_BINARY_INV)
     h, w = im_th.shape[:2]
     mask = np.zeros((h + 2, w + 2), np.uint8)
