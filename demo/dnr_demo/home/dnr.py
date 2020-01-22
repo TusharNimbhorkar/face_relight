@@ -262,7 +262,7 @@ def preprocess(img, device):
         img = img[int(c1_ms):int(c1_ps), int(c0_ms):int(c0_ps)]
         mask = mask[int(c1_ms):int(c1_ps), int(c0_ms):int(c0_ps)]
 
-        img = cv2.copyMakeBorder(img, top, bottom, left, right, cv2.BORDER_CONSTANT, value=[255,255,255])
+        img = cv2.copyMakeBorder(img, top, bottom, left, right, cv2.BORDER_CONSTANT, value=[0,0,0])
         mask = cv2.copyMakeBorder(mask, top, bottom, left, right, cv2.BORDER_CONSTANT, 0)
 
 
