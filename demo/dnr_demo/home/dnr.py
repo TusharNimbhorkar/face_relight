@@ -21,6 +21,7 @@ from models.skeleton512 import HourglassNet
 from .segment_model import BiSeNet
 import numpy as np
 import torchvision.transforms as transforms
+import imutils
 
 # only load these modules for Celery workers, to not slow down django
 if settings.IS_CELERY_WORKER:
