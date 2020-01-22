@@ -236,8 +236,6 @@ def preprocess(img, device):
 
     if len(rects) > 0:
 
-        mask = segment(np.array(img), device)
-
         rect_id = np.argmax(scores)
         rect = rects[rect_id]
         # rect = rects[0]
@@ -276,7 +274,8 @@ def preprocess(img, device):
         loc[1] = int(c0_ms)
 
         img = img[int(c1_ms):int(c1_ps), int(c0_ms):int(c0_ps)]
-        mask = mask[int(c1_ms):int(c1_ps), int(c0_ms):int(c0_ps)]
+        mask = segment(img, device)
+        # mask = mask[int(c1_ms):int(c1_ps), int(c0_ms):int(c0_ps)]
 
         img = cv2.copyMakeBorder(img, top, bottom, left, right, cv2.BORDER_CONSTANT, value=[0,0,0])
         mask = cv2.copyMakeBorder(mask, top, bottom, left, right, cv2.BORDER_CONSTANT, 0)
