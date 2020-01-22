@@ -279,9 +279,9 @@ def preprocess(img, device):
         mask = cv2.copyMakeBorder(mask, top, bottom, left, right, cv2.BORDER_CONSTANT, 0)
 
 
-        if np.max(img.shape[:2]) > 1024:
-            img = cv2.resize(img, (1024,1024))
-            mask = cv2.resize(mask, (1024,1024))
+        # if np.max(img.shape[:2]) > 1024:
+        #     img = cv2.resize(img, (1024,1024))
+        #     mask = cv2.resize(mask, (1024,1024))
     else:
         img = None
         mask = None
