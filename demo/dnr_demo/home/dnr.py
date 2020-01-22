@@ -214,7 +214,17 @@ def handleOutput(outputImg, Lab, col, row, filepath, mask, img_p, img_orig, loc,
     outImage = cv2.resize(outImage, (crop_sz[1], crop_sz[0]))
 
     top, bottom, left, right = border
-    outImage = outImage[top:-bottom,left:-right]
+
+    right = -right
+    bottom = -bottom
+
+    if bottom == 0:
+        bottom = None
+
+    if right == 0:
+        right = None
+
+    outImage = outImage[top:bottom,left:right]
 
     img_orig[loc[0]:loc[0]+outImage.shape[0], loc[1]:loc[1]+outImage.shape[1]] = outImage
 
