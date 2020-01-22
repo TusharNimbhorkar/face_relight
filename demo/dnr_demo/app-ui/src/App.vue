@@ -168,11 +168,30 @@
         selectedSHMul: 0.7,
         shMul: 0.7,
         isShowingAdvanceOption: false,
+        imageCache: {}
       }
     },
     components: {
     },
     methods: {
+      checkImage(path) {
+        return new Promise(resolve => {
+          if (!this.imageCache.hasOwnProperty(path)) {
+            const img = new Image();
+            img.onload = () => resolve({path, status: 'ok'});
+            img.onerror = () => resolve({path, status: 'error'});
+
+            img.src = path;
+            this.imageCache[path] = new Date()
+          }
+        })
+      },
+      preload(imageList) {
+        Promise
+        .all(imageList.map(this.checkImage))
+        // .then((state)=>{
+        // })
+			},
       selectOrbit(type) {
         this.selectedOrbit = type
         this.selectedValue = range[type].midRange
@@ -180,11 +199,23 @@
         this.maxRange = range[type].maxRange
         this.isShowingSHPreview = false
         this.isShowingAdvanceOption = false
-        this.updateImageList();
+        this.updateImageList()
+        this.preload(this.imageList)
       },
       selectExample(id) {
         this.selectedModel = id
         this.selectOrbit('none')
+        
+        let preloadList = []
+        const orbits = ['horizontal', 'around']
+        orbits.map((orbit) => {
+          for (let val=range[orbit].minRange ; val <= range[orbit].maxRange; val++) {
+            preloadList.push(this.generateImageURL(val, orbit))
+          }
+        })
+        console.log(preloadList)
+        this.preload(preloadList)
+        this.resetSH()
         this.isMenuShow = false
       },
       resetSH() {
@@ -192,6 +223,7 @@
         this.isShowingAdvanceOption = false
 
         this.isShowingSHPreview=false
+        this.selectedSHMul = 0.7
         this.shMul = this.selectedSHMul
       },
       checkForSHPreview() {
@@ -239,17 +271,21 @@
           });
         }
       },
-      generateImageURL(val) {
+      generateImageURL(val, orbit) {
+        let selectedOrbit = orbit
+        if (!selectedOrbit) {
+          selectedOrbit = this.selectedOrbit
+        }
         const defaultURL = `${MEDIA_ROOT}/${this.selectedModel}/ori.jpg`;
-        let id = this.selectedOrbit==='over' ? this.maxRange - val : val;
-        if (this.selectedOrbit === 'around') {
-          id = this.maxRange - val - 16;
+        let id = selectedOrbit==='over' ? range[selectedOrbit].maxRange - val : val;
+        if (selectedOrbit === 'around') {
+          id = range[selectedOrbit].maxRange - val - 16;
           if (id < 0) {
-            id += this.maxRange
+            id += range[selectedOrbit].maxRange
           }
         }
                 
-        return this.selectedOrbit==='none' ? defaultURL : `${MEDIA_ROOT}/${this.selectedModel}/${this.selectedOrbit}_${id}_${(+this.selectedSHMul).toFixed(2)}.jpg`
+        return selectedOrbit==='none' ? defaultURL : `${MEDIA_ROOT}/${this.selectedModel}/${selectedOrbit}_${id}_${(+this.selectedSHMul).toFixed(2)}.jpg`
       },
       handleUpdateSHMul() {               
         if (!this.isBusy) {
