@@ -258,6 +258,7 @@
               });
               this.isBusy = false;
             }
+            this.$refs.file.value = ''
           })
           .catch((error) => {
             console.log('err', error)
@@ -268,6 +269,7 @@
               });
 
             this.isBusy = false;
+            this.$refs.file.value = ''
           });
         }
       },
