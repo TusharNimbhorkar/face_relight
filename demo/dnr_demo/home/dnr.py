@@ -151,7 +151,7 @@ def vis_parsing_maps(im, parsing_anno, stride,h=None,w=None):
     cv2.floodFill(im_floodfill, mask, (0, h-1), 255)
     cv2.floodFill(im_floodfill, mask, (w-1, h-1), 255)
 
-    # mask = mask[0:0+h, 0:0+w]
+    mask = mask[0:0+h, 0:0+w]
     vis_parsing_anno = cv2.bitwise_not(mask)
     vis_parsing_anno[vis_parsing_anno==254]=0
 
