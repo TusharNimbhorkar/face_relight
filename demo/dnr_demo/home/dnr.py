@@ -208,9 +208,9 @@ def handleOutput(outputImg, Lab, col, row, filepath, mask, img_p, img_orig, loc)
     # Add the masked foreground and background.
     outImage = cv2.add(foreground, background)
 
-    img_orig[loc[0]:loc[0]+outImage.shape[0], loc[1]:loc[1]+outImage.shape[1]] = outImage
+    # img_orig[loc[0]:loc[0]+outImage.shape[0], loc[1]:loc[1]+outImage.shape[1]] = outImage
 
-    cv2.imwrite(filepath, img_orig)
+    cv2.imwrite(filepath, outImage)
     return True
 
 
@@ -279,9 +279,9 @@ def preprocess(img, device):
         mask = cv2.copyMakeBorder(mask, top, bottom, left, right, cv2.BORDER_CONSTANT, 0)
 
 
-        # if np.max(img.shape[:2]) > 1024:
-        #     img = cv2.resize(img, (1024,1024))
-        #     mask = cv2.resize(mask, (1024,1024))
+        if np.max(img.shape[:2]) > 1024:
+            img = cv2.resize(img, (1024,1024))
+            mask = cv2.resize(mask, (1024,1024))
     else:
         img = None
         mask = None
