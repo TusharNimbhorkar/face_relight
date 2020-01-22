@@ -7,8 +7,11 @@
 - CUDA 10.0
 
 ### Installation 
+1 Install dependencies
 
-1. Create the conda environment with all the dependencies required:
+        sudo apt-get install redis-server
+
+2. Create the conda environment with all the dependencies required:
 
         conda env create -f environment.yml
         conda activate fr
@@ -19,7 +22,7 @@
 
 1. Run Celery. If ran with 1 worker (-c 1), cpu will be used, otherwise - GPU:
 
-        celery -A dnr_demo worker --loglevel=info
+        celery -A dnr_demo worker --loglevel=info -c 1
 
 2. Run the server:
 
