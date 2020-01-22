@@ -166,7 +166,6 @@ def vis_parsing_maps(im, parsing_anno, stride,h=None,w=None):
 
 def segment(img_, device):
     with torch.no_grad():
-
         h, w, _ = img_.shape
         image = cv2.resize(img_, (512, 512), interpolation=cv2.INTER_AREA)
         img = segment_norm(image)
@@ -210,6 +209,7 @@ def handleOutput(outputImg, Lab, col, row, filepath, mask, img_p, img_orig, loc)
 
     # img_orig[loc[0]:loc[0]+outImage.shape[0], loc[1]:loc[1]+outImage.shape[1]] = outImage
 
+    print()
     cv2.imwrite(filepath, outImage)
     return True
 
@@ -279,9 +279,9 @@ def preprocess(img, device):
         mask = cv2.copyMakeBorder(mask, top, bottom, left, right, cv2.BORDER_CONSTANT, 0)
 
 
-        # if np.max(img.shape[:2]) > 1024:
-        #     img = cv2.resize(img, (1024,1024))
-        #     mask = cv2.resize(mask, (1024,1024))
+        if np.max(img.shape[:2]) > 1024:
+            img = cv2.resize(img, (1024,1024))
+            mask = cv2.resize(mask, (1024,1024))
     else:
         img = None
         mask = None
