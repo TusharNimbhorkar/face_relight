@@ -311,7 +311,7 @@ def prediction_task_sh_mul(data_path, img_path, preset_name, sh_id, upload_id=No
         pool = ThreadPool(processes=8)
         pool.apply_async(
             cv2.imwrite,
-            [osp.join(out_dir, 'ori.jpg'), img_orig]
+            [osp.join(out_dir, 'ori.jpg'), img_p]
         )
 
         row, col, _ = img_p.shape
@@ -373,7 +373,7 @@ def prediction_task(data_path, img_path, sh_mul=None, upload_id=None):
         pool = ThreadPool(processes=8)
         pool.apply_async(
             cv2.imwrite,
-            [osp.join(out_dir, 'ori.jpg'), img_orig]
+            [osp.join(out_dir, 'ori.jpg'), img_p]
         )
 
         row, col, _ = img_p.shape
@@ -435,7 +435,6 @@ def process_image_sh_mul(img_path, preset_name, sh_id, upload_id=None):
 
 @worker_process_init.connect
 def worker_process_init_(**kwargs):
-
     data_path = osp.abspath('../data/')
     model_path = osp.join(data_path, "model/14_net_G_dpr7_mseBS20.pth")
     init_gpu(data_path, model_path)  # make sure all models are initialized upon starting the worker
