@@ -200,13 +200,13 @@ def handleOutput(outputImg, Lab, col, row, filepath, mask, img_p, img_orig, loc)
     background = background.astype(float)
 
     # Multiply the foreground with the alpha matte
-    # foreground = cv2.multiply(mask, foreground)
+    foreground = cv2.multiply(mask, foreground)
 
     # Multiply the background with ( 1 - alpha )
-    # background = cv2.multiply(1 - mask, background)
+    background = cv2.multiply(1 - mask, background)
 
     # Add the masked foreground and background.
-    outImage = foreground #cv2.add(foreground, background)
+    outImage = cv2.add(foreground, background)
 
     # img_orig[loc[0]:loc[0]+outImage.shape[0], loc[1]:loc[1]+outImage.shape[1]] = outImage
 
