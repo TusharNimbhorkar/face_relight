@@ -138,7 +138,7 @@ def vis_parsing_maps(im, parsing_anno, stride,h=None,w=None):
     # MASK
     vis_parsing_anno = cv2.resize(vis_parsing_anno,(w,h))
     vis_parsing_anno[vis_parsing_anno==16]=0
-    vis_parsing_anno[vis_parsing_anno==17]=0
+    # vis_parsing_anno[vis_parsing_anno==17]=0
     vis_parsing_anno[vis_parsing_anno == 14] = 0
     vis_parsing_anno[vis_parsing_anno>0]=255
 
