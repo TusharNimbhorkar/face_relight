@@ -231,6 +231,7 @@ def handleOutput(outputImg, Lab, col, row, filepath, mask, img_p, img_orig, loc,
     img_overlayed[loc[0]:loc[0]+outImage.shape[0], loc[1]:loc[1]+outImage.shape[1]] = outImage
     # print(loc[0] - 10,loc[0] + outImage.shape[0] + 10, loc[1] - 10,loc[1] + outImage.shape[1] + 10)
 
+    '''
     # blending fr the bounding box
     img1 = np.ones_like(img_overlayed)
 
@@ -258,8 +259,10 @@ def handleOutput(outputImg, Lab, col, row, filepath, mask, img_p, img_orig, loc,
     # Add the masked foreground and background.
     outImage = cv2.add(foreground, background)
     
-    # cv2.imwrite(filepath, img_overlayed)
+    # 
     cv2.imwrite(filepath, outImage)
+    '''
+    cv2.imwrite(filepath, img_overlayed)
     return True
 
 
