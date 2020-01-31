@@ -138,6 +138,7 @@ def vis_parsing_maps(im, parsing_anno, stride,h=None,w=None):
     # MASK
     vis_parsing_anno = cv2.resize(vis_parsing_anno,(w,h))
     vis_parsing_anno[vis_parsing_anno==16]=0
+    # vis_parsing_anno[vis_parsing_anno==17]=0
     vis_parsing_anno[vis_parsing_anno == 14] = 0
     vis_parsing_anno[vis_parsing_anno>0]=255
 
@@ -228,7 +229,39 @@ def handleOutput(outputImg, Lab, col, row, filepath, mask, img_p, img_orig, loc,
 
     img_overlayed = np.copy(img_orig)
     img_overlayed[loc[0]:loc[0]+outImage.shape[0], loc[1]:loc[1]+outImage.shape[1]] = outImage
+    # print(loc[0] - 10,loc[0] + outImage.shape[0] + 10, loc[1] - 10,loc[1] + outImage.shape[1] + 10)
 
+    '''
+    # blending fr the bounding box
+    img1 = np.ones_like(img_overlayed)
+
+    img1[loc[0]+2:loc[0] + outImage.shape[0]-2, loc[1]+2:loc[1] + outImage.shape[1]-2] = 0
+    mask = cv2.bitwise_not(img1)
+    mask[mask < 255] = 0
+
+
+    # blending
+    
+    mask = cv2.GaussianBlur(mask, (7, 7), 7, 7)
+    # Normalize the alpha mask to kee   p intensity between 0 and 1
+    mask = mask.astype(float) / 255
+    background = np.copy(img_orig)
+    foreground = np.copy(img_overlayed)
+    foreground = foreground.astype(float)
+    background = background.astype(float)
+    
+    # Multiply the foreground with the alpha matte
+    foreground = cv2.multiply(mask, foreground)
+    
+    # Multiply the background with ( 1 - alpha )
+    background = cv2.multiply(1 - mask, background)
+    
+    # Add the masked foreground and background.
+    outImage = cv2.add(foreground, background)
+    
+    # 
+    cv2.imwrite(filepath, outImage)
+    '''
     cv2.imwrite(filepath, img_overlayed)
     return True
 
