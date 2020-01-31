@@ -134,7 +134,7 @@ lightFolder = 'test_data/01/'
 
 sh_vals = ['07']
 
-test_dir = '/home/tushar/face_relight/substet_eval/mpie'
+test_dir = '/home/tushar/data2/face_relight/substet_eval/mpie'
 
 
 test_dir1 = test_dir
@@ -149,9 +149,9 @@ old_people = os.listdir(test_dir1)
 persons = os.listdir(test_dir)
 
 
-# sh_costant_list = [0.9,1.1,1.2,1.3,1.4,1.5,1.6]
+#sh_costant_list = [0.6,0.7,0.8,0.9,1.1,1.2,1.3,1.4,1.5,1.6]
 # sh_costant_list = [0.7,0.75,0.8,0.85]
-sh_costant_list = [0.8]
+sh_costant_list = [0.85,1]
 
 for sh_constant_ in sh_costant_list:
 
@@ -170,7 +170,7 @@ for sh_constant_ in sh_costant_list:
         max_mse = 0
 
         ##############################################################
-        img_dirs = '/home/tushar/face_relight/substet_eval/mpie_segment/'
+        img_dirs = '/home/tushar/data2/face_relight/substet_eval/mpie_segment/'
         people_ = os.listdir(img_dirs)
         peoples = []
         for jj in sorted(people_):
@@ -294,7 +294,7 @@ for sh_constant_ in sh_costant_list:
                             # cv2.imwrite(os.path.join('07_10.jpg'.format(i)), resultLab)
 
                             #######################################################################
-                            segment_path_ear = os.path.join('/home/tushar/face_relight/substet_eval', 'mpie_segment',
+                            segment_path_ear = os.path.join('/home/tushar/data2/face_relight/substet_eval', 'mpie_segment',
                                                             per,
                                                             per + front_number)
                             im1 = cv2.imread(segment_path_ear,0)
@@ -331,7 +331,7 @@ for sh_constant_ in sh_costant_list:
                             segment_im[:, :, 1] = np.copy(first_channel)
                             segment_im[:, :, 2] = np.copy(first_channel)
                             segment_im[segment_im > 0] = 1
-                            resize = False
+                            resize = True
                             if resize:
                                 img_side_copy = cv2.resize(img_side_copy,(128,128))
                                 segment_im = cv2.resize(segment_im,(128,128))
