@@ -144,7 +144,7 @@ class lightgrad61Model(BaseModel):
         self.loss_G = self.loss_G_GAN + self.loss_L1_add #self.loss_G_L1 + self.loss_G_MSE + self.loss_G_total_variance
         #
         if epoch > 10:
-            self.loss_G_feat = self.criterionL1(self.face_feat_A, self.face_feat_B) * 0.5
+            self.loss_G_feat = self.mseloss(self.face_feat_A, self.face_feat_B) * 0.5
             self.loss_G = self.loss_G + self.loss_G_feat
         else:
             self.loss_G_feat = 0.0
