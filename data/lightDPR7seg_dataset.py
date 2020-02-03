@@ -64,6 +64,7 @@ class lightDPR7segDataset(BaseDataset):
         # print(segment_path)
         segment_im = cv2.imread(segment_path)
         segment_im[segment_im==255]=1
+        segment_im = segment_im.astype(np.float32)
 
         #"{:05d}".format(real_im_number)+'.png')
 
@@ -72,7 +73,7 @@ class lightDPR7segDataset(BaseDataset):
 
         img_A = cv2.resize(A, (512, 512))
 
-        img_A = np.multiply(img_A,segment_im)
+        # img_A = np.multiply(img_A,segment_im)
 
         Lab_A = cv2.cvtColor(img_A, cv2.COLOR_BGR2LAB)
         inputLA = Lab_A[:, :, 0]
@@ -88,7 +89,7 @@ class lightDPR7segDataset(BaseDataset):
 
         B = cv2.imread(target_path)
         img_B = cv2.resize(B, (512, 512))
-        img_B = np.multiply(img_B,segment_im)
+        # img_B = np.multiply(img_B,segment_im)
 
         Lab_B = cv2.cvtColor(img_B, cv2.COLOR_BGR2LAB)
         inputLB = Lab_B[:, :, 0]
@@ -115,6 +116,8 @@ class lightDPR7segDataset(BaseDataset):
         B = self.transform_A(inputB)
         C = self.transform_A(inputC)
         D = self.transform_A(inputorig)
+        S = self.transform_A(segment_im)
+
 
         del_item = AB_path[0].split('_')[-1][:-4]
         target_item = target_path.split('_')[-1][:-4]
@@ -137,7 +140,7 @@ class lightDPR7segDataset(BaseDataset):
         # todo: check for just VARIABLE thingy
 
 
-        return {'A': A, 'B': B,'C':C,'D':D, 'AL':torch.from_numpy(sh_AL),'BL':torch.from_numpy(sh_BL), 'A_paths': AB_path, 'B_paths': AB_path}
+        return {'A': A, 'B': B,'C':C,'D':D,'S':S, 'AL':torch.from_numpy(sh_AL),'BL':torch.from_numpy(sh_BL), 'A_paths': AB_path, 'B_paths': AB_path}
 
     def __len__(self):
         return len(self.list_AB)
