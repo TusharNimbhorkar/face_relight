@@ -139,7 +139,7 @@ class lightgrad61Model(BaseModel):
         self.loss_G_total_variance = self.criterionL1(self.calc_gradient(x=self.real_B),
                                                       self.calc_gradient(self.fake_B))
 
-        self.loss_L1_add = self.loss_G_L1 + self.loss_G_MSE + self.loss_G_total_variance
+        self.loss_L1_add = self.loss_G_L1 + self.loss_G_MSE + self.loss_G_total_variance +self.loss_G_L1_SS
 
         self.loss_G = self.loss_G_GAN + self.loss_L1_add #self.loss_G_L1 + self.loss_G_MSE + self.loss_G_total_variance
         #
