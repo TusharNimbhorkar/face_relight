@@ -1,4 +1,5 @@
 # MSE-SUM on SH is mean not sum
+# model with loss calculated on Segments
 import torch
 import sys
 from util.image_pool import ImagePool

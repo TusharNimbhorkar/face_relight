@@ -1,4 +1,6 @@
 # MSE-SUM on SH is mean not sum
+# Model with self supervision loss!!!
+
 import torch
 import sys
 from util.image_pool import ImagePool
