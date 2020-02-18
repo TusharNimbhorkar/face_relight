@@ -1,5 +1,5 @@
 # MSE-SUM on SH is mean not sum
-# Default model
+# Default model with stack
 import torch
 import sys
 from util.image_pool import ImagePool
@@ -8,15 +8,15 @@ from . import networks
 
 sys.path.append('.')
 # from relight_model import *
-from skeleton512 import *
+from skeleton512_hybrid import *
 import torch.nn as nn
 from torch.autograd import Variable
 import numpy as np
 #
 
-class lightgrad59Model(BaseModel):
+class lightgrad59StackModel(BaseModel):
     def name(self):
-        return 'lightgrad59Model'
+        return 'lightgrad59StackModel'
 
     @staticmethod
     def modify_commandline_options(parser, is_train=True):
@@ -71,6 +71,7 @@ class lightgrad59Model(BaseModel):
         self.real_BL = input['BL'].to(self.device)
         self.real_C = input['C'].to(self.device)
         self.real_D = input['D'].to(self.device)
+        self.real_A_con = input['A_con'].to(self.device)
         self.image_paths = input['A_paths' if AtoB else 'B_paths']
 
     def forward(self, epoch):
@@ -82,10 +83,10 @@ class lightgrad59Model(BaseModel):
             count_skip = 0
 
         if epoch <= 10:
-            self.fake_B, _, self.fake_AL, _ = self.netG(self.real_A, self.real_BL, count_skip, oriImg=None)
+            self.fake_B, _, self.fake_AL, _ = self.netG(self.real_A_con, self.real_BL, count_skip, oriImg=None)
 
         if epoch > 10:
-            self.fake_B, self.face_feat_A, self.fake_AL, self.face_feat_B = self.netG(self.real_A, self.real_BL,
+            self.fake_B, self.face_feat_A, self.fake_AL, self.face_feat_B = self.netG(self.real_A_con, self.real_BL,
                                                                                       count_skip, oriImg=self.real_D)
 
     def calc_gradient(self, x):
