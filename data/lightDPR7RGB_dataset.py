@@ -53,7 +53,7 @@ class lightDPR7RGBDataset(BaseDataset):
 
         real_im_path = os.path.join(self.opt.dataroot,'real_im',"{:05d}".format(real_im_number)+'.png')
         C = cv2.imread(real_im_path)
-        img_C = cv2.resize(C, (512, 512))
+        img_C = cv2.resize(C, (256, 256))
         Lab_C = cv2.cvtColor(img_C, cv2.COLOR_BGR2LAB)
         inputLC = Lab_C
         inputC = inputLC.astype(np.float32) / 255.0
@@ -65,6 +65,9 @@ class lightDPR7RGBDataset(BaseDataset):
         segment_path = os.path.join(self.opt.dataroot,'segments',AB_path[0].split('/')[-1].split('_')[0],AB_path[0].split('/')[-1].split('_')[0]+'.png')
         # print(segment_path)
         segment_im = cv2.imread(segment_path)
+
+        segment_im=cv2.resize(segment_im,(256,256))
+
         segment_im[segment_im==255]=1
         segment_im_invert = np.invert(segment_im)
         segment_im_invert[segment_im_invert == 254] = 0
@@ -83,7 +86,7 @@ class lightDPR7RGBDataset(BaseDataset):
 
         orig_im_path = target_path[:-5] + '5.png'
         orig = cv2.imread(orig_im_path)
-        img_orig = cv2.resize(orig, (512, 512))
+        img_orig = cv2.resize(orig, (256, 256))
 
         back_original = np.multiply(img_orig,segment_im_invert)
 
@@ -95,7 +98,7 @@ class lightDPR7RGBDataset(BaseDataset):
 
 
         A = cv2.imread(AB_path[0])
-        img_A = cv2.resize(A, (512, 512))
+        img_A = cv2.resize(A, (256, 256))
 
         img_A = back_original+ np.multiply(img_A,segment_im)
 
@@ -108,7 +111,7 @@ class lightDPR7RGBDataset(BaseDataset):
 
 
         B = cv2.imread(target_path)
-        img_B = cv2.resize(B, (512, 512))
+        img_B = cv2.resize(B, (256, 256))
 
         img_B = back_original+ np.multiply(img_B,segment_im)
 
