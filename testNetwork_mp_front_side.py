@@ -134,20 +134,9 @@ lightFolder = 'test_data/01/'
 
 sh_vals = ['07']
 
-# test_dir = '/home/tushar/face_relight/substet_eval/transfer_q_2x'
-# test_dir = '/home/tushar/face_relight/substet_eval/face_crops_face_rel_full'
-
-# test_dir = '/home/tushar/face_relight/substet_eval/transfer_batch_2x'
-
-test_dir = '/home/tushar/face_relight/substet_eval/mpie'
+test_dir = '/home/tushar/data2/face_relight/substet_eval/mpie'
 
 
-# test_dir = '/home/tushar/face_relight/substet_eval/mpie_singel'
-
-# test_dir = '/home/nedko/face_relight/outputs/mpie'
-# test_dir1 = '/home/tushar/face_relight/substet_eval/transfer_batch_1xhalf'
-# test_dir = '/home/tushar/face_relight/substet_eval/transfer_batch_1xhalf'
-# test_dir1 = '/home/tushar/face_relight/substet_eval/face_crops_face_rel_full'
 test_dir1 = test_dir
 
 
@@ -160,8 +149,10 @@ old_people = os.listdir(test_dir1)
 persons = os.listdir(test_dir)
 
 
-# sh_costant_list = [0.9,1.1,1.2,1.3,1.4,1.5,1.6]
-sh_costant_list = [1.3]
+# sh_costant_list = [0.6,0.7,0.8,0.85,0.9,1.0,1.1,1.2,1.3,1.4,1.5,1.6,1.7]
+sh_costant_list = [1.6,1.7,1.8,1.9,2.0]
+# sh_costant_list = [0.7,0.75,0.8,0.85]
+# sh_costant_list = [0.8]
 
 for sh_constant_ in sh_costant_list:
 
@@ -178,172 +169,185 @@ for sh_constant_ in sh_costant_list:
 
         lowest_error = 9999999
         max_mse = 0
+
+        ##############################################################
+        img_dirs = '/home/tushar/data2/face_relight/substet_eval/mpie_segment/'
+        # people_ = os.listdir(img_dirs)
+        # peoples = []
+        # for jj in sorted(people_):
+        #     os.path.join(img_dirs, jj, jj + '_07.png')
+        #     im1_ = cv2.imread(os.path.join(img_dirs, jj, jj + '_07.png'), 0)
+        #     im2_ = cv2.imread(os.path.join(img_dirs, jj, jj + front_number), 0)
+        #     bool_compare = (im1_ == im2_).astype(np.int)
+        #     value = (bool_compare.shape[0] * bool_compare.shape[1]) - np.sum(bool_compare)
+        #     if value > 10000:
+        #         peoples.append(jj)
+        ##############################################################
+
+
         for per in persons:
-            if per in old_people:
-                person_dir = os.path.join(test_dir, per)
-                # from
-                side_im = os.path.join(person_dir, per + '_07.png')
-                # side_im = os.path.join(person_dir, per + front_number)
+            person_dir = os.path.join(test_dir, per)
+            # from
+            side_im = os.path.join(person_dir, per + '_07.png')
+            # side_im = os.path.join(person_dir, per + front_number)
 
-                # To
-                front_im = os.path.join(person_dir, per + front_number)
-                # front_im = os.path.join(person_dir, per + '_07.png')
+            # To
+            front_im = os.path.join(person_dir, per + front_number)
+            # front_im = os.path.join(person_dir, per + '_07.png')
 
 
-                exists_ims_side = cv2.imread(side_im) is not None
-                exists_ims_front = cv2.imread(front_im) is not None
+            exists_ims_side = cv2.imread(side_im) is not None
+            exists_ims_front = cv2.imread(front_im) is not None
 
-                if os.path.exists(side_im) and os.path.exists(front_im) and exists_ims_front and exists_ims_side:
+            if os.path.exists(side_im) and os.path.exists(front_im) and exists_ims_front and exists_ims_side:
 
-                    for sh_v in sh_vals:
+                for sh_v in sh_vals:
 
-                        saveFolder = os.path.join('runresult', checkpoint_dir_cmd.split('/')[-2], sh_v)
+                    saveFolder = os.path.join('runresult', checkpoint_dir_cmd.split('/')[-2], sh_v)
 
-                        if not os.path.exists(saveFolder):
-                            os.makedirs(saveFolder)
+                    if not os.path.exists(saveFolder):
+                        os.makedirs(saveFolder)
 
-                        dir_ims = 'test_data/relight_constant'
-                        ims = os.listdir(dir_ims)
-                        if sh_v == '07':
-                            sh_constant = 0.7
+                    dir_ims = 'test_data/relight_constant'
+                    ims = os.listdir(dir_ims)
+                    if sh_v == '07':
+                        sh_constant = 0.7
 
-                        # side_im = '/home/tushar/face_relight/mp_subset/side/epoch014_real_A.png'
-                        # front_im = '/home/tushar/face_relight/mp_subset/front/epoch014_real_B.png'
+                    # side_im = '/home/tushar/face_relight/mp_subset/side/epoch014_real_A.png'
+                    # front_im = '/home/tushar/face_relight/mp_subset/front/epoch014_real_B.png'
 
-                        im_path = front_im
-                        img = cv2.imread(im_path)
-                        img_front_copy = cv2.imread(im_path)
-                        row, col, _ = img.shape
-                        img = cv2.resize(img, (512, 512))
-                        Lab = cv2.cvtColor(img, cv2.COLOR_BGR2LAB)
+                    im_path = front_im
+                    img = cv2.imread(im_path)
+                    img_front_copy = cv2.imread(im_path)
+                    row, col, _ = img.shape
+                    img = cv2.resize(img, (512, 512))
+                    Lab = cv2.cvtColor(img, cv2.COLOR_BGR2LAB)
 
-                        inputL = Lab[:, :, 0]
-                        inputL = inputL.astype(np.float32) / 255.0
-                        inputL = inputL.transpose((0, 1))
-                        inputL = inputL[None, None, ...]
-                        inputL = Variable(torch.from_numpy(inputL).cuda())
+                    inputL = Lab[:, :, 0]
+                    inputL = inputL.astype(np.float32) / 255.0
+                    inputL = inputL.transpose((0, 1))
+                    inputL = inputL[None, None, ...]
+                    inputL = Variable(torch.from_numpy(inputL).cuda())
 
-                        im_path = side_im
-                        img1 = cv2.imread(im_path)
-                        img_side_copy = cv2.imread(im_path)
-                        row1, col1, _ = img1.shape
-                        img1 = cv2.resize(img1, (512, 512))
-                        Lab1 = cv2.cvtColor(img1, cv2.COLOR_BGR2LAB)
+                    im_path = side_im
+                    img1 = cv2.imread(im_path)
+                    img_side_copy = cv2.imread(im_path)
+                    row1, col1, _ = img1.shape
+                    img1 = cv2.resize(img1, (512, 512))
+                    Lab1 = cv2.cvtColor(img1, cv2.COLOR_BGR2LAB)
 
-                        inputL1 = Lab1[:, :, 0]
-                        inputL1 = inputL1.astype(np.float32) / 255.0
-                        inputL1 = inputL1.transpose((0, 1))
-                        inputL1 = inputL1[None, None, ...]
-                        inputL1 = Variable(torch.from_numpy(inputL1).cuda())
+                    inputL1 = Lab1[:, :, 0]
+                    inputL1 = inputL1.astype(np.float32) / 255.0
+                    inputL1 = inputL1.transpose((0, 1))
+                    inputL1 = inputL1[None, None, ...]
+                    inputL1 = Variable(torch.from_numpy(inputL1).cuda())
 
-                        for i in range(1):
-                            sh = np.loadtxt(os.path.join(lightFolder, 'rotate_light_{:02d}.txt'.format(i)))
-                            sh = sh[0:9]
-                            sh = sh * sh_constant
-                            # --------------------------------------------------
-                            # rendering half-sphere
-                            sh = np.squeeze(sh)
-                            shading = get_shading(normal, sh)
-                            value = np.percentile(shading, 95)
-                            ind = shading > value
-                            shading[ind] = value
-                            shading = (shading - np.min(shading)) / (np.max(shading) - np.min(shading))
-                            shading = (shading * 255.0).astype(np.uint8)
-                            shading = np.reshape(shading, (256, 256))
-                            shading = shading * valid
+                    for i in range(1):
+                        sh = np.loadtxt(os.path.join(lightFolder, 'rotate_light_{:02d}.txt'.format(i)))
+                        sh = sh[0:9]
+                        sh = sh * sh_constant
+                        # --------------------------------------------------
+                        # rendering half-sphere
+                        sh = np.squeeze(sh)
+                        shading = get_shading(normal, sh)
+                        value = np.percentile(shading, 95)
+                        ind = shading > value
+                        shading[ind] = value
+                        shading = (shading - np.min(shading)) / (np.max(shading) - np.min(shading))
+                        shading = (shading * 255.0).astype(np.uint8)
+                        shading = np.reshape(shading, (256, 256))
+                        shading = shading * valid
 
-                            sh = np.reshape(sh, (1, 9, 1, 1)).astype(np.float32)
-                            sh = Variable(torch.from_numpy(sh).cuda())
+                        sh = np.reshape(sh, (1, 9, 1, 1)).astype(np.float32)
+                        sh = Variable(torch.from_numpy(sh).cuda())
 
-                            _, _, outputSH, _ = my_network(inputL1, sh, skip_c)
+                        _, _, outputSH, _ = my_network(inputL1, sh, skip_c)
 
-                            # outputImg, _, _, _ = my_network(inputL, outputSH*1.3, skip_c)
-                            outputImg, _, _, _ = my_network(inputL, outputSH, skip_c)
-                            outputImg, _, _, _ = my_network(inputL, outputSH*sh_constant_, skip_c)
+                        # outputImg, _, _, _ = my_network(inputL, outputSH*1.3, skip_c)
+                        outputImg, _, _, _ = my_network(inputL, outputSH, skip_c)
+                        outputImg, _, _, _ = my_network(inputL, outputSH*sh_constant_, skip_c)
 
-                            '''sh_viz'''
-                            y = torch.Tensor.cpu(outputSH).detach().numpy()
-                            sh = np.squeeze(y)
-                            shading = get_shading(normal, sh)
-                            value = np.percentile(shading, 95)
-                            ind = shading > value
-                            shading[ind] = value
-                            shading = (shading - np.min(shading)) / (np.max(shading) - np.min(shading))
-                            shading = (shading * 255.0).astype(np.uint8)
-                            shading = np.reshape(shading, (256, 256))
-                            shading = shading * valid
-                            cv2.imwrite(os.path.join('_light_{:02d}_07_front.png'.format(i)), shading)
-                            '''end'''
+                        '''sh_viz'''
+                        y = torch.Tensor.cpu(outputSH).detach().numpy()
+                        sh = np.squeeze(y)
+                        shading = get_shading(normal, sh)
+                        value = np.percentile(shading, 95)
+                        ind = shading > value
+                        shading[ind] = value
+                        shading = (shading - np.min(shading)) / (np.max(shading) - np.min(shading))
+                        shading = (shading * 255.0).astype(np.uint8)
+                        shading = np.reshape(shading, (256, 256))
+                        shading = shading * valid
+                        # cv2.imwrite(os.path.join('_light_{:02d}_07_front.png'.format(i)), shading)
+                        '''end'''
 
-                            outputImg = outputImg[0].cpu().data.numpy()
-                            outputImg = outputImg.transpose((1, 2, 0))
-                            outputImg = np.squeeze(outputImg)  # *1.45
-                            outputImg = (outputImg * 255.0).astype(np.uint8)
-                            Lab[:, :, 0] = outputImg
-                            resultLab = cv2.cvtColor(Lab, cv2.COLOR_LAB2BGR)
-                            resultLab = cv2.resize(resultLab, (col, row))
-                            # #cv2.imwrite(os.path.join(saveFolder, side_im[:-4] + '_{:02d}.jpg'.format(i)), resultLab)
-                            cv2.imwrite(os.path.join('07_10.jpg'.format(i)), resultLab)
+                        outputImg = outputImg[0].cpu().data.numpy()
+                        outputImg = outputImg.transpose((1, 2, 0))
+                        outputImg = np.squeeze(outputImg)  # *1.45
+                        outputImg = (outputImg * 255.0).astype(np.uint8)
+                        Lab[:, :, 0] = outputImg
+                        resultLab = cv2.cvtColor(Lab, cv2.COLOR_LAB2BGR)
+                        resultLab = cv2.resize(resultLab, (col, row))
+                        # #cv2.imwrite(os.path.join(saveFolder, side_im[:-4] + '_{:02d}.jpg'.format(i)), resultLab)
+                        # cv2.imwrite(os.path.join('07_10.jpg'.format(i)), resultLab)
 
-                            #######################################################################
-                            segment_path_ear = os.path.join('/home/tushar/face_relight/substet_eval', 'mpie_segment', per,
+                        #######################################################################
+                        segment_path_ear = os.path.join('/home/tushar/data2/face_relight/substet_eval', 'mpie_segment',
+                                                        per,
                                                         per + front_number)
-                            im1 = cv2.imread(segment_path_ear,0)
-                            im1[im1 == 8] = 255
-                            im1[im1 == 7] = 255
-                            im1[im1 < 255] = 0
-                            im1[im1 == 0] = 254
-                            im1[im1 == 255] = 1
-                            im1[im1 == 254] = 0
-                            retval, labels, stats, centroids = cv2.connectedComponentsWithStats(im1)
-                            area = []
+                        im1 = cv2.imread(segment_path_ear,0)
+                        im1[im1 == 8] = 255
+                        im1[im1 == 7] = 255
+                        im1[im1 < 255] = 0
+                        im1[im1 == 0] = 254
+                        im1[im1 == 255] = 1
+                        im1[im1 == 254] = 0
+                        retval, labels, stats, centroids = cv2.connectedComponentsWithStats(im1)
+                        area = []
 
-                            for j in range(len(stats)):
-                                area.append(stats[j][4])
-                            sor_area = sorted(area)
+                        for j in range(len(stats)):
+                            area.append(stats[j][4])
+                        sor_area = sorted(area)
 
-                            area_1 = area.index(sor_area[-2])
-                            area_2 = area.index(sor_area[-3])
+                        area_1 = area.index(sor_area[-2])
+                        area_2 = area.index(sor_area[-3])
 
-                            labels[labels == area_1] = 255
-                            labels[labels == area_2] = 255
-                            labels[labels < 255] = 0
-                            labels[labels == 0] = 1
-                            labels[labels == 255] = 0
+                        labels[labels == area_1] = 255
+                        labels[labels == area_2] = 255
+                        labels[labels < 255] = 0
+                        labels[labels == 0] = 1
+                        labels[labels == 255] = 0
 
-                            ####################################################################################
+                        ####################################################################################
 
+                        segment_im = cv2.imread(os.path.join(person_dir, 'mask.png'))
+                        first_channel = np.copy(segment_im[:, :, 0])
+                        first_channel[first_channel < 255] = 0
+                        first_channel = np.multiply(first_channel, labels)
 
+                        segment_im[:, :, 0] = np.copy(first_channel)
+                        segment_im[:, :, 1] = np.copy(first_channel)
+                        segment_im[:, :, 2] = np.copy(first_channel)
+                        segment_im[segment_im > 0] = 1
+                        resize = True
+                        if resize:
+                            img_side_copy = cv2.resize(img_side_copy,(128,128))
+                            segment_im = cv2.resize(segment_im,(128,128))
+                            resultLab = cv2.resize(resultLab,(128,128))
 
-                            segment_im = cv2.imread(os.path.join(person_dir, 'mask.png'))
-                            first_channel = np.copy(segment_im[:, :, 0])
-                            first_channel[first_channel<255]=0
-                            first_channel = np.multiply(first_channel, labels)
+                        current_mse_all = mse_all_seg(np.multiply(img_side_copy,segment_im), np.multiply(resultLab,segment_im),segment_im)
+                        if current_mse_all>max_mse:
+                            max_mse=current_mse_all
+                            # print('max  ',per, '  err  ',max_mse)
 
+                        overall_error_1 = overall_error_1 + current_mse_all
 
-                            segment_im[:, :, 0] = np.copy(first_channel)
-                            segment_im[:, :, 1] = np.copy(first_channel)
-                            segment_im[:, :, 2] = np.copy(first_channel)
-                            segment_im[segment_im > 0] = 1
-                            resize = True
-                            if resize:
-                                img_side_copy = cv2.resize(img_side_copy,(128,128))
-                                segment_im = cv2.resize(segment_im,(128,128))
-                                resultLab = cv2.resize(resultLab,(128,128))
+                        number_seg=number_seg+1
 
-                            current_mse_all = mse_all_seg(np.multiply(img_side_copy,segment_im), np.multiply(resultLab,segment_im),segment_im)
-                            if current_mse_all>max_mse:
-                                max_mse=current_mse_all
-                                # print('max  ',per, '  err  ',max_mse)
-
-                            overall_error_1 = overall_error_1 + current_mse_all
-
-                            number_seg=number_seg+1
-
-                            current_mse_all = mse_all(img_side_copy, resultLab)
-                            overall_error_2 = overall_error_2 + current_mse_all
-                            number = number+1
-                            # print(number)
+                        current_mse_all = mse_all(img_side_copy, resultLab)
+                        overall_error_2 = overall_error_2 + current_mse_all
+                        number = number+1
+                        # print(number)
 
 
 

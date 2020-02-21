@@ -5,7 +5,8 @@ import numpy as np
 from commons.common_tools import def_log
 from joblib import dump, load
 
-input_path = 'data_from_7.csv'
+# input_path = 'data_from_7.csv'
+input_path = 'data_to_7.csv'
 
 with open(input_path, newline='') as csvfile:
     spamreader = csv.reader(csvfile, delimiter=',', quotechar='|', quoting=csv.QUOTE_NONNUMERIC)
@@ -31,8 +32,8 @@ clf = linear_model.LinearRegression()
 clf.fit(X_, y)
 print(clf.predict(predict_))
 
-dump(poly, 'models/poly_from_7.joblib')
-dump(clf, 'models/linear_from_7.joblib')
+dump(poly, 'models/self_poly_to_7.joblib')
+dump(clf, 'models/self_linear_to_7.joblib')
 
 # poly = load('models/poly_from_7.joblib')
 # X_ = poly.transform(x)

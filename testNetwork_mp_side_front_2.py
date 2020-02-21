@@ -31,8 +31,8 @@ import joblib
 ap = argparse.ArgumentParser()
 ap.add_argument("-f", "--first", required=True,
                 help="checkpoint")
-ap.add_argument("-s", "--second", required=True,
-                help="skip")
+# ap.add_argument("-s", "--second", required=True,
+#                 help="skip")
 args = vars(ap.parse_args())
 
 # load the two input images
@@ -41,7 +41,7 @@ args = vars(ap.parse_args())
 checkpoint_dir_cmd = args["first"]
 # checkpoint_dir_cmd = 'models/trained/trained_model_03.t7'#args["first"]
 
-skip_c = int(args["second"])
+skip_c = 0#int(args["second"])
 # imageB = cv2.imread(args["second"])
 
 '''
@@ -160,8 +160,8 @@ persons = os.listdir(test_dir)
 
 
 
-sh_poly_path_temp = 'models/poly_%s_7.joblib'
-sh_linear_path_temp = 'models/linear_%s_7.joblib'
+sh_poly_path_temp = 'models/poly_%s_7_new.joblib'
+sh_linear_path_temp = 'models/linear_%s_7_new.joblib'
 
 
 # load the two input images
@@ -174,14 +174,14 @@ device = "cuda"
 
 
 for ii in range(len(from_id_list)):
-    # from_id = from_id_list[ii]
+    from_id = from_id_list[ii]
 
     # to_id = from_id_list[ii]
 
-    from_id = 7
-    to_id = from_id_list[ii]
+    # from_id = 7
+    # to_id = from_id_list[ii]
 
-    # to_id = 7
+    to_id = 7
 
     # print(from_id)
     if from_id == 7:
@@ -240,12 +240,12 @@ for ii in range(len(from_id_list)):
         
         person_dir = os.path.join(test_dir, per)
         # from
-        side_im = os.path.join(person_dir, per + '_07.png')
-        # side_im = os.path.join(person_dir, per + front_number)
+        # side_im = os.path.join(person_dir, per + '_07.png')
+        side_im = os.path.join(person_dir, per + front_number)
 
         # To
-        front_im = os.path.join(person_dir, per + front_number)
-        # front_im = os.path.join(person_dir, per + '_07.png')
+        # front_im = os.path.join(person_dir, per + front_number)
+        front_im = os.path.join(person_dir, per + '_07.png')
 
 
         exists_ims_side = cv2.imread(side_im) is not None
