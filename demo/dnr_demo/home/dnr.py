@@ -22,6 +22,7 @@ from .segment_model import BiSeNet
 import numpy as np
 import torchvision.transforms as transforms
 import imutils
+from PIL import Image
 
 # only load these modules for Celery workers, to not slow down django
 if settings.IS_CELERY_WORKER:
@@ -189,7 +190,7 @@ def handleOutput(outputImg, Lab, col, row, filepath, mask, img_p, img_orig, loc,
     t_Lab = Lab.copy()
     t_Lab[:, :, 0] = outputImg
     resultLab = cv2.cvtColor(t_Lab, cv2.COLOR_LAB2BGR)
-    resultLab = cv2.resize(resultLab, (col, row))
+    resultLab = np.array(Image.fromarray(resultLab).resize((col, row), resample=Image.LANCZOS))
 
     os.makedirs(os.path.dirname(filepath), exist_ok=True)
     # do something here
@@ -211,7 +212,7 @@ def handleOutput(outputImg, Lab, col, row, filepath, mask, img_p, img_orig, loc,
     # Add the masked foreground and background.
     outImage = cv2.add(foreground, background)
 
-
+    # breaking here in PIL resize!!!!!!
     outImage = cv2.resize(outImage, (crop_sz[1], crop_sz[0]))
 
     top, bottom, left, right = border
@@ -272,9 +273,19 @@ def preprocess(img, device):
 
     if np.max(img.shape[:2]) > 1024:
         if img.shape[0] < img.shape[1]:
-            img_res = imutils.resize(img, width=1024)
+            # img_res = imutils.resize(img, width=1024)
+            (h, w) = img.shape[:2]
+            width = 1024
+            r = width / float(w)
+            dim = (width, int(h * r))
+            img_res = np.array(Image.fromarray(img).resize(dim, resample=Image.LANCZOS))
         else:
-            img_res = imutils.resize(img, width=1024)
+            # img_res = imutils.resize(img, width=1024)
+            (h, w) = img.shape[:2]
+            width = 1024
+            r = width / float(w)
+            dim = (width, int(h * r))
+            img_res = np.array(Image.fromarray(img).resize(dim, resample=Image.LANCZOS))
     else:
         img_res = img
 
@@ -334,7 +345,8 @@ def preprocess(img, device):
 
         crop_sz = img.shape
         if np.max(img.shape[:2]) > 1024:
-            img = cv2.resize(img, (1024,1024))
+            # img = cv2.resize(img, (1024,1024))
+            img = np.array(Image.fromarray(img).resize((1024, 1024), resample=Image.LANCZOS))
             mask = cv2.resize(mask, (1024,1024))
     else:
         img = None
@@ -372,7 +384,8 @@ def prediction_task_sh_mul(data_path, img_path, preset_name, sh_id, upload_id=No
 
 
         row, col, _ = img_p.shape
-        img = cv2.resize(img_p, (512, 512))
+        # img = cv2.resize(img_p, (512, 512))
+        img = np.array(Image.fromarray(img_p).resize((512, 512), resample=Image.LANCZOS))
         Lab = cv2.cvtColor(img, cv2.COLOR_BGR2LAB)
 
         inputL = Lab[:, :, 0]
@@ -434,7 +447,8 @@ def prediction_task(data_path, img_path, sh_mul=None, upload_id=None):
         )
 
         row, col, _ = img_p.shape
-        img = cv2.resize(img_p, (512, 512))
+        # img = cv2.resize(img_p, (512, 512))
+        img = np.array(Image.fromarray(img_p).resize((512, 512), resample=Image.LANCZOS))
         Lab = cv2.cvtColor(img, cv2.COLOR_BGR2LAB)
 
         inputL = Lab[:, :, 0]
