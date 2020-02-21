@@ -54,8 +54,8 @@ class lightDPR7RGBDataset(BaseDataset):
         real_im_path = os.path.join(self.opt.dataroot,'real_im',"{:05d}".format(real_im_number)+'.png')
         C = cv2.imread(real_im_path)
         img_C = cv2.resize(C, (256, 256))
-        Lab_C = cv2.cvtColor(img_C, cv2.COLOR_BGR2LAB)
-        inputLC = Lab_C
+        # Lab_C = cv2.cvtColor(img_C, cv2.COLOR_BGR2LAB)
+        inputLC = img_C
         inputC = inputLC.astype(np.float32) / 255.0
         # inputC = inputC.transpose((0,1))
         # inputC = inputC[..., None]
@@ -90,8 +90,8 @@ class lightDPR7RGBDataset(BaseDataset):
 
         back_original = np.multiply(img_orig,segment_im_invert)
 
-        Lab_orig = cv2.cvtColor(img_orig, cv2.COLOR_BGR2LAB)
-        inputLorig = Lab_orig
+        # Lab_orig = cv2.cvtColor(img_orig, cv2.COLOR_BGR2LAB)
+        inputLorig = img_orig
         inputorig = inputLorig.astype(np.float32) / 255.0
         # inputorig = inputorig.transpose((0, 1))
         # inputorig = inputorig[..., None]
@@ -102,8 +102,8 @@ class lightDPR7RGBDataset(BaseDataset):
 
         img_A = back_original+ np.multiply(img_A,segment_im)
 
-        Lab_A = cv2.cvtColor(img_A, cv2.COLOR_BGR2LAB)
-        inputLA = Lab_A
+        # Lab_A = cv2.cvtColor(img_A, cv2.COLOR_BGR2LAB)
+        inputLA = img_A
         inputA = inputLA.astype(np.float32) / 255.0  #totensor also dividing????
         # inputA = inputA.transpose((0, 1))
         # inputA = inputA[ ... ,None]
@@ -115,8 +115,8 @@ class lightDPR7RGBDataset(BaseDataset):
 
         img_B = back_original+ np.multiply(img_B,segment_im)
 
-        Lab_B = cv2.cvtColor(img_B, cv2.COLOR_BGR2LAB)
-        inputLB = Lab_B
+        # Lab_B = cv2.cvtColor(img_B, cv2.COLOR_BGR2LAB)
+        inputLB = img_B
         inputB = inputLB.astype(np.float32) / 255.0
         # inputB = inputB.transpose((0, 1))
         # inputB = inputB[ ... ,None]
@@ -127,7 +127,7 @@ class lightDPR7RGBDataset(BaseDataset):
         B = self.transform_A(inputB)
         C = self.transform_A(inputC)
         D = self.transform_A(inputorig)
-        seg_im = cv2.cvtColor(segment_im, cv2.COLOR_BGR2GRAY).astype(np.float32)
+        # seg_im = cv2.cvtColor(segment_im, cv2.COLOR_BGR2GRAY).astype(np.float32)
         # seg_im = seg_im[..., None]
 
         # S = self.transform_A(seg_im)
