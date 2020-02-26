@@ -33,6 +33,8 @@ class lightDPRDiffDataset(BaseDataset):
 
             self.list_AB.append([i1[-1], i1[-1]])
             self.AB_paths.append(i1[-1])
+            og_im = i1[-1]
+
             for k in range(6):
                 a = [i1.pop(random.randrange(len(i1))) for _ in range(1)]
                 blist = list(set(i2) - set(a))
@@ -41,7 +43,8 @@ class lightDPRDiffDataset(BaseDataset):
                 i2 = blist
                 self.AB_paths.append(a[0])
                 # self.list_AB.append([a[0] , b[0]])
-                self.list_AB.append([a[0], i1[-1]])
+                self.list_AB.append([a[0], og_im])
+                # print(og_im)
         random.shuffle(self.list_AB)
 
         assert(opt.resize_or_crop == 'resize_and_crop')  # only support this mode
