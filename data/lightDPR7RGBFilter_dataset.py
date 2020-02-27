@@ -28,7 +28,7 @@ class lightDPR7RGBFilterDataset(BaseDataset):
         self.AB_paths = []
         self.dict_AB = {}
         self.list_AB = []
-        filter_dict = list(pkl.load(open("/home/nedko/face_relight/dbs/overexposure_scores_full.pkl", "rb")).keys())
+        filter_dict = pkl.load(open("/home/nedko/face_relight/dbs/overexposure_scores_full.pkl", "rb"))
         # filter_list = [1,5,6,7]
         for i in range(0, len(self.AB_paths_) - 6, 6):
             i1 = self.AB_paths_[i:i + 6]
