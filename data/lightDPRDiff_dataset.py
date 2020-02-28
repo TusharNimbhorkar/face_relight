@@ -154,6 +154,8 @@ class lightDPRDiffDataset(BaseDataset):
         sh_BL = sh * 1.0 #0.7
         sh_BL = np.squeeze(sh_BL)
         sh_BL = np.reshape(sh_BL, (9, 1, 1)).astype(np.float32)
+        sh_BL = np.ones_like(sh_BL)
+        print(sh_BL)
 
         # todo: check for just VARIABLE thingy
 
