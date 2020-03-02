@@ -89,7 +89,7 @@ class Logger:
     def __process_args(self, message, *args):
         message = str(message)
         for arg in args:
-            if arg != []:
+            if not(isinstance(arg, list) and len(arg)==0):
                 message+=' ' + str(arg)
 
         return message
@@ -133,7 +133,6 @@ class Logger:
         :param message:
         :return:
         '''
-
         if self.log_level<=1:
             message = self.__process_args(message, *args)
             self.__print(message, BColors.LightBlue, kwargs)

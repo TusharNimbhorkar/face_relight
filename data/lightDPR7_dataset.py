@@ -11,6 +11,11 @@ import cv2
 import numpy as np
 import torch
 from torch.autograd import Variable
+import matplotlib.pyplot as plt
+from commons.common_tools import Logger, BColors
+
+log = Logger("DataLoader", tag_color=BColors.LightBlue)
+
 class lightDPR7Dataset(BaseDataset):
     @staticmethod
     def modify_commandline_options(parser, is_train=True):
@@ -25,6 +30,9 @@ class lightDPR7Dataset(BaseDataset):
         self.AB_paths = []
         self.dict_AB = {}
         self.list_AB = []
+
+        self.img_size = 256
+
         for i in range(0, len(self.AB_paths_) - 6, 6):
             i1 = self.AB_paths_[i:i + 6]
             i2 = self.AB_paths_[i:i + 6]
@@ -49,11 +57,13 @@ class lightDPR7Dataset(BaseDataset):
     def __getitem__(self, index):
         # todo: A,B,AL,BL
 
+        #self.img_size = random.choice([256, 768, 512, 1024])
+
         real_im_number = random.choice(range(0, self.opt.ffhq))
 
         real_im_path = os.path.join(self.opt.dataroot,'real_im',"{:05d}".format(real_im_number)+'.png')
         C = cv2.imread(real_im_path)
-        img_C = cv2.resize(C, (512, 512))
+        img_C = cv2.resize(C, (self.img_size, self.img_size))
         Lab_C = cv2.cvtColor(img_C, cv2.COLOR_BGR2LAB)
         inputLC = Lab_C[:, :, 0]
         inputC = inputLC.astype(np.float32) / 255.0
@@ -63,7 +73,7 @@ class lightDPR7Dataset(BaseDataset):
 
         AB_path = self.list_AB[index]
         A = cv2.imread(AB_path[0])
-        img_A = cv2.resize(A, (512, 512))
+        img_A = cv2.resize(A, (self.img_size, self.img_size))
         Lab_A = cv2.cvtColor(img_A, cv2.COLOR_BGR2LAB)
         inputLA = Lab_A[:, :, 0]
         inputA = inputLA.astype(np.float32) / 255.0  #totensor also dividing????
@@ -77,7 +87,7 @@ class lightDPR7Dataset(BaseDataset):
             target_path = AB_path.replace('test','target')
 
         B = cv2.imread(target_path)
-        img_B = cv2.resize(B, (512, 512))
+        img_B = cv2.resize(B, (self.img_size, self.img_size))
         Lab_B = cv2.cvtColor(img_B, cv2.COLOR_BGR2LAB)
         inputLB = Lab_B[:, :, 0]
         inputB = inputLB.astype(np.float32) / 255.0
@@ -87,7 +97,7 @@ class lightDPR7Dataset(BaseDataset):
 
         orig_im_path = target_path[:-5]+'5.png'
         orig = cv2.imread(orig_im_path)
-        img_orig = cv2.resize(orig, (512, 512))
+        img_orig = cv2.resize(orig, (self.img_size, self.img_size))
         Lab_orig = cv2.cvtColor(img_orig, cv2.COLOR_BGR2LAB)
         inputLorig = Lab_orig[:, :, 0]
         inputorig = inputLorig.astype(np.float32) / 255.0
