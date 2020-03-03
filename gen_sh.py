@@ -6,17 +6,26 @@ import os.path as osp
 import csv
 import numpy as np
 import argparse
+import shutil
 import matplotlib.pyplot as plt
 
 
 ap = argparse.ArgumentParser()
 ap.add_argument("-i", "--input_dir", required=True,
 	help="Input Data Directory")
+ap.add_argument("-p", "--prev_dir", required=True,
+	help="Older Data Directory")
 args = vars(ap.parse_args())
 
-data_dir = args['input_dir']#'/home/nedko/face_relight/dbs/example_data'
+data_dir = args['input_dir'] #'/home/nedko/face_relight/dbs/example_data'
+older_date_dir = args['prev_dir'] #/home/tushar/data2/DPR/train
 light_info_fname = 'index.txt'
 out_sh_fname = 'light_%s_sh.txt'
+
+orig_img_fname = '%s_05.png'
+orig_sh_fname = '%s_light_05.txt'
+out_orig_img_fname = 'orig.png'
+
 
 for entry_dir in glob.glob(osp.join(data_dir, '*')):
     light_info_path = osp.join(entry_dir, light_info_fname)
@@ -34,3 +43,12 @@ for entry_dir in glob.glob(osp.join(data_dir, '*')):
             img_subname = row[0].split('.')[0]
             out_sh_path = osp.join(entry_dir, out_sh_fname % img_subname)
             np.savetxt(out_sh_path, sh_coeffs.T, delimiter=',')
+
+        entry_subname = entry_dir.rsplit('/',1)[-1]
+        orig_img_path = osp.join(older_date_dir, entry_subname, orig_img_fname % entry_subname)
+        orig_sh_path = osp.join(older_date_dir, entry_subname, orig_sh_fname % entry_subname)
+        out_orig_img_path = osp.join(entry_dir, out_orig_img_fname)
+        out_orig_sh_path = osp.join(entry_dir, out_sh_fname % 'orig')
+
+        shutil.copyfile(orig_img_path, out_orig_img_path)
+        shutil.copyfile(orig_sh_path, out_orig_sh_path)
