@@ -2,6 +2,7 @@
     construct shading using sh basis
 '''
 import numpy as np
+from math import sin,cos
 def SH_basis(normal):
     '''
         get SH basis based on normal
@@ -112,4 +113,40 @@ def get_shading_debug(normal, SH):
     sh_basis = SH_basis_debug(normal)
     shading = np.matmul(sh_basis, SH)
     #shading = sh_basis*SH[0]
+    return shading
+
+
+def euler_to_dir(yaw, pitch, roll):
+    x = -cos(yaw) * sin(pitch) * sin(roll) - sin(yaw) * cos(roll)
+    y = -sin(yaw) * sin(pitch) * sin(roll) + cos(yaw) * cos(roll)
+    z = cos(pitch) * sin(roll)
+    return np.array([x, y, z])
+
+
+def gen_half_sphere(sh):
+    img_size = 256
+    x = np.linspace(-1, 1, img_size)
+    z = np.linspace(1, -1, img_size)
+    x, z = np.meshgrid(x, z)
+
+    mag = np.sqrt(x ** 2 + z ** 2)
+    valid = mag <= 1
+    y = -np.sqrt(1 - (x * valid) ** 2 - (z * valid) ** 2)
+    x = x * valid
+    y = y * valid
+    z = z * valid
+    normal = np.concatenate((x[..., None], y[..., None], z[..., None]), axis=2)
+    normal = np.reshape(normal, (-1, 3))
+
+    '''sh_viz'''
+    # y = torch.Tensor.cpu(sh).detach().numpy()
+    # sh = np.squeeze(y)
+    shading = get_shading(normal, sh)
+    value = np.percentile(shading, 95)
+    ind = shading > value
+    shading[ind] = value
+    shading = (shading - np.min(shading)) / (np.max(shading) - np.min(shading))
+    shading = (shading * 255.0).astype(np.uint8)
+    shading = np.reshape(shading, (256, 256))
+    shading = shading * valid
     return shading
