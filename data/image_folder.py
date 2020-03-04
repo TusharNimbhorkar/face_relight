@@ -9,6 +9,7 @@ import torch.utils.data as data
 from PIL import Image
 import os
 import os.path
+import glob
 
 IMG_EXTENSIONS = [
     '.jpg', '.JPG', '.jpeg', '.JPEG',
@@ -20,16 +21,16 @@ def is_image_file(filename):
     return any(filename.endswith(extension) for extension in IMG_EXTENSIONS)
 
 
-def make_dataset(dir):
+def make_dataset(dir, n_per_dir=-1):
     images = []
     assert os.path.isdir(dir), '%s is not a valid directory' % dir
+    for entry_dir in sorted(glob.glob(os.path.join(dir,'*'))):
+        paths = sorted(glob.glob(os.path.join(entry_dir,'*')))
+        paths = [path for path in paths if is_image_file(path)]
 
-    for root, _, fnames in sorted(os.walk(dir)):
-        for fname in fnames:
-            if is_image_file(fname):
-                path = os.path.join(root, fname)
-                images.append(path)
-
+        if n_per_dir > 0:
+            paths = paths[:n_per_dir-1] + [paths[-1]]
+        images.extend(paths)
     return images
 
 
