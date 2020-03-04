@@ -1,0 +1,1 @@
+python train_ser.py --dataroot /home/tushar/data2/DPR/ --name model_fulltrain_dpr11_gan_BS20 --model lightgrad59RGB --direction AtoB  --gpu_ids 0 --checkpoints_dir /home/tushar/data2/checkpoints_debug/ --display_winsize 128 --dataset_mode lightDPR7RGB --display_id 0 --save_epoch_freq 1 --save_latest_freq 68000 --num_threads 10 --batch_size 20 --max_dataset_size 193375
