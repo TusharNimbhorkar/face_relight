@@ -1,4 +1,5 @@
 import time,sys
+from commons.torch_tools import Chronometer
 
 import torch
 
@@ -15,23 +16,23 @@ if __name__ == '__main__':
     visualizer = Visualizer(opt)
     total_steps = 0
 
+    print(str(model.device))
+
+    epoch_chron = Chronometer(model.device)
+    iter_chron = Chronometer(model.device)
+    data_chron = Chronometer(model.device)
+    elapsed_data = 0
+    elapsed_iter = 0
+    elapsed_epoch = 0
+
     def str_time(s):
         hours, remainder = divmod(s, 3600)
         minutes, seconds = divmod(remainder, 60)
         return '{:02}:{:02}'.format(int(hours), int(minutes))
 
     for epoch in range(1,15):
-        epoch_start_time = torch.cuda.Event(enable_timing=True)
-        epoch_end_time = torch.cuda.Event(enable_timing=True)
-
-        iter_start_time = torch.cuda.Event(enable_timing=True)
-        iter_end_time = torch.cuda.Event(enable_timing=True)
-
-        data_start_time = torch.cuda.Event(enable_timing=True)
-        data_end_time = torch.cuda.Event(enable_timing=True)
-
-        epoch_start_time.record()
-        data_start_time.record()
+        epoch_chron.tick()
+        data_chron.tick()
 
 
         epoch_iter = 0
@@ -43,8 +44,8 @@ if __name__ == '__main__':
         for i, data in enumerate(dataset):
             total_steps += opt.batch_size
             if total_steps % opt.print_freq == 0:
-                iter_start_time.record()
-                data_end_time.record()
+                iter_chron.tick()
+                elapsed_data = data_chron.tock()
             visualizer.reset()
 
             epoch_iter += opt.batch_size
@@ -60,11 +61,9 @@ if __name__ == '__main__':
 
             if total_steps % opt.print_freq == 0:
                 losses = model.get_current_losses()
-                iter_end_time.record()
-                torch.cuda.synchronize(model.device)
-                t = (iter_start_time.elapsed_time(iter_end_time)/1000) / opt.batch_size
-                t_data = (data_start_time.elapsed_time(data_end_time)/1000) / opt.batch_size
-                t_current = (epoch_start_time.elapsed_time(iter_end_time) / 1000)/epoch_iter
+                t = iter_chron.tock() / opt.batch_size
+                t_data = elapsed_data / opt.batch_size
+                t_current = elapsed_epoch/epoch_iter
 
                 visualizer.print_current_losses(epoch, epoch_iter, losses, t, t_data, ['Avg Time: %.3f' % t_current,
                                                                                        'Ep Time %s / %s' % (str_time(t_current*epoch_iter),str_time(t_current*(dataset_size)))])
@@ -78,15 +77,14 @@ if __name__ == '__main__':
 
 
             if (total_steps+opt.batch_size) % opt.print_freq == 0:
-                data_start_time.record()
+                data_chron.tick()
 
         if epoch % opt.save_epoch_freq == 0:
             print('saving the model at the end of epoch %d, iters %d' % (epoch, total_steps))
             model.save_networks('latest')
             model.save_networks(epoch)
 
-        epoch_end_time.record()
-        torch.cuda.synchronize(model.device)
+        elapsed_epoch = epoch_chron.tock()
         print('End of epoch %d / %d \t Time Taken: %d sec' %
-              (epoch, opt.niter + opt.niter_decay,  epoch_start_time.elapsed_time(epoch_end_time)/1000))
+              (epoch, opt.niter + opt.niter_decay,  elapsed_epoch))
         model.update_learning_rate()

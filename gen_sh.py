@@ -7,6 +7,7 @@ import csv
 import numpy as np
 import argparse
 import shutil
+from commons.common_tools import sort_numerically
 import matplotlib.pyplot as plt
 
 
@@ -26,8 +27,10 @@ orig_img_fname = '%s_05.png'
 orig_sh_fname = '%s_light_05.txt'
 out_orig_img_fname = 'orig.png'
 
-
-for entry_dir in glob.glob(osp.join(data_dir, '*')):
+entry_dirs = glob.glob(osp.join(data_dir, '*'))
+sort_numerically(entry_dirs)
+for entry_dir in entry_dirs:
+    print(entry_dir)
     light_info_path = osp.join(entry_dir, light_info_fname)
     with open(light_info_path, 'r') as light_info_file:
         csv_reader = csv.reader(light_info_file, delimiter=',')

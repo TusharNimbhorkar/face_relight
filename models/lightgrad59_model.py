@@ -39,8 +39,9 @@ class lightgrad59Model(BaseModel):
         else:  # during test time, only load Gs
             self.model_names = ['G']
 
-        self.netG = HourglassNet().cuda()
-        self.netG = torch.nn.DataParallel(self.netG, self.opt.gpu_ids)
+        self.netG = HourglassNet().to(self.device)
+        if 'cpu' not in str(self.device):
+            self.netG = torch.nn.DataParallel(self.netG, self.opt.gpu_ids)
         self.netG.train(True)
 
         if self.isTrain:
@@ -91,11 +92,11 @@ class lightgrad59Model(BaseModel):
     def calc_gradient(self, x):
         a = np.array([[1, 0, -1], [2, 0, -2], [1, 0, -1]])
         conv1 = nn.Conv2d(1, 1, kernel_size=3, stride=1, padding=1, bias=False)
-        conv1.weight = nn.Parameter(torch.from_numpy(a).float().unsqueeze(0).unsqueeze(0).cuda())
+        conv1.weight = nn.Parameter(torch.from_numpy(a).float().unsqueeze(0).unsqueeze(0).to(self.device))
         G_x = conv1(Variable(x))
         b = np.array([[1, 2, 1], [0, 0, 0], [-1, -2, -1]])
         conv2 = nn.Conv2d(1, 1, kernel_size=3, stride=1, padding=1, bias=False)
-        conv2.weight = nn.Parameter(torch.from_numpy(b).float().unsqueeze(0).unsqueeze(0).cuda())
+        conv2.weight = nn.Parameter(torch.from_numpy(b).float().unsqueeze(0).unsqueeze(0).to(self.device))
         G_y = conv2(Variable(x))
         G = torch.sqrt(torch.pow(G_x, 2) + torch.pow(G_y, 2))
 
