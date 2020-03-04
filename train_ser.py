@@ -21,9 +21,11 @@ if __name__ == '__main__':
     epoch_chron = Chronometer(model.device)
     iter_chron = Chronometer(model.device)
     data_chron = Chronometer(model.device)
+    current_chron = Chronometer(model.device)
     elapsed_data = 0
     elapsed_iter = 0
     elapsed_epoch = 0
+    elapsed_current = 0
 
     def str_time(s):
         hours, remainder = divmod(s, 3600)
@@ -33,6 +35,7 @@ if __name__ == '__main__':
     for epoch in range(1,15):
         epoch_chron.tick()
         data_chron.tick()
+        current_chron.tick()
 
 
         epoch_iter = 0
@@ -63,7 +66,7 @@ if __name__ == '__main__':
                 losses = model.get_current_losses()
                 t = iter_chron.tock() / opt.batch_size
                 t_data = elapsed_data / opt.batch_size
-                t_current = elapsed_epoch/epoch_iter
+                t_current = current_chron.tock()/epoch_iter
 
                 visualizer.print_current_losses(epoch, epoch_iter, losses, t, t_data, ['Avg Time: %.3f' % t_current,
                                                                                        'Ep Time %s / %s' % (str_time(t_current*epoch_iter),str_time(t_current*(dataset_size)))])
