@@ -1,5 +1,6 @@
 import time,sys
 from commons.torch_tools import Chronometer
+import numpy as np
 
 import torch
 
@@ -7,9 +8,16 @@ from options.train_options import TrainOptions
 from data import CreateDataLoader
 from models import create_model
 from util.visualizer import Visualizer
+
 sys.path.append('models')
 if __name__ == '__main__':
     opt = TrainOptions().parse()
+
+    #Reproducability
+    torch.manual_seed(opt.seed)
+    np.random.seed(opt.seed)
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
 
     model = create_model(opt)
     model.setup(opt)
