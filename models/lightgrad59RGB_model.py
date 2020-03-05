@@ -95,14 +95,22 @@ class lightgrad59RGBModel(BaseModel):
                                                                                       count_skip, oriImg=self.real_D)
 
     def calc_gradient(self, x):
+        ab = torch.ones((2, 1, x.shape[2], x.shape[3])).cuda()
+        # ab = ab.cuda()
+
+        # 0.2989 * R + 0.5870 * G + 0.1140 * B
+        #           B           G           R
+        ab[:, 0] = x[:, 0]*0.2989 + x[:, 1]*0.5870 + x[:, 2]*0.2989
+
         a = np.array([[1, 0, -1], [2, 0, -2], [1, 0, -1]])
-        conv1 = nn.Conv2d(3, 3, kernel_size=3, stride=1, padding=1, bias=False)
-        conv1.weight = nn.Parameter(torch.from_numpy(a).float().unsqueeze(0).unsqueeze(0).to(self.device))
-        G_x = conv1(Variable(x)).data.view(self.opt.batch_size, 3, 512, 512)
+        conv1 = nn.Conv2d(3, 1, kernel_size=3, stride=1, padding=1, bias=False)
+        conv1.weight = nn.Parameter(torch.from_numpy(a).float().unsqueeze(0).unsqueeze(0).cuda())
+        G_x = conv1(Variable(ab))#.data.view(self.opt.batch_size, 3, 512, 512)
         b = np.array([[1, 2, 1], [0, 0, 0], [-1, -2, -1]])
-        conv2 = nn.Conv2d(3, 3, kernel_size=3, stride=1, padding=1, bias=False)
-        conv2.weight = nn.Parameter(torch.from_numpy(b).float().unsqueeze(0).unsqueeze(0).to(self.device))
-        G_y = conv2(Variable(x)).data.view(self.opt.batch_size, 3, 512, 512)
+        conv2 = nn.Conv2d(3, 1, kernel_size=3, stride=1, padding=1, bias=False)
+        conv2.weight = nn.Parameter(torch.from_numpy(b).float().unsqueeze(0).unsqueeze(0).cuda())
+        G_y = conv2(Variable(ab))#.data.view(self.opt.batch_size, 3, 512, 512)
+
         G = torch.sqrt(torch.pow(G_x, 2) + torch.pow(G_y, 2))
 
         return G
@@ -137,11 +145,10 @@ class lightgrad59RGBModel(BaseModel):
 
         self.loss_G_MSE = self.mseloss(self.real_AL, self.fake_AL)
 
-        self.loss_G_total_variance = 0 #self.criterionL1(self.calc_gradient(x=self.real_B),self.calc_gradient(x=self.fake_B))
-
+        self.loss_G_total_variance = self.criterionL1(self.calc_gradient(x=self.real_B),self.calc_gradient(x=self.fake_B))
         self.loss_L1_add = self.loss_G_L1 + self.loss_G_MSE + self.loss_G_total_variance
 
-        self.loss_G = self.loss_G_GAN + self.loss_L1_add #self.loss_G_L1 + self.loss_G_MSE + self.loss_G_total_variance
+        self.loss_G = self.loss_G_GAN + self.loss_L1_add
         #
         if epoch > 10:
             self.loss_G_feat = self.mseloss(self.face_feat_A, self.face_feat_B) * 0.5
