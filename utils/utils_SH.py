@@ -3,6 +3,8 @@
 '''
 import numpy as np
 from math import sin,cos
+import matplotlib.pyplot as plt
+
 def SH_basis(normal):
     '''
         get SH basis based on normal
@@ -11,6 +13,7 @@ def SH_basis(normal):
         The order of SH here is:
         1, Y, Z, X, YX, YZ, 3Z^2-1, XZ, X^2-y^2
     '''
+    normal = np.array(normal)
     numElem = normal.shape[0]
 
     norm_X = normal[:,0]
@@ -150,3 +153,8 @@ def gen_half_sphere(sh):
     shading = np.reshape(shading, (256, 256))
     shading = shading * valid
     return shading
+
+def show_half_sphere(sh):
+    img = gen_half_sphere(sh)
+    plt.imshow(img)
+    plt.show()
