@@ -39,8 +39,9 @@ class lightgrad59RGBModel(BaseModel):
         else:  # during test time, only load Gs
             self.model_names = ['G']
 
-        self.netG = HourglassNet().cuda()
-        self.netG = torch.nn.DataParallel(self.netG, self.opt.gpu_ids)
+        self.netG = HourglassNet().to(self.device)
+        if str(self.device)!='cpu':
+            self.netG = torch.nn.DataParallel(self.netG, self.opt.gpu_ids)
         self.netG.train(True)
 
         if self.isTrain:
@@ -109,6 +110,7 @@ class lightgrad59RGBModel(BaseModel):
         conv2 = nn.Conv2d(3, 1, kernel_size=3, stride=1, padding=1, bias=False)
         conv2.weight = nn.Parameter(torch.from_numpy(b).float().unsqueeze(0).unsqueeze(0).cuda())
         G_y = conv2(Variable(ab))#.data.view(self.opt.batch_size, 3, 512, 512)
+
         G = torch.sqrt(torch.pow(G_x, 2) + torch.pow(G_y, 2))
 
         return G
