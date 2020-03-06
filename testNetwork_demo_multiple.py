@@ -23,17 +23,21 @@ import cv2
 
 
 ap = argparse.ArgumentParser()
-ap.add_argument("-f", "--first", required=True,
+ap.add_argument("-c", "--checkpoint", required=True,
 	help="checkpoint")
-ap.add_argument("-s", "--second", required=True,
+ap.add_argument("-s", "--skip", default=0, required=False,
 	help="skip")
+ap.add_argument("-i", "--input", default=0, required=False,
+	help="Input Directory")
+ap.add_argument("-o", "--output", default=0, required=False,
+	help="Input Directory")
 args = vars(ap.parse_args())
 
 # load the two input images
 
 
-checkpoint_dir_cmd = args["first"]
-skip_c = int(args["second"])
+checkpoint_dir_cmd = args["checkpoint"]
+skip_c = int(args["skip"])
 #imageB = cv2.imread(args["second"])
 
 
@@ -70,10 +74,10 @@ sh_vals = ['07']#,'09','10']
 
 for sh_v in sh_vals:
 
-	saveFolder = os.path.join('runresult',checkpoint_dir_cmd.split('/')[-2],sh_v)
+	saveFolder = os.path.join(args['output'], 'runresult',checkpoint_dir_cmd.split('/')[-2],sh_v)
 
 	if not os.path.exists(saveFolder):
-	    os.makedirs(saveFolder)
+		os.makedirs(saveFolder)
 
 	dir_ims = 'test_data/relight_constant'
 	ims = os.listdir(dir_ims)
@@ -86,57 +90,56 @@ for sh_v in sh_vals:
 	if sh_v=='09':
 		sh_constant=0.9
 
-	for im in ims:
-		im_path = os.path.join(dir_ims,im)
-		img = cv2.imread(im_path)
-		row, col, _ = img.shape
-		img = cv2.resize(img, (512, 512))
-		Lab = cv2.cvtColor(img, cv2.COLOR_BGR2LAB)
+	# for im in ims:
+	# 	im_path = os.path.join(dir_ims,im)
+	img = cv2.imread(args['input'])
+	row, col, _ = img.shape
+	img = cv2.resize(img, (512, 512))
+	Lab = cv2.cvtColor(img, cv2.COLOR_BGR2LAB)
 
-		inputL = Lab[:,:,0]
-		inputL = inputL.astype(np.float32)/255.0
-		inputL = inputL.transpose((0,1))
-		inputL = inputL[None,None,...]
-		inputL = Variable(torch.from_numpy(inputL).cuda())
+	inputL = Lab[:,:,0]
+	inputL = inputL.astype(np.float32)/255.0
+	inputL = inputL.transpose((0,1))
+	inputL = inputL[None,None,...]
+	inputL = Variable(torch.from_numpy(inputL).cuda())
 
-		for i in range(36):
-			sh = np.loadtxt(os.path.join(lightFolder, 'rotate_light_{:02d}.txt'.format(i)))
-			sh = sh[0:9]
-			sh = sh * sh_constant
-			# --------------------------------------------------
-			# rendering half-sphere
-			sh = np.squeeze(sh)
-			shading = get_shading(normal, sh)
-			value = np.percentile(shading, 95)
-			ind = shading > value
-			shading[ind] = value
-			shading = (shading - np.min(shading)) / (np.max(shading) - np.min(shading))
-			shading = (shading * 255.0).astype(np.uint8)
-			shading = np.reshape(shading, (256, 256))
-			shading = shading * valid
+	for i in range(36):
+		sh = np.loadtxt(os.path.join(lightFolder, 'rotate_light_{:02d}.txt'.format(i)))
+		sh = sh[0:9]
+		sh = sh * sh_constant
+		# --------------------------------------------------
+		# rendering half-sphere
+		sh = np.squeeze(sh)
+		shading = get_shading(normal, sh)
+		value = np.percentile(shading, 95)
+		ind = shading > value
+		shading[ind] = value
+		shading = (shading - np.min(shading)) / (np.max(shading) - np.min(shading))
+		shading = (shading * 255.0).astype(np.uint8)
+		shading = np.reshape(shading, (256, 256))
+		shading = shading * valid
 
-			sh = np.reshape(sh, (1, 9, 1, 1)).astype(np.float32)
-			sh = Variable(torch.from_numpy(sh).cuda())
+		sh = np.reshape(sh, (1, 9, 1, 1)).astype(np.float32)
+		sh = Variable(torch.from_numpy(sh).cuda())
 
-			millis_start = int(round(time.time() * 1000))
+		millis_start = int(round(time.time() * 1000))
 
-			outputImg, _, outputSH, _ = my_network(inputL, sh, skip_c)
+		outputImg, _, outputSH, _ = my_network(inputL, sh, skip_c)
 
-			# outputImg, _, outputSH, _ = my_network(inputL, outputSH, skip_c)
+		# outputImg, _, outputSH, _ = my_network(inputL, outputSH, skip_c)
 
-
-
-			millis_after = int(round(time.time() * 1000))
-			elapsed = millis_after - millis_start
-			print('MILISECONDS:  ', elapsed)
-			time_avg += elapsed
-			count = count + 1
-			outputImg = outputImg[0].cpu().data.numpy()
-			outputImg = outputImg.transpose((1, 2, 0))
-			outputImg = np.squeeze(outputImg) #*1.45
-			outputImg = (outputImg * 255.0).astype(np.uint8)
-			Lab[:, :, 0] = outputImg
-			resultLab = cv2.cvtColor(Lab, cv2.COLOR_LAB2BGR)
-			resultLab = cv2.resize(resultLab, (col, row))
-			cv2.imwrite(os.path.join(saveFolder, im[:-4] + '_{:02d}.jpg'.format(i)), resultLab)
-			# cv2.imwrite(os.path.join(saveFolder, im[:-4] + '_{:02d}.jpg'.format(i)), outputImg)
+		millis_after = int(round(time.time() * 1000))
+		elapsed = millis_after - millis_start
+		# print('MILISECONDS:  ', elapsed)
+		time_avg += elapsed
+		count = count + 1
+		outputImg = outputImg[0].cpu().data.numpy()
+		outputImg = outputImg.transpose((1, 2, 0))
+		outputImg = np.squeeze(outputImg) #*1.45
+		outputImg = (outputImg * 255.0).astype(np.uint8)
+		Lab[:, :, 0] = outputImg
+		resultLab = cv2.cvtColor(Lab, cv2.COLOR_LAB2BGR)
+		resultLab = cv2.resize(resultLab, (col, row))
+		print(os.path.join(saveFolder, '0_{:02d}.jpg'.format(i)))
+		cv2.imwrite(os.path.join(saveFolder, '0_{:02d}.jpg'.format(i)), resultLab)
+		# cv2.imwrite(os.path.join(saveFolder, im[:-4] + '_{:02d}.jpg'.format(i)), outputImg)
