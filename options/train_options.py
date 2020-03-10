@@ -29,6 +29,8 @@ class TrainOptions(BaseOptions):
         parser.add_argument('--lr_decay_iters', type=int, default=50, help='multiply by a gamma every lr_decay_iters iterations')
         parser.add_argument('--seed', type=int, default=42069,
                             help='Random seed for reproducability (on the same PyTorch version and the same )')
+        parser.add_argument('--ft', default=False,action='store_true', help='whether fine-tune the model')
+
 
         self.isTrain = True
         return parser
