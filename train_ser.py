@@ -61,7 +61,7 @@ if __name__ == '__main__':
             epoch_iter += opt.batch_size
             model.set_input(data)
             if opt.ft:
-                model.optimize_parameters(epoch)
+                model.optimize_parameters()
             else:
                 model.optimize_parameters(epoch)
             if total_steps % opt.display_freq == 0:
