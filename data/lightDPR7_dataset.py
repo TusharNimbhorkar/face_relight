@@ -31,7 +31,7 @@ class lightDPR7Dataset(BaseDataset):
         self.dict_AB = {}
         self.list_AB = []
 
-        self.img_size = 256
+        self.img_size = 1024
 
         for i in range(0, len(self.AB_paths_) - 6, 6):
             i1 = self.AB_paths_[i:i + 6]
@@ -73,7 +73,10 @@ class lightDPR7Dataset(BaseDataset):
 
         AB_path = self.list_AB[index]
         A = cv2.imread(AB_path[0])
-        img_A = cv2.resize(A, (self.img_size, self.img_size))
+        try:
+            img_A = cv2.resize(A, (self.img_size, self.img_size))
+        except:
+            print(AB_path[0])
         Lab_A = cv2.cvtColor(img_A, cv2.COLOR_BGR2LAB)
         inputLA = Lab_A[:, :, 0]
         inputA = inputLA.astype(np.float32) / 255.0  #totensor also dividing????
@@ -87,7 +90,10 @@ class lightDPR7Dataset(BaseDataset):
             target_path = AB_path.replace('test','target')
 
         B = cv2.imread(target_path)
-        img_B = cv2.resize(B, (self.img_size, self.img_size))
+        try:
+            img_B = cv2.resize(B, (self.img_size, self.img_size))
+        except:
+            print(target_path)
         Lab_B = cv2.cvtColor(img_B, cv2.COLOR_BGR2LAB)
         inputLB = Lab_B[:, :, 0]
         inputB = inputLB.astype(np.float32) / 255.0
@@ -97,7 +103,10 @@ class lightDPR7Dataset(BaseDataset):
 
         orig_im_path = target_path[:-5]+'5.png'
         orig = cv2.imread(orig_im_path)
-        img_orig = cv2.resize(orig, (self.img_size, self.img_size))
+        try:
+            img_orig = cv2.resize(orig, (self.img_size, self.img_size))
+        except:
+            print(orig_im_path)
         Lab_orig = cv2.cvtColor(img_orig, cv2.COLOR_BGR2LAB)
         inputLorig = Lab_orig[:, :, 0]
         inputorig = inputLorig.astype(np.float32) / 255.0
