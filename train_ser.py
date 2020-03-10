@@ -38,8 +38,12 @@ if __name__ == '__main__':
         hours, remainder = divmod(s, 3600)
         minutes, seconds = divmod(remainder, 60)
         return '{:02}:{:02}'.format(int(hours), int(minutes))
+    if opt.ft:
+        end_epoch_count = 5
+    else:
+        end_epoch_count=15
 
-    for epoch in range(1,15):
+    for epoch in range(1, end_epoch_count):
         epoch_chron.tick()
         data_chron.tick()
         current_chron.tick()
