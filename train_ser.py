@@ -12,7 +12,6 @@ from util.visualizer import Visualizer
 sys.path.append('models')
 if __name__ == '__main__':
     opt = TrainOptions().parse()
-
     #Reproducability
     torch.manual_seed(opt.seed)
     np.random.seed(opt.seed)
@@ -60,11 +59,11 @@ if __name__ == '__main__':
             visualizer.reset()
 
             epoch_iter += opt.batch_size
-            # print('set_input')
             model.set_input(data)
-            # print('optimize')
-            model.optimize_parameters(epoch)
-            # print(model.named_parameters())
+            if opt.ft:
+                model.optimize_parameters(epoch)
+            else:
+                model.optimize_parameters(epoch)
             if total_steps % opt.display_freq == 0:
                 save_result = total_steps % opt.update_html_freq == 0
                 model.compute_visuals()
