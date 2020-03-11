@@ -95,7 +95,7 @@ class lightgrad59RGBModel(BaseModel):
                                                                                       count_skip, oriImg=self.real_D)
 
     def calc_gradient(self, x):
-        ab = torch.ones((2, 1, x.shape[2], x.shape[3])).cuda()
+        ab = torch.ones((2, 1, x.shape[2], x.shape[3])).to(self.device)
         # ab = ab.cuda()
 
         # 0.2989 * R + 0.5870 * G + 0.1140 * B
@@ -104,11 +104,11 @@ class lightgrad59RGBModel(BaseModel):
 
         a = np.array([[1, 0, -1], [2, 0, -2], [1, 0, -1]])
         conv1 = nn.Conv2d(3, 1, kernel_size=3, stride=1, padding=1, bias=False)
-        conv1.weight = nn.Parameter(torch.from_numpy(a).float().unsqueeze(0).unsqueeze(0).cuda())
+        conv1.weight = nn.Parameter(torch.from_numpy(a).float().unsqueeze(0).unsqueeze(0).to(self.device))
         G_x = conv1(Variable(ab))#.data.view(self.opt.batch_size, 3, 512, 512)
         b = np.array([[1, 2, 1], [0, 0, 0], [-1, -2, -1]])
         conv2 = nn.Conv2d(3, 1, kernel_size=3, stride=1, padding=1, bias=False)
-        conv2.weight = nn.Parameter(torch.from_numpy(b).float().unsqueeze(0).unsqueeze(0).cuda())
+        conv2.weight = nn.Parameter(torch.from_numpy(b).float().unsqueeze(0).unsqueeze(0).to(self.device))
         G_y = conv2(Variable(ab))#.data.view(self.opt.batch_size, 3, 512, 512)
 
         G = torch.sqrt(torch.pow(G_x, 2) + torch.pow(G_y, 2))
