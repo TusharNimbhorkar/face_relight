@@ -162,5 +162,5 @@ for sh_v in sh_vals:
 		resultLab = cv2.cvtColor(Lab, cv2.COLOR_LAB2BGR)
 		# resultLab = cv2.resize(resultLab, (col, row))
 		print(os.path.join(saveFolder, '0_{:02d}.jpg'.format(i)))
-		# cv2.imwrite(os.path.join(saveFolder, '0_{:02d}.png'.format(i)), resultLab)
-		cv2.imwrite(os.path.join(saveFolder, '0_{:02d}.jpg'.format(i)), outputImg)
+		cv2.imwrite(os.path.join(saveFolder, '0_{:02d}.png'.format(i)), resultLab)
+		# cv2.imwrite(os.path.join(saveFolder, '0_{:02d}.jpg'.format(i)), outputImg)
