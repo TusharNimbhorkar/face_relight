@@ -3,11 +3,12 @@ from commons.torch_tools import Chronometer
 import numpy as np
 
 import torch
-
+import os
 from options.train_options import TrainOptions
 from data import CreateDataLoader
 from models import create_model
 from util.visualizer import Visualizer
+from tensorboardX import SummaryWriter
 
 sys.path.append('models')
 if __name__ == '__main__':
@@ -22,6 +23,7 @@ if __name__ == '__main__':
     model.setup(opt)
     visualizer = Visualizer(opt)
     total_steps = 0
+    writer = SummaryWriter(os.path.join(opt.checkpoints_dir,opt.name,'logdir'))
 
     print(str(model.device))
 
@@ -75,12 +77,21 @@ if __name__ == '__main__':
 
             if total_steps % opt.print_freq == 0:
                 losses = model.get_current_losses()
+                print(dict(losses))
                 t = iter_chron.tock() / opt.batch_size
                 t_data = elapsed_data / opt.batch_size
                 t_current = current_chron.tock()/epoch_iter
 
                 visualizer.print_current_losses(epoch, epoch_iter, losses, t, t_data, ['Avg Time: %.3f' % t_current,
                                                                                        'Ep Time %s / %s' % (str_time(t_current*epoch_iter),str_time(t_current*(dataset_size)))])
+
+                for key in losses.keys():
+
+                    writer.add_scalar(key,losses[key], total_steps)
+                # writer.add_scalar(f'loss/check_info', {'G_GAN':losses['G_GAN'],'G_L1':losses['G_L1']}, total_steps)
+                #epoch * len(trainloader) + i)
+
+
                 if opt.display_id > 0:
                     visualizer.plot_current_losses(epoch, float(epoch_iter) / dataset_size, opt, losses)
 
