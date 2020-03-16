@@ -217,6 +217,7 @@ class HourglassNet_1024(nn.Module):
         self.downSample = nn.MaxPool2d(kernel_size=2, stride=2)
 
         self.upSample = nn.Upsample(scale_factor=2, mode='nearest')
+        self.HG4 = HourglassBlock(self.model_512.ncPre, self.model_512.ncHG3, self.model_512.HG3)
 
         self.conv_1 = nn.Conv2d(self.ncPre, self.ncPre, kernel_size=3, stride=1, padding=1)
         self.bn_1 = nn.BatchNorm2d(self.ncPre) 
@@ -226,19 +227,42 @@ class HourglassNet_1024(nn.Module):
         self.bn_3 = nn.BatchNorm2d(self.ncPre)
 
         self.output = nn.Conv2d(self.ncPre, 1, kernel_size=1, stride=1, padding=0)
+
+    def forward_512(self, x, target_light, skip_count, oriImg=None):
+        #feat = self.pre_conv(x)
+        #feat = F.relu(self.pre_bn(feat))
+        feat = x
+        # get the inner most features
+        feat, out_feat, out_light = self.HG4(feat, target_light, 0, skip_count)
+        #feat = F.relu(self.bn_1(self.conv_1(feat)))
+        #feat = F.relu(self.bn_2(self.conv_2(feat)))
+        #feat = F.relu(self.bn_3(self.conv_3(feat)))
+        #out_img = self.output(feat)
+        #out_img = torch.sigmoid(out_img)
+
+        # for training, we need the original image
+        # to supervise the bottle neck layer feature
+        out_feat_ori = None
+        if not oriImg is None:
+            _, out_feat_ori, _ = self.HG4(oriImg, target_light, 0, skip_count)
+
+        return out_feat, out_light, out_feat_ori, feat
+
     def forward(self, x, target_light, skip_count, oriImg=None):
 
         feat = self.pre_conv(x)
         feat = F.relu(self.pre_bn(feat))
-        feat = self.downSample(feat)
+        # feat = self.downSample(feat)
 
         if not oriImg is None:
             feat_ori = self.pre_conv(oriImg)
             feat_ori = F.relu(self.pre_bn(feat_ori))
-            oriImg = self.downSample(feat_ori)
+            oriImg = feat_ori
+            # oriImg = self.downSample(feat_ori)
 
-        out_feat, out_light, out_feat_ori, feat = self.model_512(feat, target_light, skip_count, oriImg)
-        feat = self.upSample(feat)
+
+        out_feat, out_light, out_feat_ori, feat = self.forward_512(feat, target_light, skip_count, oriImg)
+        # feat = self.upSample(feat)
 
         feat = F.relu(self.bn_1(self.conv_1(feat)))
         feat = F.relu(self.bn_2(self.conv_2(feat)))

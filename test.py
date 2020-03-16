@@ -14,7 +14,7 @@ from utils_SH import *
 import os
 import numpy as np
 import argparse
-
+from PIL import Image
 from torch.autograd import Variable
 from torchvision.utils import make_grid
 import torch
@@ -27,10 +27,12 @@ ap.add_argument("-c", "--checkpoint", required=True,
 	help="checkpoint")
 ap.add_argument("-s", "--skip", default=0, required=False,
 	help="skip")
-ap.add_argument("-i", "--input", default=0, required=False,
+ap.add_argument("-i", "--input", default='test_data/2.png', required=False,
 	help="Input Directory")
-ap.add_argument("-o", "--output", default=0, required=False,
+ap.add_argument("-o", "--output", default='out_result/', required=False,
 	help="output Directory")
+ap.add_argument('--ft', default=False,action='store_true', help='whether fine-tune the model')
+
 args = vars(ap.parse_args())
 
 # load the two input images
@@ -61,12 +63,29 @@ normal = np.reshape(normal, (-1, 3))
 modelFolder = 'trained_model/'
 
 # load model
-from skeleton512 import *
-my_network = HourglassNet()
-print(checkpoint_dir_cmd)
-my_network.load_state_dict(torch.load(checkpoint_dir_cmd))
-my_network.cuda()
-my_network.train(False)
+
+if args['ft']:
+	do=0
+	from skeleton1024 import *
+	my_network_512 = HourglassNet(16)
+	my_network = HourglassNet_1024(my_network_512, 16)
+	# my_network.load_state_dict(torch.load(os.path.join(modelFolder, 'trained_model_1024_03.t7')))
+	my_network.load_state_dict(torch.load(checkpoint_dir_cmd))
+	my_network.cuda()
+	my_network.train(False)
+	size_re = (1024,1024)
+	print('fine tune model 1024')
+
+else:
+	from skeleton512 import *
+	my_network = HourglassNet()
+	print(checkpoint_dir_cmd)
+	my_network.load_state_dict(torch.load(checkpoint_dir_cmd))
+	my_network.cuda()
+	my_network.train(False)
+	size_re = (512,512)	
+	# size_re = (1024,1024)
+
 
 lightFolder = 'test_data/00/'
 
@@ -79,8 +98,8 @@ for sh_v in sh_vals:
 	if not os.path.exists(saveFolder):
 		os.makedirs(saveFolder)
 
-	dir_ims = 'test_data/relight_constant'
-	ims = os.listdir(dir_ims)
+	# dir_ims = 'test_data/relight_constant'
+	# ims = os.listdir(dir_ims)
 	time_avg = 0
 	count = 0.0
 	if sh_v=='07':
@@ -94,7 +113,9 @@ for sh_v in sh_vals:
 	# 	im_path = os.path.join(dir_ims,im)
 	img = cv2.imread(args['input'])
 	row, col, _ = img.shape
-	img = cv2.resize(img, (512, 512))
+	# img = cv2.resize(img, size_re)
+	img = np.array(Image.fromarray(img).resize(size_re, resample=Image.LANCZOS))
+	# cv2.imwrite('1.png',img)
 	Lab = cv2.cvtColor(img, cv2.COLOR_BGR2LAB)
 
 	inputL = Lab[:,:,0]
@@ -139,7 +160,7 @@ for sh_v in sh_vals:
 		outputImg = (outputImg * 255.0).astype(np.uint8)
 		Lab[:, :, 0] = outputImg
 		resultLab = cv2.cvtColor(Lab, cv2.COLOR_LAB2BGR)
-		resultLab = cv2.resize(resultLab, (col, row))
+		# resultLab = cv2.resize(resultLab, (col, row))
 		print(os.path.join(saveFolder, '0_{:02d}.jpg'.format(i)))
-		cv2.imwrite(os.path.join(saveFolder, '0_{:02d}.jpg'.format(i)), resultLab)
-		# cv2.imwrite(os.path.join(saveFolder, im[:-4] + '_{:02d}.jpg'.format(i)), outputImg)
+		cv2.imwrite(os.path.join(saveFolder, '0_{:02d}.png'.format(i)), resultLab)
+		# cv2.imwrite(os.path.join(saveFolder, '0_{:02d}.jpg'.format(i)), outputImg)

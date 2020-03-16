@@ -10,6 +10,17 @@ import sys
 
 import commons.globals as globals
 
+def overrides(interface_class):
+    '''
+    Overriding decorator that checks for the overriden method
+    :param interface_class:
+    :return:
+    '''
+    def overrider(method):
+        assert(method.__name__ in dir(interface_class))
+        return method
+    return overrider
+
 def __tryint(s):
     try:
         return int(s)

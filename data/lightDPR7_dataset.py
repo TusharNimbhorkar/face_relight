@@ -26,16 +26,19 @@ class lightDPR7Dataset(BaseDataset):
     def __init__(self, opt):
         BaseDataset.__init__(self, opt)
         self.dir_AB = os.path.join(opt.dataroot, opt.phase)
-        self.AB_paths_ = sorted(make_dataset(self.dir_AB))
+        self.AB_paths_ = make_dataset(self.dir_AB)
         self.AB_paths = []
         self.dict_AB = {}
         self.list_AB = []
 
         self.img_size = 1024
+        self.use_segments = False
+        synth_n_per_id = 5
+        n_per_id = synth_n_per_id + 1
 
-        for i in range(0, len(self.AB_paths_) - 6, 6):
-            i1 = self.AB_paths_[i:i + 6]
-            i2 = self.AB_paths_[i:i + 6]
+        for i in range(0, len(self.AB_paths_) - n_per_id, n_per_id):
+            i1 = self.AB_paths_[i:i + n_per_id]
+            i2 = self.AB_paths_[i:i + n_per_id]
 
             self.list_AB.append([i1[-1], i1[-1]])
             self.AB_paths.append(i1[-1])
@@ -54,94 +57,116 @@ class lightDPR7Dataset(BaseDataset):
         assert(self.opt.loadSize >= self.opt.fineSize)
 
         self.transform_A = get_simple_transform(grayscale=False)
+
+    def _get_paths(self, real_img_id, input_img_id):
+        AB_path = self.list_AB[input_img_id]
+        source_path = AB_path[0]
+        target_path = AB_path[1]
+
+        src_light_path = AB_path[0][:-6] + 'light_%s.txt' % AB_path[0].split('_')[-1][:-4]
+        tgt_light_path = AB_path[0][:-6] + 'light_%s.txt' % target_path.split('_')[-1][:-4]
+
+        real_img_path = os.path.join(self.opt.dataroot,'real_im',"{:05d}".format(real_img_id)+'.png')
+        orig_img_path = target_path[:-5]+'5.png'
+        segment_img_path = os.path.join(self.opt.dataroot, 'segments', AB_path[0].split('/')[-1].split('_')[0],
+                     source_path.split('/')[-1].split('_')[0] + '.png')
+        return real_img_path, orig_img_path, source_path, target_path, segment_img_path, src_light_path, tgt_light_path
+
+    def _img_to_input(self, img):
+        '''
+        Converts a numpy RGB image array into an L channel input array
+        :param img: RGB image numpy array
+        :return: L channel input array
+        '''
+
+        img_lab = cv2.cvtColor(img, cv2.COLOR_BGR2LAB)
+        input_L = img_lab[:, :, 0]
+        input_L_norm = input_L.astype(np.float32) / 255.0
+        input_L_norm = input_L_norm.transpose((0,1))
+        input_L_norm = input_L_norm[..., None]
+        input = self.transform_A(input_L_norm)
+
+        return input
+
+    def _get_sh(self, sh):
+        sh = sh[0:9]
+        sh = sh * 1.0
+        sh = np.squeeze(sh)
+        sh = np.reshape(sh, (9, 1, 1)).astype(np.float32)
+        return sh
+
+    def _read_img(self, img_path, size):
+        img = cv2.imread(img_path)
+        if size < img.shape[0]:
+            try:
+                    img = cv2.resize(img, (self.img_size, self.img_size))
+            except Exception as e:
+                print(img_path)
+                raise e
+
+        return img
+
     def __getitem__(self, index):
-        # todo: A,B,AL,BL
-
-        #self.img_size = random.choice([256, 768, 512, 1024])
-
-        real_im_number = random.choice(range(0, self.opt.ffhq))
-
-        real_im_path = os.path.join(self.opt.dataroot,'real_im',"{:05d}".format(real_im_number)+'.png')
-        C = cv2.imread(real_im_path)
-        img_C = cv2.resize(C, (self.img_size, self.img_size))
-        Lab_C = cv2.cvtColor(img_C, cv2.COLOR_BGR2LAB)
-        inputLC = Lab_C[:, :, 0]
-        inputC = inputLC.astype(np.float32) / 255.0
-        inputC = inputC.transpose((0,1))
-        inputC = inputC[..., None]
-
-
+        real_img_id = random.choice(range(0, self.opt.ffhq))
         AB_path = self.list_AB[index]
-        A = cv2.imread(AB_path[0])
-        try:
-            img_A = cv2.resize(A, (self.img_size, self.img_size))
-        except:
-            print(AB_path[0])
-        Lab_A = cv2.cvtColor(img_A, cv2.COLOR_BGR2LAB)
-        inputLA = Lab_A[:, :, 0]
-        inputA = inputLA.astype(np.float32) / 255.0  #totensor also dividing????
-        inputA = inputA.transpose((0, 1))
-        inputA = inputA[ ... ,None]
+        real_path, orig_path, source_path, target_path, segment_img_path, src_light_path, tgt_light_path = self._get_paths(real_img_id, index)
 
-        if self.opt.isTrain:
-            target_path = AB_path[1]
-        else:
-            # TODO: CHANGE THIS IN FUTURE
-            target_path = AB_path.replace('test','target')
+        #Real discriminator image
+        img_real = cv2.imread(real_path)
 
-        B = cv2.imread(target_path)
-        try:
-            img_B = cv2.resize(B, (self.img_size, self.img_size))
-        except:
-            print(target_path)
-        Lab_B = cv2.cvtColor(img_B, cv2.COLOR_BGR2LAB)
-        inputLB = Lab_B[:, :, 0]
-        inputB = inputLB.astype(np.float32) / 255.0
-        inputB = inputB.transpose((0, 1))
-        inputB = inputB[ ... ,None]
+        if self.img_size < img_real.shape[0]:
+            try:
+                    img_real = cv2.resize(img_real, (self.img_size, self.img_size))
+            except Exception as e:
+                print(real_path)
+                raise e
 
+        input_real = self._img_to_input(img_real)
 
-        orig_im_path = target_path[:-5]+'5.png'
-        orig = cv2.imread(orig_im_path)
-        try:
-            img_orig = cv2.resize(orig, (self.img_size, self.img_size))
-        except:
-            print(orig_im_path)
-        Lab_orig = cv2.cvtColor(img_orig, cv2.COLOR_BGR2LAB)
-        inputLorig = Lab_orig[:, :, 0]
-        inputorig = inputLorig.astype(np.float32) / 255.0
-        inputorig = inputorig.transpose((0, 1))
-        inputorig = inputorig[..., None]
+        #Real original image
+        img_orig = self._read_img(orig_path, self.img_size)
+        input_orig = self._img_to_input(img_orig)
 
+        #Segments
+        back_original = None
+        if self.use_segments:
+            segment_im = cv2.imread(segment_img_path)
+            segment_im=cv2.resize(segment_im,(self.img_size,self.img_size))
 
+            segment_im[segment_im==255]=1
+            segment_im_invert = np.invert(segment_im)
+            segment_im_invert[segment_im_invert == 254] = 0
+            segment_im_invert[segment_im_invert == 255] = 1
 
-        # TODO NORMALISE??????? Check base dataset
-        A = self.transform_A(inputA)
-        B = self.transform_A(inputB)
-        C = self.transform_A(inputC)
-        D = self.transform_A(inputorig)
+            back_original = np.multiply(img_orig, segment_im_invert)
 
-        del_item = AB_path[0].split('_')[-1][:-4]
-        target_item = target_path.split('_')[-1][:-4]
+        #Source image
+        img_src = self._read_img(source_path, self.img_size)
 
-        # TODO: LIGHT!!!!!
-        AL_path = AB_path[0][:-6] + 'light_' + del_item + '.txt'
-        sh = np.loadtxt(AL_path)
-        sh = sh[0:9]
-        sh_AL = sh * 1.0
-        sh_AL = np.squeeze(sh_AL)
-        sh_AL = np.reshape(sh_AL, (9, 1, 1)).astype(np.float32)
+        if self.use_segments:
+            img_src = back_original + np.multiply(img_src, segment_im)
 
-        BL_path = AB_path[0][:-6] + 'light_' + target_item + '.txt'
-        sh = np.loadtxt(BL_path)
-        sh = sh[0:9]
-        sh_BL = sh * 1.0 #0.7
-        sh_BL = np.squeeze(sh_BL)
-        sh_BL = np.reshape(sh_BL, (9, 1, 1)).astype(np.float32)
+        input_src = self._img_to_input(img_src)
+
+        #Target image
+        img_tgt = self._read_img(target_path, self.img_size)
+
+        if self.use_segments:
+            img_tgt = back_original + np.multiply(img_tgt, segment_im)
+
+        input_tgt = self._img_to_input(img_tgt)
+
+        #Source light
+        sh = np.loadtxt(src_light_path)
+        sh_src = self._get_sh(sh)
+
+        #Target light
+        sh = np.loadtxt(tgt_light_path)
+        sh_tgt = self._get_sh(sh)
 
         # todo: check for just VARIABLE thingy
 
-        return {'A': A, 'B': B,'C':C,'D':D, 'AL':torch.from_numpy(sh_AL),'BL':torch.from_numpy(sh_BL), 'A_paths': AB_path, 'B_paths': AB_path}
+        return {'A': input_src, 'B': input_tgt,'C':input_real,'D':input_orig, 'AL':torch.from_numpy(sh_src),'BL':torch.from_numpy(sh_tgt), 'A_paths': AB_path, 'B_paths': AB_path}
 
     def __len__(self):
         return len(self.list_AB)
