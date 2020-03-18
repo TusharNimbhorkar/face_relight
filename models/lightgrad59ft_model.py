@@ -13,7 +13,8 @@ from .skeleton1024 import *
 import torch.nn as nn
 from torch.autograd import Variable
 import numpy as np
-#
+import torch.nn.functional as F
+
 
 class lightgrad59ftModel(BaseModel):
     def name(self):
@@ -24,7 +25,7 @@ class lightgrad59ftModel(BaseModel):
         if is_train:
             parser.set_defaults(pool_size=0, gan_mode='lsgan')
             parser.add_argument('--lambda_L1', type=float, default=100.0, help='weight for L1 loss')
-            parser.add_argument('--ft_model',type=str,default='/home/tushar/Ilumination_gan/models/trained/trained_model_03.t7')
+            parser.add_argument('--ft_model',type=str,default='/home/tushar/data2/checkpoints_debug/model_fulltrain_dpr7_mse_sumBS20/14_net_G.pth')
             parser.add_argument('--ft_model_D',type=str,default='/home/tushar/data2/checkpoints_debug/model_fulltrain_dpr7_mse_sumBS20/14_net_D.pth')
 
 
@@ -108,7 +109,8 @@ class lightgrad59ftModel(BaseModel):
     def backward_D(self):
         # Fake
         # stop backprop to the generator by detaching fake_B
-        fake_AB = torch.cat((self.real_C, self.fake_B), 1)
+        # fake_AB = torch.cat((self.real_C, self.fake_B), 1)
+        fake_AB = F.interpolate(torch.cat((self.real_C, self.fake_B), 1),size=512)
         pred_fake = self.netD(fake_AB.detach())
         self.loss_D_fake = self.criterionGAN(pred_fake, False)
 
@@ -125,8 +127,10 @@ class lightgrad59ftModel(BaseModel):
     def backward_G(self):
         # First, G(A) should fake the discriminator
 
-        fake_AB = torch.cat((self.real_C, self.fake_B), 1)
+        # fake_AB = torch.cat((self.real_C, self.fake_B), 1)
+        fake_AB = F.interpolate(torch.cat((self.real_C, self.fake_B), 1),size=512)
         pred_fake = self.netD(fake_AB)
+
         self.loss_G_GAN = self.criterionGAN(pred_fake, True) * 0.5
 
         # Second, G(A) = B
