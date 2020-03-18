@@ -25,6 +25,7 @@ class lightgrad59ftModel(BaseModel):
             parser.set_defaults(pool_size=0, gan_mode='lsgan')
             parser.add_argument('--lambda_L1', type=float, default=100.0, help='weight for L1 loss')
             parser.add_argument('--ft_model',type=str,default='/home/tushar/Ilumination_gan/models/trained/trained_model_03.t7')
+            parser.add_argument('--ft_model_D',type=str,default='/home/tushar/data2/checkpoints_debug/model_fulltrain_dpr7_mse_sumBS20/14_net_D.pth')
 
 
         return parser
@@ -52,7 +53,15 @@ class lightgrad59ftModel(BaseModel):
 
         if self.isTrain:
             self.netD = networks.define_D(2, opt.ndf, opt.netD,
-                                          opt.n_layers_D, opt.norm, opt.init_type, opt.init_gain, self.gpu_ids)
+                                          opt.n_layers_D+1, opt.norm, opt.init_type, opt.init_gain, self.gpu_ids)
+            load_path = opt.ft_model_D
+            if isinstance(self.netD, torch.nn.DataParallel):
+                self.netD = self.netD.module
+            print('loading the descriminator model from %s' % load_path)
+            state_dict = torch.load(load_path, map_location=str(self.device))
+            if hasattr(state_dict, '_metadata'):
+                del state_dict._metadata
+            self.netD.load_state_dict(state_dict)
 
         if self.isTrain:
             self.criterionGAN = networks.GANLoss(gan_mode='lsgan').to(self.device)
