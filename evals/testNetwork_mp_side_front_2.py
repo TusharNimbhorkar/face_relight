@@ -7,8 +7,8 @@
 # bestcoesf=1.3 and 1.0
 import sys
 
-sys.path.append('models')
-sys.path.append('utils')
+sys.path.append('../models')
+sys.path.append('../utils')
 from sklearn.preprocessing import PolynomialFeatures
 from sklearn import linear_model
 from utils_SH import *
@@ -27,6 +27,8 @@ import cv2
 import matplotlib.pyplot as plt
 
 import joblib
+from eval_depth import *
+
 
 ap = argparse.ArgumentParser()
 ap.add_argument("-f", "--first", required=True,
@@ -134,11 +136,12 @@ my_network.load_state_dict(torch.load(checkpoint_dir_cmd))
 my_network.cuda()
 my_network.train(False)
 
-lightFolder = 'test_data/01/'
+lightFolder = '../test_data/01/'
 
 sh_vals = ['07']
 
-test_dir = '/home/tushar/data2/data/mpie'
+# test_dir = '/home/tushar/data2/data/mpie'
+test_dir = '/home/tushar/face_relight/substet_eval/mpie'
 
 
 test_dir1 = test_dir
@@ -160,8 +163,8 @@ persons = os.listdir(test_dir)
 
 
 
-sh_poly_path_temp = 'models/poly_%s_7_new.joblib'
-sh_linear_path_temp = 'models/linear_%s_7_new.joblib'
+sh_poly_path_temp = '/home/tushar/face_relight/models/trained_eval_models/poly_%s_7_new.joblib'
+sh_linear_path_temp = '/home/tushar/face_relight/models/trained_eval_models/linear_%s_7_new.joblib'
 
 
 # load the two input images
@@ -174,14 +177,16 @@ device = "cuda"
 
 
 for ii in range(len(from_id_list)):
-    from_id = from_id_list[ii]
+    # from_id = from_id_list[ii]
+    # to_id = 7
 
     # to_id = from_id_list[ii]
 
-    # from_id = 7
-    # to_id = from_id_list[ii]
+    from_id = 7
+    to_id = from_id_list[ii]
 
-    to_id = 7
+
+
 
     # print(from_id)
     if from_id == 7:
@@ -222,7 +227,8 @@ for ii in range(len(from_id_list)):
     max_mse = 0
 
     ##############################################################
-    img_dirs = '/home/tushar/data2/face-parsing.PyTorch/res/mpie_segment/'
+    # img_dirs = '/home/tushar/data2/face-parsing.PyTorch/res/mpie_segment/'
+    img_dirs = '/home/tushar/face_relight/substet_eval/mpie_segment'
     people_ = os.listdir(img_dirs)
     peoples = []
     for jj in sorted(people_):
@@ -240,12 +246,12 @@ for ii in range(len(from_id_list)):
         
         person_dir = os.path.join(test_dir, per)
         # from
-        # side_im = os.path.join(person_dir, per + '_07.png')
-        side_im = os.path.join(person_dir, per + front_number)
+        side_im = os.path.join(person_dir, per + '_07.png')
+        # side_im = os.path.join(person_dir, per + front_number)
 
         # To
-        # front_im = os.path.join(person_dir, per + front_number)
-        front_im = os.path.join(person_dir, per + '_07.png')
+        front_im = os.path.join(person_dir, per + front_number)
+        # front_im = os.path.join(person_dir, per + '_07.png')
 
 
         exists_ims_side = cv2.imread(side_im) is not None
@@ -260,8 +266,8 @@ for ii in range(len(from_id_list)):
                 if not os.path.exists(saveFolder):
                     os.makedirs(saveFolder)
 
-                dir_ims = 'test_data/relight_constant'
-                ims = os.listdir(dir_ims)
+                # dir_ims = 'test_data/relight_constant'
+                # ims = os.listdir(dir_ims)
                 if sh_v == '07':
                     sh_constant = 0.7
 
@@ -314,6 +320,7 @@ for ii in range(len(from_id_list)):
 
                     # outputImg, _, _, _ = my_network(inputL, outputSH*1.3, skip_c)
                     # outputImg, _, _, _ = my_network(inputL, outputSH, skip_c)
+                    # sh_constant_ = 1.0
                     outputImg, _, _, _ = my_network(inputL, outputSH*sh_constant_, skip_c)
 
                     '''sh_viz'''
@@ -341,9 +348,14 @@ for ii in range(len(from_id_list)):
                     # cv2.imwrite(os.path.join('07_10.jpg'.format(i)), resultLab)
 
                     #######################################################################
-                    segment_path_ear = os.path.join('/home/tushar/data2/face-parsing.PyTorch/res/', 'mpie_segment',
+                    # segment_path_ear = os.path.join('/home/tushar/data2/face-parsing.PyTorch/res/', 'mpie_segment',
+                    #                                 per,
+                    #                                 per + front_number)
+
+                    segment_path_ear = os.path.join('/home/tushar/face_relight/substet_eval/', 'mpie_segment',
                                                     per,
                                                     per + front_number)
+
                     im1 = cv2.imread(segment_path_ear,0)
                     im1[im1 == 8] = 255
                     im1[im1 == 7] = 255
@@ -384,7 +396,10 @@ for ii in range(len(from_id_list)):
                         segment_im = cv2.resize(segment_im,(128,128))
                         resultLab = cv2.resize(resultLab,(128,128))
 
-                    current_mse_all = mse_all_seg(np.multiply(img_side_copy,segment_im), np.multiply(resultLab,segment_im),segment_im)
+                    # current_mse_all = mse_all_seg(np.multiply(img_side_copy,segment_im), np.multiply(resultLab,segment_im),segment_im)
+                    current_mse_all = ScaleInvariantMeanSquaredError(np.multiply(img_side_copy,segment_im), np.multiply(resultLab,segment_im))#segment_im)
+                    current_mse_all = current_mse_all/np.sum(segment_im)
+                    current_mse_all = current_mse_all*(128.0*128.0)
                     if current_mse_all>max_mse:
                         max_mse=current_mse_all
                         # print('max  ',per, '  err  ',max_mse)
