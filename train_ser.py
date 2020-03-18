@@ -77,7 +77,6 @@ if __name__ == '__main__':
 
             if total_steps % opt.print_freq == 0:
                 losses = model.get_current_losses()
-                print(dict(losses))
                 t = iter_chron.tock() / opt.batch_size
                 t_data = elapsed_data / opt.batch_size
                 t_current = current_chron.tock()/epoch_iter
