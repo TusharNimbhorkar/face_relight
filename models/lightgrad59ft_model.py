@@ -53,8 +53,9 @@ class lightgrad59ftModel(BaseModel):
         self.netG.train(True)
 
         if self.isTrain:
-            self.netD = networks.define_D(2, opt.ndf, opt.netD,
-                                          opt.n_layers_D+1, opt.norm, opt.init_type, opt.init_gain, self.gpu_ids)
+            # self.netD = networks.define_D(2, opt.ndf, opt.netD, opt.n_layers_D, opt.norm, opt.init_type, opt.init_gain, self.gpu_ids)
+            self.netD = networks.define_D(2, opt.ndf, 'n_layers', opt.n_layers_D+1, opt.norm, opt.init_type, opt.init_gain, self.gpu_ids)
+
             load_path = opt.ft_model_D
             if isinstance(self.netD, torch.nn.DataParallel):
                 self.netD = self.netD.module
@@ -62,7 +63,17 @@ class lightgrad59ftModel(BaseModel):
             state_dict = torch.load(load_path, map_location=str(self.device))
             if hasattr(state_dict, '_metadata'):
                 del state_dict._metadata
-            self.netD.load_state_dict(state_dict)
+            # self.netD.load_state_dict(state_dict)
+            not_incl = ['model.11.bias', 'model.11.weight']
+            for i in state_dict.keys():
+                if i not in not_incl:
+                    print(i)
+                    self.netD.state_dict()[i] = state_dict[i]
+                if i=='model.11.bias':
+                    self.netD.state_dict()['model.14.bias'] = state_dict[i]
+                if i=='model.11.weight':
+                    self.netD.state_dict()['model.14.weight'] = state_dict[i]
+
 
         if self.isTrain:
             self.criterionGAN = networks.GANLoss(gan_mode='lsgan').to(self.device)
