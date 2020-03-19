@@ -57,9 +57,9 @@ class lightgrad59ftModel(BaseModel):
             self.netD = networks.define_D(2, opt.ndf, 'n_layers', opt.n_layers_D+1, opt.norm, opt.init_type, opt.init_gain, self.gpu_ids)
 
             load_path = opt.ft_model_D
-            if isinstance(self.netD, torch.nn.DataParallel):
-                self.netD = self.netD.module
-            print('loading the descriminator model from %s' % load_path)
+            # if isinstance(self.netD, torch.nn.DataParallel):
+            #     self.netD = self.netD.module
+            # print('loading the descriminator model from %s' % load_path)
             state_dict = torch.load(load_path, map_location=str(self.device))
             if hasattr(state_dict, '_metadata'):
                 del state_dict._metadata
@@ -120,8 +120,8 @@ class lightgrad59ftModel(BaseModel):
     def backward_D(self):
         # Fake
         # stop backprop to the generator by detaching fake_B
-        # fake_AB = torch.cat((self.real_C, self.fake_B), 1)
-        fake_AB = F.interpolate(torch.cat((self.real_C, self.fake_B), 1),size=512)
+        fake_AB = torch.cat((self.real_C, self.fake_B), 1)
+        # fake_AB = F.interpolate(torch.cat((self.real_C, self.fake_B), 1),size=512)
         pred_fake = self.netD(fake_AB.detach())
         self.loss_D_fake = self.criterionGAN(pred_fake, False)
 
@@ -138,8 +138,8 @@ class lightgrad59ftModel(BaseModel):
     def backward_G(self):
         # First, G(A) should fake the discriminator
 
-        # fake_AB = torch.cat((self.real_C, self.fake_B), 1)
-        fake_AB = F.interpolate(torch.cat((self.real_C, self.fake_B), 1),size=512)
+        fake_AB = torch.cat((self.real_C, self.fake_B), 1)
+        # fake_AB = F.interpolate(torch.cat((self.real_C, self.fake_B), 1),size=512)
         pred_fake = self.netD(fake_AB)
 
         self.loss_G_GAN = self.criterionGAN(pred_fake, True) * 0.5
