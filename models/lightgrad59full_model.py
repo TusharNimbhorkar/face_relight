@@ -131,7 +131,7 @@ class lightgrad59fullModel(BaseModel):
 
         self.loss_D.backward()
 
-    def backward_G(self):
+    def backward_G(self,epoch):
         # First, G(A) should fake the discriminator
 
         fake_AB = torch.cat((self.real_C, self.fake_B), 1)
@@ -151,11 +151,11 @@ class lightgrad59fullModel(BaseModel):
         self.loss_L1_add = self.loss_G_L1 + self.loss_G_MSE + self.loss_G_total_variance
 
         self.loss_G = self.loss_G_GAN + self.loss_L1_add
-        # if epoch > 10:
-        self.loss_G_feat = self.mseloss(self.face_feat_A, self.face_feat_B) * 0.5
-        self.loss_G = self.loss_G + self.loss_G_feat
-        # else:
-        #     self.loss_G_feat = 0.0
+        if epoch > 11:
+            self.loss_G_feat = self.mseloss(self.face_feat_A, self.face_feat_B) * 0.5
+            self.loss_G = self.loss_G + self.loss_G_feat
+        else:
+            self.loss_G_feat = 0.0
 
         self.loss_G.backward()
 
@@ -170,5 +170,5 @@ class lightgrad59fullModel(BaseModel):
         # update G
         self.set_requires_grad(self.netD, False)
         self.optimizer_G.zero_grad()
-        self.backward_G()
+        self.backward_G(epoch)
         self.optimizer_G.step()
