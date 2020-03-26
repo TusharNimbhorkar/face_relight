@@ -2,6 +2,7 @@ import os.path as osp
 import glob
 import cv2
 import numpy as np
+import os
 import matplotlib.pyplot as plt
 from utils.utils_SH import get_shading
 from models.skeleton512_rgb import HourglassNet as HourglassNet_RGB
@@ -10,11 +11,47 @@ from PIL import  Image
 import torch
 
 dpr_path = '/home/tushar/data2/DPR/train'
-lightFolder = 'test_data/00/'
-sh_constant = 1
+lightFolder_dpr = 'test_data/00/'
+lightFolder_3dulight = 'test_data/sh_presets/horizontal'
+out_dir = '/home/nedko/face_relight/dbs/examples_v0.3_left'
 
-checkpoint_src = '/home/tushar/data2/checkpoints/face_relight/outputs/model_rgb_light3du/14_net_G.pth'
-checkpoint_tgt = '/home/tushar/data2/DPR_test/trained_model/trained_model_03.t7'
+target_sh_id_dpr = 5 #60
+target_sh_id_3dulight = 19#89
+
+os.makedirs(out_dir, exist_ok=True)
+
+class Model:
+    def __init__(self, checkpoint_path, lab, resolution, dataset_name, sh_const=1.0, name=''):
+        self.checkpoint_path = checkpoint_path
+        self.lab = lab
+        self.resolution = resolution
+        self.model = None
+        self.sh_const = sh_const
+        self.name=name
+
+        if dataset_name == 'dpr':
+            self.sh_path = lightFolder_dpr
+            self.target_sh = target_sh_id_dpr
+        elif dataset_name == '3dulight':
+            self.sh_path = lightFolder_3dulight
+            self.target_sh = target_sh_id_3dulight
+
+model_lab_pretrained = Model('/home/nedko/face_relight/models/trained/trained_model_03.t7', lab=True, resolution=512, dataset_name='dpr', sh_const = 0.7, name='Pretrained DPR') # '/home/tushar/data2/DPR_test/trained_model/trained_model_03.t7'
+model_lab_3dulight_03 = Model('/home/nedko/face_relight/outputs/model_256_lab_3dulight_v0.3/model_256_lab_3dulight_v0.3/14_net_G.pth', lab=True, resolution=256, dataset_name='3dulight', name='LAB 3DULight v0.3')
+model_lab_3dulight_02 = Model('/home/tushar/data2/checkpoints/model_256_3dudataset_lab/model_256_3dudataset_lab/14_net_G.pth', lab=True, resolution=256, dataset_name='3dulight', name='LAB 3DULight v0.2')
+model_rgb_3dulight_02 = Model('/home/tushar/data2/checkpoints/face_relight/outputs/model_rgb_light3du/14_net_G.pth', lab=False, resolution=256, dataset_name='3dulight', name='RGB 3DULight v0.2')
+model_lab_dpr_10k = Model('/home/tushar/data2/checkpoints/model_256_dprdata10k_lab/14_net_G.pth', lab=True, resolution=256, dataset_name='dpr', name='LAB DPR 10K')
+
+model_objs = [
+    model_lab_pretrained,
+    model_lab_3dulight_02,
+    model_lab_3dulight_03,
+    model_lab_dpr_10k
+]
+
+# checkpoint_src = '/home/nedko/face_relight/outputs/model_256_lab_3dulight_v0.3/model_256_lab_3dulight_v0.3/14_net_G.pth'
+# checkpoint_tgt = '/home/tushar/data2/checkpoints/model_256_3dudataset_lab/model_256_3dudataset_lab/14_net_G.pth' #'/home/tushar/data2/checkpoints/face_relight/outputs/model_rgb_light3du/14_net_G.pth' #'/home/tushar/data2/DPR_test/trained_model/trained_model_03.t7'
+
 
 def load_model(checkpoint_dir_cmd, lab=True):
     if lab:
@@ -44,11 +81,11 @@ def gen_norm():
     normal = np.reshape(normal, (-1, 3))
     return normal, valid
 
-def test(my_network, input_img, lab=True, sh_id=0):
+def test(my_network, input_img, lab=True, sh_id=0, sh_constant=1.0, res=256, sh_path=lightFolder_3dulight):
     img = input_img
     row, col, _ = img.shape
     # img = cv2.resize(img, size_re)
-    img = np.array(Image.fromarray(img).resize((256, 256), resample=Image.LANCZOS))
+    img = np.array(Image.fromarray(img).resize((res, res), resample=Image.LANCZOS))
     # cv2.imwrite('1.png',img)
     if lab:
         Lab = cv2.cvtColor(img, cv2.COLOR_BGR2LAB)
@@ -66,7 +103,7 @@ def test(my_network, input_img, lab=True, sh_id=0):
     inputL = torch.autograd.Variable(torch.from_numpy(inputL).cuda())
 
 
-    sh = np.loadtxt(osp.join(lightFolder, 'rotate_light_{:02d}.txt'.format(sh_id)))
+    sh = np.loadtxt(osp.join(sh_path, 'rotate_light_{:02d}.txt'.format(sh_id)))
     sh = sh[0:9]
     sh = sh * sh_constant
     # --------------------------------------------------
@@ -111,24 +148,34 @@ def test(my_network, input_img, lab=True, sh_id=0):
     return resultLab
 
 
-src_model = load_model(checkpoint_src, lab=False)
-tgt_model = load_model(checkpoint_tgt, lab=True)
+for model_obj in model_objs:
+    model_obj.model = load_model(model_obj.checkpoint_path, lab=model_obj.lab)
 
 dpr_dirs = sorted(glob.glob(osp.join(dpr_path, '*')))
 
 for dir in dpr_dirs:
     orig_path = osp.join(dir, dir.rsplit('/',1)[-1] + '_05.png')
-    left_path = osp.join(dir, dir.rsplit('/', 1)[-1] + '_00.png')
+    # left_path = osp.join(dir, dir.rsplit('/', 1)[-1] + '_00.png')
     orig_img = cv2.imread(orig_path)
-    left_img = cv2.imread(left_path)
+    # left_img = cv2.imread(left_path)
 
-    src_result = test(src_model, orig_img, lab=False)
-    tgt_result = test(tgt_model, orig_img, lab=True)
+    if orig_img.shape[0] > 256:
+        orig_img = cv2.resize(orig_img, (256,256))
 
-    orig_img = cv2.resize(orig_img, (256,256))
-    left_img = cv2.resize(left_img, (256,256))
+    results = [orig_img]
+    for model_obj in model_objs:
+        result_img = test(model_obj.model, orig_img, lab=model_obj.lab, sh_constant=model_obj.sh_const, res=model_obj.resolution, sh_id=model_obj.target_sh, sh_path=model_obj.sh_path)
 
-    out_img = np.concatenate((orig_img, src_result, tgt_result), axis=1)
+        if result_img.shape[0]>256:
+            result_img = cv2.resize(result_img, (256,256))
+
+        cv2.putText(result_img, model_obj.name, (5, 20), cv2.FONT_HERSHEY_COMPLEX, 0.5, 255)
+        results.append(result_img)
+
+    # tgt_result = cv2.resize(tgt_result, (256,256))
+
+    out_img = np.concatenate(results, axis=1)
+    cv2.imwrite(osp.join(out_dir, orig_path.rsplit('/', 1)[-1]), out_img)
     print(dir)
-    plt.imshow(out_img[:,:,::-1])
-    plt.show()
+    # plt.imshow(out_img[:,:,::-1])
+    # plt.show()
