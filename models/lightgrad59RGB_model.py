@@ -95,7 +95,7 @@ class lightgrad59RGBModel(BaseModel):
                                                                                       count_skip, oriImg=self.real_D)
 
     def calc_gradient(self, x):
-        ab = torch.ones((2, 1, x.shape[2], x.shape[3])).to(self.device)
+        ab = torch.ones((x.shape[0], 1, x.shape[2], x.shape[3])).to(self.device)
         # ab = ab.cuda()
 
         # 0.2989 * R + 0.5870 * G + 0.1140 * B
@@ -146,6 +146,7 @@ class lightgrad59RGBModel(BaseModel):
         self.loss_G_MSE = self.mseloss(self.real_AL, self.fake_AL)
 
         self.loss_G_total_variance = self.criterionL1(self.calc_gradient(x=self.real_B),self.calc_gradient(x=self.fake_B))
+
         self.loss_L1_add = self.loss_G_L1 + self.loss_G_MSE + self.loss_G_total_variance
 
         self.loss_G = self.loss_G_GAN + self.loss_L1_add
