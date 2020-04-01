@@ -13,6 +13,7 @@ import torch
 from torch.autograd import Variable
 import matplotlib.pyplot as plt
 from commons.common_tools import Logger, BColors
+from copy import deepcopy
 
 log = Logger("DataLoader", tag_color=BColors.LightBlue)
 
@@ -21,6 +22,10 @@ class lightDPR7Dataset(BaseDataset):
     def modify_commandline_options(parser, is_train=True):
         if is_train:
             parser.add_argument('--ffhq', type=int, default=70000, help='sample size ffhq')
+            parser.add_argument('--img_size', type=int, default=1024, help='Image size to train')
+            parser.add_argument('--n_synth', type=int, default=5, help='Sample of synthetic images per indentity in dataset')
+            parser.add_argument('--n_first', type=int, default=5, help='number of first synthetic images per indentity')
+
         return parser
 
     def __init__(self, opt):
@@ -31,18 +36,24 @@ class lightDPR7Dataset(BaseDataset):
         self.dict_AB = {}
         self.list_AB = []
 
-        self.img_size = 1024
+        self.img_size = self.opt.img_size
         self.use_segments = False
-        synth_n_per_id = 5
+        synth_n_per_id = self.opt.n_synth
+        n_want = self.opt.n_first
         n_per_id = synth_n_per_id + 1
 
         for i in range(0, len(self.AB_paths_) - n_per_id, n_per_id):
-            i1 = self.AB_paths_[i:i + n_per_id]
-            i2 = self.AB_paths_[i:i + n_per_id]
 
-            self.list_AB.append([i1[-1], i1[-1]])
+            ori_img = self.AB_paths_[i+synth_n_per_id]
+            self.list_AB.append([ori_img, ori_img])
+
+            i1 = self.AB_paths_[i:i + n_want]
+            i1.append(ori_img)
+            i2 = deepcopy(i1)
+            # i2 = self.AB_paths_[i:i + n_want]
+
             self.AB_paths.append(i1[-1])
-            for k in range(6):
+            for k in range(len(i1)):
                 a = [i1.pop(random.randrange(len(i1))) for _ in range(1)]
                 blist = list(set(i2) - set(a))
                 b = [blist.pop(random.randrange(len(blist))) for _ in range(1)]
