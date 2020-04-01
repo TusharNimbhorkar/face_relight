@@ -37,4 +37,4 @@ class light3DURGBDataset(lightDPR7RGBDataset):
 
 
     def name(self):
-        return 'lightDPR7RGBDataset'
+        return 'light3DURGBDataset'
