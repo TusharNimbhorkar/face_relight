@@ -30,6 +30,11 @@ class TrainOptions(BaseOptions):
         parser.add_argument('--seed', type=int, default=42069,
                             help='Random seed for reproducability (on the same PyTorch version and the same )')
         parser.add_argument('--ft', default=False,action='store_true', help='whether fine-tune the model')
+        parser.add_argument('--img_size', type=int, default=1024, help='Image size to train')
+        parser.add_argument('--n_synth', type=int, default=5,
+                            help='Sample of synthetic images per indentity in dataset ffhq')
+        parser.add_argument('--n_first', type=int, default=5, help='number of first synthetic images per indentity')
+
 
 
         self.isTrain = True

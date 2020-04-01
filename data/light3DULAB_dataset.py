@@ -10,10 +10,6 @@ class light3DULABDataset(lightDPR7Dataset):
     def modify_commandline_options(parser, is_train=True):
         if is_train:
             parser.add_argument('--ffhq', type=int, default=70000, help='sample size ffhq')
-            parser.add_argument('--img_size', type=int, default=1024, help='Image size to train')
-            parser.add_argument('--n_synth', type=int, default=5,
-                                help='Sample of synthetic images per indentity in dataset ffhq')
-            parser.add_argument('--n_first', type=int, default=5, help='number of first synthetic images per indentity')
 
         return parser
 

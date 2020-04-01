@@ -22,9 +22,6 @@ class lightDPR7Dataset(BaseDataset):
     def modify_commandline_options(parser, is_train=True):
         if is_train:
             parser.add_argument('--ffhq', type=int, default=70000, help='sample size ffhq')
-            parser.add_argument('--img_size', type=int, default=1024, help='Image size to train')
-            parser.add_argument('--n_synth', type=int, default=5, help='Sample of synthetic images per indentity in dataset')
-            parser.add_argument('--n_first', type=int, default=5, help='number of first synthetic images per indentity')
 
         return parser
 
@@ -50,7 +47,6 @@ class lightDPR7Dataset(BaseDataset):
             i1 = self.AB_paths_[i:i + n_want]
             i1.append(ori_img)
             i2 = deepcopy(i1)
-            # i2 = self.AB_paths_[i:i + n_want]
 
             self.AB_paths.append(i1[-1])
             for k in range(len(i1)):
