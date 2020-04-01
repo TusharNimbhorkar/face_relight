@@ -83,11 +83,13 @@ else:
 	my_network.load_state_dict(torch.load(checkpoint_dir_cmd))
 	my_network.cuda()
 	my_network.train(False)
-	size_re = (512,512)	
+	size_re = (256, 256)
+	# size_re = (512,512)
 	# size_re = (1024,1024)
 
 
-lightFolder = 'test_data/00/'
+# lightFolder = 'test_data/00/'
+lightFolder = './test_data/sh_presets/vertical'
 
 sh_vals = ['07']#,'09','10']
 
@@ -124,7 +126,7 @@ for sh_v in sh_vals:
 	inputL = inputL[None,None,...]
 	inputL = Variable(torch.from_numpy(inputL).cuda())
 
-	for i in range(36):
+	for i in range(90):
 		sh = np.loadtxt(os.path.join(lightFolder, 'rotate_light_{:02d}.txt'.format(i)))
 		sh = sh[0:9]
 		sh = sh * sh_constant

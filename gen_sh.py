@@ -36,9 +36,9 @@ for entry_dir in entry_dirs:
         csv_reader = csv.reader(light_info_file, delimiter=',')
         next(csv_reader)
         for row in csv_reader:
-            light_dir = np.asarray([float(val) for val in row[1:3]])[...].astype(np.float32)
-            light_dir = -euler_to_dir(light_dir[1], light_dir[0], 0)[np.newaxis, ...]
-            light_dir = light_dir / np.linalg.norm(light_dir)
+            light_euler = np.asarray([float(val) for val in row[1:3]])[...].astype(np.float32)
+            light_dir = -euler_to_dir(0, light_euler[0], light_euler[1])[np.newaxis, ...]
+            # light_dir = light_dir / np.linalg.norm(light_dir)
             sh_coeffs = SH_basis(light_dir)
 
             # shading = gen_half_sphere(sh_coeffs.T)

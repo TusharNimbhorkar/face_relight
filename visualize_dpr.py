@@ -12,11 +12,13 @@ import torch
 
 dpr_path = '/home/tushar/data2/DPR/train'
 lightFolder_dpr = 'test_data/00/'
-lightFolder_3dulight = 'test_data/sh_presets/horizontal'
-out_dir = '/home/nedko/face_relight/dbs/examples_v0.3_left'
+lightFolder_3dulight_shfix = 'test_data/sh_presets/horizontal'
+lightFolder_3dulight = 'test_data/sh_presets/horizontal_old'
+out_dir = '/home/nedko/face_relight/dbs/comparison_right'
 
-target_sh_id_dpr = 5 #60
-target_sh_id_3dulight = 19#89
+target_sh_id_dpr = 60#5 #60
+target_sh_id_3dulight = 70 # 19#89
+target_sh_id_3dulight_shfix = 75 # 19#89
 
 os.makedirs(out_dir, exist_ok=True)
 
@@ -35,8 +37,13 @@ class Model:
         elif dataset_name == '3dulight':
             self.sh_path = lightFolder_3dulight
             self.target_sh = target_sh_id_3dulight
+        elif dataset_name == '3dulight_shfix':
+            self.sh_path = lightFolder_3dulight_shfix
+            self.target_sh = target_sh_id_3dulight_shfix
 
 model_lab_pretrained = Model('/home/nedko/face_relight/models/trained/trained_model_03.t7', lab=True, resolution=512, dataset_name='dpr', sh_const = 0.7, name='Pretrained DPR') # '/home/tushar/data2/DPR_test/trained_model/trained_model_03.t7'
+model_lab_3dulight_05_shfix = Model('/home/nedko/face_relight/outputs/model_256_lab_3dulight_v0.5_shfix/model_256_lab_3dulight_v0.5_shfix/14_net_G.pth', lab=True, resolution=256, dataset_name='3dulight_shfix', name='LAB 3DULight v0.5 SHFIX')
+model_lab_3dulight_05 = Model('/home/nedko/face_relight/outputs/model_256_lab_3dulight_v0.5/model_256_lab_3dulight_v0.5/14_net_G.pth', lab=True, resolution=256, dataset_name='3dulight', name='LAB 3DULight v0.5')
 model_lab_3dulight_04 = Model('/home/nedko/face_relight/outputs/model_256_lab_3dulight_v0.4/model_256_lab_3dulight_v0.4/14_net_G.pth', lab=True, resolution=256, dataset_name='3dulight', name='LAB 3DULight v0.4')
 model_lab_3dulight_03 = Model('/home/nedko/face_relight/outputs/model_256_lab_3dulight_v0.3/model_256_lab_3dulight_v0.3/14_net_G.pth', lab=True, resolution=256, dataset_name='3dulight', name='LAB 3DULight v0.3')
 model_lab_3dulight_02 = Model('/home/tushar/data2/checkpoints/model_256_3dudataset_lab/model_256_3dudataset_lab/14_net_G.pth', lab=True, resolution=256, dataset_name='3dulight', name='LAB 3DULight v0.2')
@@ -46,8 +53,8 @@ model_lab_dpr_10k = Model('/home/tushar/data2/checkpoints/model_256_dprdata10k_l
 model_objs = [
     model_lab_pretrained,
     model_lab_3dulight_02,
-    model_lab_3dulight_03,
-    model_lab_dpr_10k
+    model_lab_3dulight_05,
+    model_lab_3dulight_05_shfix,
 ]
 
 # checkpoint_src = '/home/nedko/face_relight/outputs/model_256_lab_3dulight_v0.3/model_256_lab_3dulight_v0.3/14_net_G.pth'
