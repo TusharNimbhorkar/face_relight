@@ -37,4 +37,4 @@ class light3DULABDataset(lightDPR7Dataset):
 
 
     def name(self):
-        return 'lightDPR7LABDataset'
+        return 'light3DULABDataset'
