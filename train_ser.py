@@ -45,7 +45,12 @@ if __name__ == '__main__':
     else:
         end_epoch_count=15
 
-    for epoch in range(1, end_epoch_count):
+    if opt.continue_train:
+        start_epoch_count = int(opt.epoch) + 1
+    else:
+        start_epoch_count=1
+    print(start_epoch_count)
+    for epoch in range(start_epoch_count, end_epoch_count):
         epoch_chron.tick()
         data_chron.tick()
         current_chron.tick()
