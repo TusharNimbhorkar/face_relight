@@ -36,7 +36,7 @@ class DatasetDefault(Dataset):
         super().__init__(dir)
 
     def iterate(self):
-        paths = sorted(glob.glob(osp.join(self.path, '*.png')) + glob.glob(osp.join(self.path, '*.jpg')))
+        paths = sorted(glob.glob(osp.join(self.dir, '*.png')) + glob.glob(osp.join(self.dir, '*.jpg')))
         for path in paths:
             out_fname = path.rsplit('/',1)[-1]
             yield path, out_fname, None
@@ -113,6 +113,7 @@ class Model:
             self.sh_path = lightFolder_3dulight_shfix
             self.target_sh = target_sh_id_3dulight_shfix
 
+# dataset_test = DatasetDefault('path/to/files')
 dataset_3dulight_v0p8 =  Dataset3DULightGT('/home/nedko/face_relight/dbs/3dulight_v0.8_256/train', n_samples=5, n_samples_offset=0) # DatasetDPR('/home/tushar/data2/DPR/train')
 dataset_3dulight_v0p7_randfix =  Dataset3DULightGT('/home/tushar/data2/face_relight/dbs/3dulight_v0.7_256_fix/train', n_samples=5, n_samples_offset=0) # DatasetDPR('/home/tushar/data2/DPR/train')
 dataset_3dulight_v0p6 =  Dataset3DULightGT('/home/nedko/face_relight/dbs/3dulight_v0.6_256/train', n_samples=5, n_samples_offset=5) # DatasetDPR('/home/tushar/data2/DPR/train')
@@ -121,7 +122,6 @@ model_lab_pretrained = Model('/home/nedko/face_relight/models/trained/trained_mo
 model_rgb_3dulight_08_full = Model('/home/nedko/face_relight/outputs/model_256_rgb_3dulight_v0.8/model_256_rgb_3dulight_v0.8_full/14_net_G.pth', lab=False, resolution=256, dataset_name='3dulight_shfix', name='RGB 3DULight v0.8 30k')
 model_rgb_3dulight_08 = Model('/home/nedko/face_relight/outputs/model_256_rgb_3dulight_v0.8/model_256_rgb_3dulight_v08_rgb/14_net_G.pth', lab=False, resolution=256, dataset_name='3dulight_shfix', name='RGB 3DULight v0.8')
 model_lab_3dulight_08_full = Model('/home/nedko/face_relight/outputs/model_256_lab_3dulight_v0.8_full/model_256_lab_3dulight_v0.8_full/14_net_G.pth', lab=True, resolution=256, dataset_name='3dulight_shfix', name='LAB 3DULight v0.8 30k')
-# model_lab_3dulight_08 = Model('/home/nedko/face_relight/outputs/model_256_lab_3dulight_v0.8/model_256_lab_3dulight_v0.8/14_net_G.pth', lab=True, resolution=256, dataset_name='3dulight_shfix', name='LAB 3DULight v0.8')
 model_lab_3dulight_08 = Model('/home/nedko/face_relight/outputs/model_256_lab_3dulight_v0.8/model_256_lab_3dulight_v0.8/14_net_G.pth', lab=True, resolution=256, dataset_name='3dulight_shfix', name='LAB 3DULight v0.8')
 model_lab_3dulight_07_randfix = Model('/home/tushar/data2/face_relight/outputs/model_256_lab_3dulight_v0.7_random_ns5/model_256_lab_3dulight_v0.7_random_ns5/14_net_G.pth', lab=True, resolution=256, dataset_name='3dulight_shfix', name='LAB 3DULight v0.7 RANDFIX')
 model_lab_3dulight_07 = Model('/home/nedko/face_relight/outputs/model_256_lab_3dulight_v0.7_dlfix_ns15/model_256_lab_3dulight_v0.7_dlfix_ns15/14_net_G.pth', lab=True, resolution=256, dataset_name='3dulight_shfix', name='LAB 3DULight v0.7')
