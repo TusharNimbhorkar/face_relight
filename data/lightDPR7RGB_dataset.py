@@ -8,7 +8,6 @@ class lightDPR7RGBDataset(lightDPR7Dataset):
     '''
     def __init__(self, opt):
         super(lightDPR7RGBDataset, self).__init__(opt)
-        self.use_segments = True
 
     def _img_to_input(self, img):
         '''
