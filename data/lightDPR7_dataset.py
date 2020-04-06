@@ -34,7 +34,7 @@ class lightDPR7Dataset(BaseDataset):
         self.list_AB = []
 
         self.img_size = self.opt.img_size
-        self.use_segments = False
+        self.use_segments = self.opt.segment
         synth_n_per_id = self.opt.n_synth
         n_want = self.opt.n_first
         n_per_id = synth_n_per_id + 1
