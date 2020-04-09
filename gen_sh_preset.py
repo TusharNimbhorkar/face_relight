@@ -18,9 +18,9 @@ ap.add_argument("-p", "--pattern_name", required=True,
 args = vars(ap.parse_args())
 
 if args['pattern_name'] == 'horizontal':
-    X_range = list(range(-90, 90, 2))
-    Y_range = [90] * len(X_range)
-    Z_range = [0] * len(X_range)
+    Z_range = list(range(-90, 90, 2))
+    Y_range = [90] * len(Z_range)
+    X_range = [0] * len(Z_range)
 elif args['pattern_name'] == 'round':
     Z_range = list(range(0, 360, 3))
     X_range = [45] * len(Z_range)
