@@ -1,3 +1,4 @@
+import argparse
 import os.path as osp
 import glob
 import cv2
@@ -11,12 +12,19 @@ from models.skeleton512 import HourglassNet
 from PIL import  Image
 import torch
 
+ap = argparse.ArgumentParser()
+ap.add_argument("-i", "--input", default='test_data/test_images', required=False,
+	help="Input Directory")
+ap.add_argument("-o", "--output", default='outputs/test', required=False,
+	help="output Directory")
+args = vars(ap.parse_args())
+
 lightFolder_dpr = 'test_data/00/'
 lightFolder_3dulight_shfix = 'test_data/sh_presets/horizontal'
 lightFolder_3dulight = 'test_data/sh_presets/horizontal_old'
-out_dir = '/home/nedko/face_relight/dbs/comparison'
+out_dir = args["output"]#'/home/nedko/face_relight/dbs/comparison'
 
-target_sh_id_dpr = list(range(90))#60#5 #60
+target_sh_id_dpr = list(range(72)) + [71]*20#60#5 #60
 target_sh_id_3dulight = list(range(90))# 70 # 19#89
 target_sh_id_3dulight_shfix = list(range(90))#75 # 19#89
 
@@ -115,16 +123,25 @@ class Model:
             self.sh_path = lightFolder_3dulight_shfix
             self.target_sh = target_sh_id_3dulight_shfix
 
-# dataset_test = DatasetDefault('path/to/files')
-dataset_3dulight_v0p8 =  Dataset3DULightGT('/home/nedko/face_relight/dbs/3dulight_v0.8_256/train', n_samples=5, n_samples_offset=0) # DatasetDPR('/home/tushar/data2/DPR/train')
-dataset_3dulight_v0p7_randfix =  Dataset3DULightGT('/home/tushar/data2/face_relight/dbs/3dulight_v0.7_256_fix/train', n_samples=5, n_samples_offset=0) # DatasetDPR('/home/tushar/data2/DPR/train')
-dataset_3dulight_v0p6 =  Dataset3DULightGT('/home/nedko/face_relight/dbs/3dulight_v0.6_256/train', n_samples=5, n_samples_offset=5) # DatasetDPR('/home/tushar/data2/DPR/train')
+class ModelSegment(Model):
+    def __call__(self, *args, **kwargs):
+        results = self.model(*args, **kwargs)
 
+        outputImg, _, outputSH, _ = results
+        #DO THE SEGMENTATION HERE
+
+        return results
+
+# dataset_test = DatasetDefault('path/to/files')
+dataset_3dulight_v0p8 = Dataset3DULightGT('/home/nedko/face_relight/dbs/3dulight_v0.8_256/train', n_samples=5, n_samples_offset=0) # DatasetDPR('/home/tushar/data2/DPR/train')
+dataset_3dulight_v0p7_randfix =  Dataset3DULightGT('/home/tushar/data2/face_relight/dbs/3dulight_v0.7_256_fix/train', n_samples=5, n_samples_offset=0) # DatasetDPR('/home/tushar/data2/DPR/train')
+dataset_3dulight_v0p6 = Dataset3DULightGT('/home/nedko/face_relight/dbs/3dulight_v0.6_256/train', n_samples=5, n_samples_offset=5) # DatasetDPR('/home/tushar/data2/DPR/train')
 
 model_lab_pretrained = Model('/home/nedko/face_relight/models/trained/trained_model_03.t7', lab=True, resolution=512, dataset_name='dpr', sh_const = 0.7, name='Pretrained DPR') # '/home/tushar/data2/DPR_test/trained_model/trained_model_03.t7'
-model_lab_3dulight_08_seg_11 = Model('/home/tushar/data2/face_relight/outputs/model_256_3du_v08_lab_seg/11_net_G.pth', lab=True, resolution=256, dataset_name='3dulight_shfix', name='LAB 3DULight v0.8 10k Segment')
-model_lab_3dulight_08_full_11 = Model('/home/nedko/face_relight/outputs/model_256_lab_3dulight_v0.8_full/model_256_lab_3dulight_v0.8_full/11_net_G.pth', lab=True, resolution=256, dataset_name='3dulight_shfix', name='LAB 3DULight v0.8 30k')
-model_lab_3dulight_08_full_seg_11 = Model('/home/nedko/face_relight/outputs/remote/outputs/3dulight_v0.8_256_full/11_net_G.pth', lab=True, resolution=256, dataset_name='3dulight_shfix', name='LAB 3DULight v0.8 30k Segment +hair')
+model_lab_dpr_seg = Model('/home/tushar/data2/checkpoints_debug/model_fulltrain_dpr7_mse_sumBS20_ogsegment/14_net_G.pth', lab=True, resolution=256, dataset_name='dpr', sh_const = 0.7, name='LAB DPR v0.8 10k Segment')
+model_lab_3dulight_08_seg = Model('/home/tushar/data2/face_relight/outputs/model_256_3du_v08_lab_seg/14_net_G.pth', lab=True, resolution=256, dataset_name='3dulight_shfix', name='LAB 3DULight v0.8 10k Segment')
+# model_lab_3dulight_08_full_11 = Model('/home/nedko/face_relight/outputs/model_256_lab_3dulight_v0.8_full/model_256_lab_3dulight_v0.8_full/11_net_G.pth', lab=True, resolution=256, dataset_name='3dulight_shfix', name='LAB 3DULight v0.8 30k')
+model_lab_3dulight_08_full_seg = Model('/home/nedko/face_relight/outputs/remote/outputs/3dulight_v0.8_256_full/14_net_G.pth', lab=True, resolution=256, dataset_name='3dulight_shfix', name='LAB 3DULight v0.8 30k Segment +hair')
 model_lab_3dulight_08_bs16 = Model('/home/nedko/face_relight/outputs/remote/outputs/3dulight_v0.8_256_bs16//14_net_G.pth', lab=True, resolution=256, dataset_name='3dulight_shfix', name='LAB 3DULight v0.8 bs16')
 model_rgb_3dulight_08_full = Model('/home/nedko/face_relight/outputs/model_256_rgb_3dulight_v0.8/model_256_rgb_3dulight_v0.8_full/14_net_G.pth', lab=False, resolution=256, dataset_name='3dulight_shfix', name='RGB 3DULight v0.8 30k')
 model_rgb_3dulight_08 = Model('/home/nedko/face_relight/outputs/model_256_rgb_3dulight_v0.8/model_256_rgb_3dulight_v08_rgb/14_net_G.pth', lab=False, resolution=256, dataset_name='3dulight_shfix', name='RGB 3DULight v0.8')
@@ -139,17 +156,17 @@ model_lab_3dulight_04 = Model('/home/nedko/face_relight/outputs/model_256_lab_3d
 model_lab_3dulight_03 = Model('/home/nedko/face_relight/outputs/model_256_lab_3dulight_v0.3/model_256_lab_3dulight_v0.3/14_net_G.pth', lab=True, resolution=256, dataset_name='3dulight', name='LAB 3DULight v0.3')
 model_lab_3dulight_02 = Model('/home/tushar/data2/checkpoints/model_256_3dudataset_lab/model_256_3dudataset_lab/14_net_G.pth', lab=True, resolution=256, dataset_name='3dulight', name='LAB 3DULight v0.2')
 model_rgb_3dulight_02 = Model('/home/tushar/data2/checkpoints/face_relight/outputs/model_rgb_light3du/14_net_G.pth', lab=False, resolution=256, dataset_name='3dulight', name='RGB 3DULight v0.2')
-model_lab_dpr_10k = Model('/home/tushar/data2/checkpoints/model_256_dprdata10k_lab/14_net_G.pth', lab=True, resolution=256, dataset_name='dpr', name='LAB DPR 10K')
+model_lab_dpr_10k = Model('/home/tushar/data2/checkpoints/model_256_dprdata10k_lab/14_net_G.pth', lab=True, resolution=256, dataset_name='dpr', sh_const = 0.7, name='LAB DPR 10K')
 
 model_objs = [
     # model_lab_pretrained,
-    model_lab_3dulight_08_full_11,
-    model_lab_3dulight_08_seg_11,
-    model_lab_3dulight_08_full_seg_11
+    model_lab_3dulight_08_full_seg,
+    model_lab_3dulight_08_seg,
+    model_lab_dpr_seg
 ]
 
 # dataset = dataset_3dulight_v0p8
-dataset = DatasetDefault('dbs/test')
+dataset = DatasetDefault(args["input"])
 
 # checkpoint_src = '/home/nedko/face_relight/outputs/model_256_lab_3dulight_v0.3/model_256_lab_3dulight_v0.3/14_net_G.pth'
 # checkpoint_tgt = '/home/tushar/data2/checkpoints/model_256_3dudataset_lab/model_256_3dudataset_lab/14_net_G.pth' #'/home/tushar/data2/checkpoints/face_relight/outputs/model_rgb_light3du/14_net_G.pth' #'/home/tushar/data2/DPR_test/trained_model/trained_model_03.t7'
