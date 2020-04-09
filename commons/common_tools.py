@@ -7,8 +7,32 @@
 
 import re
 import sys
+import cv2
+import numpy as np
 
 import commons.globals as globals
+
+
+class FileOutput:
+    def __init__(self, out_path):
+        self.video = None
+        self.out_path = out_path
+
+    def post(self, img, **kwargs):
+
+        if self.video == None:
+            # fourcc = cv2.VideoWriter_fourcc(*'DIVX')  # 'x264' doesn't work
+            # self.video = cv2.VideoWriter(self.out_path, fourcc, 29.0, (img.shape[1], img.shape[0]), False)
+            self.video = cv2.VideoWriter(self.out_path, cv2.VideoWriter_fourcc('M', 'J', 'P', 'G'), 20,
+                                         (img.shape[1], img.shape[0]))
+
+        # self.video = cv2.VideoWriter(self.out_path, -1, 1, (img.shape[1], img.shape[0]))
+        self.video.write(np.array(img).astype(np.uint8))
+
+    def close(self):
+        # cv2.destroyAllWindows()
+        if self.video is not None:
+            self.video.release()
 
 def overrides(interface_class):
     '''
