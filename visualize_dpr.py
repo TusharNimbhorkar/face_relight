@@ -4,6 +4,7 @@ import cv2
 import numpy as np
 import os
 import matplotlib.pyplot as plt
+from commons.common_tools import FileOutput
 from utils.utils_SH import get_shading
 from models.skeleton512_rgb import HourglassNet as HourglassNet_RGB
 from models.skeleton512 import HourglassNet
@@ -13,12 +14,13 @@ import torch
 lightFolder_dpr = 'test_data/00/'
 lightFolder_3dulight_shfix = 'test_data/sh_presets/horizontal'
 lightFolder_3dulight = 'test_data/sh_presets/horizontal_old'
-out_dir = '/home/nedko/face_relight/dbs/comparison_right'
+out_dir = '/home/nedko/face_relight/dbs/comparison'
 
-target_sh_id_dpr = 60#5 #60
-target_sh_id_3dulight = 70 # 19#89
-target_sh_id_3dulight_shfix = 75 # 19#89
+target_sh_id_dpr = list(range(90))#60#5 #60
+target_sh_id_3dulight = list(range(90))# 70 # 19#89
+target_sh_id_3dulight_shfix = list(range(90))#75 # 19#89
 
+min_video_frames = 10
 min_resolution = 256
 
 os.makedirs(out_dir, exist_ok=True)
@@ -118,7 +120,12 @@ dataset_3dulight_v0p8 =  Dataset3DULightGT('/home/nedko/face_relight/dbs/3duligh
 dataset_3dulight_v0p7_randfix =  Dataset3DULightGT('/home/tushar/data2/face_relight/dbs/3dulight_v0.7_256_fix/train', n_samples=5, n_samples_offset=0) # DatasetDPR('/home/tushar/data2/DPR/train')
 dataset_3dulight_v0p6 =  Dataset3DULightGT('/home/nedko/face_relight/dbs/3dulight_v0.6_256/train', n_samples=5, n_samples_offset=5) # DatasetDPR('/home/tushar/data2/DPR/train')
 
+
 model_lab_pretrained = Model('/home/nedko/face_relight/models/trained/trained_model_03.t7', lab=True, resolution=512, dataset_name='dpr', sh_const = 0.7, name='Pretrained DPR') # '/home/tushar/data2/DPR_test/trained_model/trained_model_03.t7'
+model_lab_3dulight_08_seg_11 = Model('/home/tushar/data2/face_relight/outputs/model_256_3du_v08_lab_seg/11_net_G.pth', lab=True, resolution=256, dataset_name='3dulight_shfix', name='LAB 3DULight v0.8 10k Segment')
+model_lab_3dulight_08_full_11 = Model('/home/nedko/face_relight/outputs/model_256_lab_3dulight_v0.8_full/model_256_lab_3dulight_v0.8_full/11_net_G.pth', lab=True, resolution=256, dataset_name='3dulight_shfix', name='LAB 3DULight v0.8 30k')
+model_lab_3dulight_08_full_seg_11 = Model('/home/nedko/face_relight/outputs/remote/outputs/3dulight_v0.8_256_full/11_net_G.pth', lab=True, resolution=256, dataset_name='3dulight_shfix', name='LAB 3DULight v0.8 30k Segment +hair')
+model_lab_3dulight_08_bs16 = Model('/home/nedko/face_relight/outputs/remote/outputs/3dulight_v0.8_256_bs16//14_net_G.pth', lab=True, resolution=256, dataset_name='3dulight_shfix', name='LAB 3DULight v0.8 bs16')
 model_rgb_3dulight_08_full = Model('/home/nedko/face_relight/outputs/model_256_rgb_3dulight_v0.8/model_256_rgb_3dulight_v0.8_full/14_net_G.pth', lab=False, resolution=256, dataset_name='3dulight_shfix', name='RGB 3DULight v0.8 30k')
 model_rgb_3dulight_08 = Model('/home/nedko/face_relight/outputs/model_256_rgb_3dulight_v0.8/model_256_rgb_3dulight_v08_rgb/14_net_G.pth', lab=False, resolution=256, dataset_name='3dulight_shfix', name='RGB 3DULight v0.8')
 model_lab_3dulight_08_full = Model('/home/nedko/face_relight/outputs/model_256_lab_3dulight_v0.8_full/model_256_lab_3dulight_v0.8_full/14_net_G.pth', lab=True, resolution=256, dataset_name='3dulight_shfix', name='LAB 3DULight v0.8 30k')
@@ -136,12 +143,13 @@ model_lab_dpr_10k = Model('/home/tushar/data2/checkpoints/model_256_dprdata10k_l
 
 model_objs = [
     # model_lab_pretrained,
-    model_rgb_3dulight_08,
-    model_rgb_3dulight_08_full,
-    model_lab_3dulight_08_full
+    model_lab_3dulight_08_full_11,
+    model_lab_3dulight_08_seg_11,
+    model_lab_3dulight_08_full_seg_11
 ]
 
-dataset = dataset_3dulight_v0p8
+# dataset = dataset_3dulight_v0p8
+dataset = DatasetDefault('dbs/test')
 
 # checkpoint_src = '/home/nedko/face_relight/outputs/model_256_lab_3dulight_v0.3/model_256_lab_3dulight_v0.3/14_net_G.pth'
 # checkpoint_tgt = '/home/tushar/data2/checkpoints/model_256_3dudataset_lab/model_256_3dudataset_lab/14_net_G.pth' #'/home/tushar/data2/checkpoints/face_relight/outputs/model_rgb_light3du/14_net_G.pth' #'/home/tushar/data2/DPR_test/trained_model/trained_model_03.t7'
@@ -249,6 +257,7 @@ for model_obj in model_objs:
 
 for orig_path, out_fname, gt_data in dataset.iterate():
 
+    video_out = FileOutput(osp.join(out_dir, out_fname.rsplit('.',1)[0]+'.avi'))
     sh_path_dataset = None
     gt_path = None
 
@@ -274,28 +283,42 @@ for orig_path, out_fname, gt_data in dataset.iterate():
         cv2.putText(gt_img, 'Ground Truth', (5, 20), cv2.FONT_HERSHEY_COMPLEX, 0.5, 255)
         results.append(gt_img)
 
-    for model_obj in model_objs:
-        if sh_path_dataset is None:
-            sh_path = model_obj.sh_path
-            target_sh = model_obj.target_sh
-            sh_fname = None
+    if sh_path_dataset is None:
+        min_sh_list_len = min([len(model_obj.target_sh) for model_obj in model_objs])
+    else:
+        min_sh_list_len = 1
+
+    for sh_idx in range(min_sh_list_len):
+        results_frame = []
+        for model_obj in model_objs:
+            if sh_path_dataset is None:
+                sh_path = model_obj.sh_path
+                target_sh = model_obj.target_sh[sh_idx]
+                sh_fname = None
+            else:
+                sh_path, sh_fname = sh_path_dataset.rsplit('/', 1)
+                target_sh = None
+
+            result_img = test(model_obj.model, orig_img, lab=model_obj.lab, sh_constant=model_obj.sh_const, res=model_obj.resolution, sh_id=target_sh, sh_path=sh_path, sh_fname=sh_fname)
+
+            if result_img.shape[0]>min_resolution:
+                result_img = cv2.resize(result_img, (min_resolution,min_resolution))
+
+            result_img = np.ascontiguousarray(result_img, dtype=np.uint8)
+            cv2.putText(result_img, model_obj.name, (5, 20), cv2.FONT_HERSHEY_COMPLEX, 0.5, 255)
+            results_frame.append(result_img)
+
+        # tgt_result = cv2.resize(tgt_result, (256,256))
+
+        out_img = np.concatenate(results + results_frame, axis=1)
+        print(orig_path, gt_path)
+
+        if min_sh_list_len > min_video_frames:
+            video_out.post(out_img)
         else:
-            sh_path, sh_fname = sh_path_dataset.rsplit('/', 1)
-            target_sh = -1
+            cv2.imwrite(osp.join(out_dir, out_fname.rsplit('.', 1)[0] + '_' + str(sh_idx) + '.' + out_fname.rsplit('.', 1)[1]), out_img)
 
-        result_img = test(model_obj.model, orig_img, lab=model_obj.lab, sh_constant=model_obj.sh_const, res=model_obj.resolution, sh_id=target_sh, sh_path=sh_path, sh_fname=sh_fname)
 
-        if result_img.shape[0]>min_resolution:
-            result_img = cv2.resize(result_img, (min_resolution,min_resolution))
-
-        result_img = np.ascontiguousarray(result_img, dtype=np.uint8)
-        cv2.putText(result_img, model_obj.name, (5, 20), cv2.FONT_HERSHEY_COMPLEX, 0.5, 255)
-        results.append(result_img)
-
-    # tgt_result = cv2.resize(tgt_result, (256,256))
-
-    out_img = np.concatenate(results, axis=1)
-    cv2.imwrite(osp.join(out_dir, out_fname), out_img)
-    print(orig_path, gt_path)
+    video_out.close()
     # plt.imshow(out_img[:,:,::-1])
     # plt.show()
