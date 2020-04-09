@@ -130,25 +130,64 @@ class Model:
             self.sh_path = lightFolder_3dulight_shfix
             self.target_sh = target_sh_id_3dulight_shfix
 
-    def __call__(self, *args, **kwargs):
-        return self.model(*args, **kwargs)
+    def __call__(self, input_img, target_sh, *args, **kwargs):
+        target_sh = torch.autograd.Variable(torch.from_numpy(target_sh).cuda())
+
+        if self.lab:
+            Lab = cv2.cvtColor(input_img, cv2.COLOR_BGR2LAB)
+            input_img = Lab[:, :, 0]
+            input_img = input_img.astype(np.float32) / 255.0
+            input_img = input_img.transpose((0, 1))
+            input_img = input_img[None, None, ...]
+        else:
+            input_img = input_img
+            input_img = input_img.astype(np.float32)
+            input_img = input_img / 255.0
+            input_img = input_img.transpose((2, 0, 1))
+            input_img = input_img[None, ...]
+
+        torch_input_img = torch.autograd.Variable(torch.from_numpy(input_img).cuda())
+
+        model_output = self.model(torch_input_img, target_sh, *args)
+        output_img, _, outputSH, _ = model_output
+
+        output_img = output_img[0].cpu().data.numpy()
+        output_img = output_img.transpose((1, 2, 0))
+        output_img = np.squeeze(output_img)  # *1.45
+        output_img = (output_img * 255.0).astype(np.uint8)
+
+        if self.lab:
+            Lab[:, :, 0] = output_img
+            output_img = cv2.cvtColor(Lab, cv2.COLOR_LAB2BGR)
+        else:
+            output_img = output_img
+
+        return output_img, outputSH
 
 class ModelSegment(Model):
     def __init__(self, checkpoint_path, lab, resolution, dataset_name, sh_const=1.0, name='',post_flag=False):
         super(ModelSegment,self).__init__(checkpoint_path, lab, resolution, dataset_name, sh_const=1.0, name='')
         self.post_flag = post_flag
 
-    def __call__(self, *args, **kwargs):
-        results = self.model(*args)
+    def __call__(self, input_img, target_sh, *args, **kwargs):
+        output_img, output_sh = super().__call__(input_img, target_sh, *args, **kwargs)
 
         rgb_img_path = kwargs['orig_img']
 
-        outputImg, _, outputSH, _ = results
         rgb_img = Image.open(osp.join(rgb_img_path))
-        segment = evaluate(rgb_img,face=kwargs['post_flag'])
+        segment = evaluate(rgb_img,face=self.post_flag)
 
+        segment[segment == 255] = 1
+        segment = np.array(Image.fromarray(segment).resize((input_img.shape[0], input_img.shape[0]), resample=Image.LANCZOS))
 
-        return outputImg, segment, outputSH, _
+        seg_img = np.zeros_like(output_img)
+        seg_img[:, :, 0] = segment
+        seg_img[:, :, 1] = segment
+        seg_img[:, :, 2] = segment
+        # seg_img = np.array(Image.fromarray(seg_img).resize((res, res), resample=Image.LANCZOS))
+        output_img = np.multiply(output_img, seg_img)
+
+        return output_img, output_sh
 
 # dataset_test = DatasetDefault('path/to/files')
 dataset_3dulight_v0p8 = Dataset3DULightGT('/home/nedko/face_relight/dbs/3dulight_v0.8_256/train', n_samples=5, n_samples_offset=0) # DatasetDPR('/home/tushar/data2/DPR/train')
@@ -286,20 +325,7 @@ def test(my_network, input_img, lab=True, sh_id=0, sh_constant=1.0, res=256, sh_
     # img = cv2.resize(img, size_re)
     img = np.array(Image.fromarray(img).resize((res, res), resample=Image.LANCZOS))
     # cv2.imwrite('1.png',img)
-    if lab:
-        Lab = cv2.cvtColor(img, cv2.COLOR_BGR2LAB)
-        inputL = Lab[:, :, 0]
-        inputL = inputL.astype(np.float32) / 255.0
-        inputL = inputL.transpose((0, 1))
-        inputL = inputL[None, None, ...]
-    else:
-        inputL = img
-        inputL = inputL.astype(np.float32)
-        inputL = inputL / 255.0
-        inputL = inputL.transpose((2, 0, 1))
-        inputL = inputL[None, ...]
 
-    inputL = torch.autograd.Variable(torch.from_numpy(inputL).cuda())
 
     if sh_fname is None:
         sh_fname = 'rotate_light_{:02d}.txt'.format(sh_id)
@@ -310,55 +336,22 @@ def test(my_network, input_img, lab=True, sh_id=0, sh_constant=1.0, res=256, sh_
     # --------------------------------------------------
     # rendering half-sphere
     sh = np.squeeze(sh)
-    normal, valid = gen_norm()
-    shading = get_shading(normal, sh)
-    value = np.percentile(shading, 95)
-    ind = shading > value
-    shading[ind] = value
-    shading = (shading - np.min(shading)) / (np.max(shading) - np.min(shading))
-    shading = (shading * 255.0).astype(np.uint8)
-    shading = np.reshape(shading, (256, 256))
-    shading = shading * valid
+    # normal, valid = gen_norm()
+    # shading = get_shading(normal, sh)
+    # value = np.percentile(shading, 95)
+    # ind = shading > value
+    # shading[ind] = value
+    # shading = (shading - np.min(shading)) / (np.max(shading) - np.min(shading))
+    # shading = (shading * 255.0).astype(np.uint8)
+    # shading = np.reshape(shading, (256, 256))
+    # shading = shading * valid
 
     sh = np.reshape(sh, (1, 9, 1, 1)).astype(np.float32)
-    sh = torch.autograd.Variable(torch.from_numpy(sh).cuda())
 
-    if 'post_flag' in extra_ops.keys():
-        outputImg, segment, outputSH, _ = my_network(inputL, sh, 0, **extra_ops)
-    else:
-        outputImg, _, outputSH, _ = my_network(inputL, sh, 0, **extra_ops)
-
-    # outputImg, _, outputSH, _ = my_network(inputL, outputSH, skip_c)
-
-    # millis_after = int(round(time.time() * 1000))
-    # elapsed = millis_after - millis_start
-    # print('MILISECONDS:  ', elapsed)
-    # time_avg += elapsed
-    # count = count + 1
-    outputImg = outputImg[0].cpu().data.numpy()
-    outputImg = outputImg.transpose((1, 2, 0))
-    outputImg = np.squeeze(outputImg)  # *1.45
-    outputImg = (outputImg * 255.0).astype(np.uint8)
+    output_img, output_sh = my_network(img, sh, 0, **extra_ops)
 
 
-    if lab:
-        Lab[:, :, 0] = outputImg
-        resultLab = cv2.cvtColor(Lab, cv2.COLOR_LAB2BGR)
-    else:
-        resultLab = outputImg
-
-    if 'post_flag' in extra_ops.keys():
-        segment[segment == 255] = 1
-        segment = np.array(Image.fromarray(segment).resize((res, res), resample=Image.LANCZOS))
-
-        seg_img = np.zeros_like(resultLab)
-        seg_img[:, :, 0] = segment
-        seg_img[:, :, 1] = segment
-        seg_img[:, :, 2] = segment
-        # seg_img = np.array(Image.fromarray(seg_img).resize((res, res), resample=Image.LANCZOS))
-        resultLab = np.multiply(resultLab, seg_img)
-
-    return resultLab
+    return output_img
 
 
 for model_obj in model_objs:
@@ -407,11 +400,10 @@ for orig_path, out_fname, gt_data in dataset.iterate():
             else:
                 sh_path, sh_fname = sh_path_dataset.rsplit('/', 1)
                 target_sh = None
-            if 'post_flag' in model_obj.__dict__.keys():
-                extra_ops = {'orig_img': orig_path}
-                extra_ops['post_flag']=model_obj.post_flag
-            else:
-                extra_ops = {}
+
+            extra_ops={}
+            if isinstance(model_obj, ModelSegment):
+                extra_ops['orig_img'] = orig_path
 
             result_img = test(model_obj, orig_img, lab=model_obj.lab, sh_constant=model_obj.sh_const, res=model_obj.resolution, sh_id=target_sh, sh_path=sh_path, sh_fname=sh_fname, extra_ops=extra_ops)
 
