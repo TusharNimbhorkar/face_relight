@@ -257,7 +257,7 @@ for model_obj in model_objs:
 
 for orig_path, out_fname, gt_data in dataset.iterate():
 
-    video_out = FileOutput(osp.join(out_dir, out_fname.rsplit('.',1)[0]+'.avi'))
+    video_out = FileOutput(osp.join(out_dir, out_fname.rsplit('.',1)[0]+'.mp4'))
     sh_path_dataset = None
     gt_path = None
 
