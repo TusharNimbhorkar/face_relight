@@ -123,6 +123,9 @@ class Model:
             self.sh_path = lightFolder_3dulight_shfix
             self.target_sh = target_sh_id_3dulight_shfix
 
+    def __call__(self, *args, **kwargs):
+        return self.model(*args, **kwargs)
+
 class ModelSegment(Model):
     def __call__(self, *args, **kwargs):
         results = self.model(*args, **kwargs)
@@ -200,7 +203,7 @@ def gen_norm():
     normal = np.reshape(normal, (-1, 3))
     return normal, valid
 
-def test(my_network, input_img, lab=True, sh_id=0, sh_constant=1.0, res=256, sh_path=lightFolder_3dulight, sh_fname=None):
+def test(my_network, input_img, lab=True, sh_id=0, sh_constant=1.0, res=256, sh_path=lightFolder_3dulight, sh_fname=None, extra_ops={}):
     img = input_img
     row, col, _ = img.shape
     # img = cv2.resize(img, size_re)
@@ -245,7 +248,7 @@ def test(my_network, input_img, lab=True, sh_id=0, sh_constant=1.0, res=256, sh_
 
     # millis_start = int(round(time.time() * 1000))
 
-    outputImg, _, outputSH, _ = my_network(inputL, sh, 0)
+    outputImg, _, outputSH, _ = my_network(inputL, sh, 0, **extra_ops)
 
     # outputImg, _, outputSH, _ = my_network(inputL, outputSH, skip_c)
 
@@ -316,7 +319,7 @@ for orig_path, out_fname, gt_data in dataset.iterate():
                 sh_path, sh_fname = sh_path_dataset.rsplit('/', 1)
                 target_sh = None
 
-            result_img = test(model_obj.model, orig_img, lab=model_obj.lab, sh_constant=model_obj.sh_const, res=model_obj.resolution, sh_id=target_sh, sh_path=sh_path, sh_fname=sh_fname)
+            result_img = test(model_obj, orig_img, lab=model_obj.lab, sh_constant=model_obj.sh_const, res=model_obj.resolution, sh_id=target_sh, sh_path=sh_path, sh_fname=sh_fname, extra_ops={})
 
             if result_img.shape[0]>min_resolution:
                 result_img = cv2.resize(result_img, (min_resolution,min_resolution))
