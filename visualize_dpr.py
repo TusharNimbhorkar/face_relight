@@ -176,7 +176,7 @@ class ModelSegment(Model):
 
         rgb_img = Image.open(osp.join(rgb_img_path))
         segment = evaluate(rgb_img,face=self.post_flag)
-
+        rgb_img = rgb_img.resize((input_img.shape[0], input_img.shape[1]), resample=Image.LANCZOS)
         segment[segment == 255] = 1
         segment = np.array(Image.fromarray(segment).resize((input_img.shape[0], input_img.shape[0]), resample=Image.LANCZOS))
 
@@ -185,9 +185,32 @@ class ModelSegment(Model):
         seg_img[:, :, 1] = segment
         seg_img[:, :, 2] = segment
         # seg_img = np.array(Image.fromarray(seg_img).resize((res, res), resample=Image.LANCZOS))
-        output_img = np.multiply(output_img, seg_img)
 
-        return output_img, output_sh
+        mask = seg_img.copy()
+        background = np.copy(rgb_img)
+        background = cv2.cvtColor(background, cv2.COLOR_RGB2BGR)
+        foreground = np.copy(output_img)
+        mask = mask.astype(float)
+        foreground = foreground.astype(float)
+        background = background.astype(float)
+
+        # Multiply the foreground with the alpha matte
+        foreground = cv2.multiply(mask, foreground)
+
+        # Multiply the background with ( 1 - alpha )
+        try:
+            background = cv2.multiply(1 - mask, background)
+        except:
+            print(background.shape, mask.shape)
+
+        # Add the masked foreground and background.
+        outImage = cv2.add(foreground, background)
+
+        # old
+        # output_img = np.multiply(output_img, seg_img)
+
+
+        return outImage, output_sh
 
 class ModelSegment_blend(Model):
     def __init__(self, checkpoint_path, lab, resolution, dataset_name, sh_const=1.0, name='',post_flag=False):
@@ -278,12 +301,12 @@ model_rgb_3dulight_02 = Model('/home/tushar/data2/checkpoints/face_relight/outpu
 model_lab_dpr_10k = Model('/home/tushar/data2/checkpoints/model_256_dprdata10k_lab/14_net_G.pth', lab=True, resolution=256, dataset_name='dpr', sh_const = 0.7, name='LAB DPR 10K')
 
 
-model_lab_pretrained1 = ModelSegment_blend('models/trained/trained_model_03.t7', lab=True, resolution=512, dataset_name='dpr', sh_const = 0.7, name='Pretrained DPR',post_flag =False ) # '/home/tushar/data2/DPR_test/trained_model/trained_model_03.t7'
-model_lab_pretrained2 = ModelSegment_blend('models/trained/trained_model_03.t7', lab=True, resolution=512, dataset_name='dpr', sh_const = 0.7, name='Pretrained DPR',post_flag =True ) # '/home/tushar/data2/DPR_test/trained_model/trained_model_03.t7'
+model_lab_pretrained1 = ModelSegment_blend('models/trained/trained_model_03.t7', lab=True, resolution=512, dataset_name='dpr', sh_const = 0.7, name='Pretrained DPR',post_flag =True ) # '/home/tushar/data2/DPR_test/trained_model/trained_model_03.t7'
+model_lab_pretrained2 = ModelSegment('models/trained/trained_model_03.t7', lab=True, resolution=512, dataset_name='dpr', sh_const = 0.7, name='Pretrained DPR',post_flag =True ) # '/home/tushar/data2/DPR_test/trained_model/trained_model_03.t7'
 
 
 model_objs = [
-    model_lab_pretrained,
+    # model_lab_pretrained,
     model_lab_pretrained1,
     model_lab_pretrained2
     # model_lab_3dulight_08_full_seg,
