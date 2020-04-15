@@ -9,6 +9,10 @@ from commons.common_tools import FileOutput
 from utils.utils_SH import get_shading
 from models.skeleton512_rgb import HourglassNet as HourglassNet_RGB
 from models.skeleton512 import HourglassNet
+# for 1024 skeleton
+from models.skeleton1024 import HourglassNet as HourglassNet_512_1024
+from models.skeleton1024 import HourglassNet_1024
+
 from PIL import  Image
 import torch
 
@@ -115,7 +119,7 @@ class Dataset3DULightGT(Dataset3DULight):
 
 
 class Model:
-    def __init__(self, checkpoint_path, lab, resolution, dataset_name, sh_const=1.0, name=''):
+    def __init__(self, checkpoint_path, lab, resolution, dataset_name, sh_const=1.0, name='',model_1024=False):
         self.checkpoint_path = checkpoint_path
         self.lab = lab
         self.resolution = resolution
@@ -123,6 +127,7 @@ class Model:
         self.sh_const = sh_const
         self.name=name
         self.device = device ##TODO
+        self.model_1024=model_1024
         # self.post_flag = post_flag
 
 
@@ -311,11 +316,15 @@ model_lab_pretrained = Model('models/trained/trained_model_03.t7', lab=True, res
 model_lab_pretrained1 = ModelSegment_blend('models/trained/trained_model_03.t7', lab=True, resolution=512, dataset_name='dpr', sh_const = 0.7, name='Pretrained DPR',post_flag =True ) # '/home/tushar/data2/DPR_test/trained_model/trained_model_03.t7'
 model_lab_pretrained2 = ModelSegment('models/trained/trained_model_03.t7', lab=True, resolution=512, dataset_name='dpr', sh_const = 0.7, name='Pretrained DPR',post_flag =True ) # '/home/tushar/data2/DPR_test/trained_model/trained_model_03.t7'
 
+model_lab_3dulight_1024_one_third = Model('/home/tushar/FR/face_relight/models/model_256_3dudata/v08_1024_third/12_net_G.pth', lab=True, model_1024 =True,resolution=1024, dataset_name='3dulight_shfix', sh_const = 1.0, name='1024 3dulight 10k') # '/home/tushar/data2/DPR_test/trained_model/trained_model_03.t7'
+
 
 model_objs = [
-    model_lab_3dulight_08_bs16,
-    model_lab_3dulight_08_bs7,
-    model_lab_3dulight_08_full
+    # model_lab_3dulight_08_bs16,
+    # model_lab_3dulight_08_bs7,
+    # model_lab_3dulight_08_full
+    model_lab_3dulight_1024_one_third,
+model_lab_pretrained2
     # model_lab_dpr_seg
 ]
 
@@ -381,9 +390,13 @@ def evaluate(img,face,device):
 
 
 
-def load_model(checkpoint_dir_cmd, device, lab=True):
+def load_model(checkpoint_dir_cmd, device, lab=True, model_1024=False):
     if lab:
-        my_network = HourglassNet()
+        if model_1024:
+            my_network_512 = HourglassNet_512_1024(16)
+            my_network = HourglassNet_1024(my_network_512, 16)
+        else:
+            my_network = HourglassNet()
     else:
         my_network = HourglassNet_RGB()
 
@@ -445,7 +458,7 @@ def test(my_network, input_img, lab=True, sh_id=0, sh_constant=1.0, res=256, sh_
 
 
 for model_obj in model_objs:
-    model_obj.model = load_model(model_obj.checkpoint_path, model_obj.device, lab=model_obj.lab)
+    model_obj.model = load_model(model_obj.checkpoint_path, model_obj.device, lab=model_obj.lab, model_1024=model_obj.model_1024)
 
 for orig_path, out_fname, gt_data in dataset.iterate():
 
@@ -462,7 +475,8 @@ for orig_path, out_fname, gt_data in dataset.iterate():
     # left_img = cv2.imread(left_path)
 
     if orig_img.shape[0] > min_resolution:
-        orig_img = cv2.resize(orig_img, (min_resolution,min_resolution))
+        # orig_img = cv2.resize(orig_img, (min_resolution,min_resolution))
+        orig_img = np.array(Image.fromarray(orig_img).resize((min_resolution,min_resolution), resample=Image.LANCZOS))
 
     results = [orig_img]
 
@@ -470,7 +484,9 @@ for orig_path, out_fname, gt_data in dataset.iterate():
         gt_img = cv2.imread(gt_path)
 
         if gt_img.shape[0] > min_resolution:
-            gt_img = cv2.resize(gt_img, (min_resolution, min_resolution))
+            # gt_img = cv2.resize(gt_img, (min_resolution, min_resolution))
+            gt_img = np.array(
+                Image.fromarray(gt_img).resize((min_resolution, min_resolution), resample=Image.LANCZOS))
 
         cv2.putText(gt_img, 'Ground Truth', (5, 20), cv2.FONT_HERSHEY_COMPLEX, 0.5, 255)
         results.append(gt_img)
@@ -498,7 +514,9 @@ for orig_path, out_fname, gt_data in dataset.iterate():
             result_img = test(model_obj, orig_img, lab=model_obj.lab, sh_constant=model_obj.sh_const, res=model_obj.resolution, sh_id=target_sh, sh_path=sh_path, sh_fname=sh_fname, extra_ops=extra_ops)
 
             if result_img.shape[0]>min_resolution:
-                result_img = cv2.resize(result_img, (min_resolution,min_resolution))
+                # result_img = cv2.resize(result_img, (min_resolution,min_resolution))
+                result_img = np.array(Image.fromarray(result_img.astype(np.uint8)).resize((min_resolution, min_resolution), resample=Image.LANCZOS))
+
 
             result_img = np.ascontiguousarray(result_img, dtype=np.uint8)
             cv2.putText(result_img, model_obj.name, (5, 20), cv2.FONT_HERSHEY_COMPLEX, 0.5, 255)
