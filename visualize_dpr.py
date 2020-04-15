@@ -181,8 +181,8 @@ class ModelSegment(Model):
         rgb_img_path = kwargs['orig_img']
 
         rgb_img = Image.open(osp.join(rgb_img_path))
-        segment = evaluate(rgb_img, self.post_flag, self.device)
-
+        segment = evaluate(rgb_img,self.post_flag, self.device)
+        rgb_img = rgb_img.resize((input_img.shape[0], input_img.shape[1]), resample=Image.LANCZOS)
         segment[segment == 255] = 1
         segment = np.array(Image.fromarray(segment).resize((input_img.shape[0], input_img.shape[0]), resample=Image.LANCZOS))
 
@@ -193,7 +193,93 @@ class ModelSegment(Model):
         # seg_img = np.array(Image.fromarray(seg_img).resize((res, res), resample=Image.LANCZOS))
         output_img = np.multiply(output_img, seg_img)
 
-        return output_img, output_sh
+        mask = seg_img.copy()
+        background = np.copy(rgb_img)
+        background = cv2.cvtColor(background, cv2.COLOR_RGB2BGR)
+        foreground = np.copy(output_img)
+        mask = mask.astype(float)
+        foreground = foreground.astype(float)
+        background = background.astype(float)
+
+        # Multiply the foreground with the alpha matte
+        foreground = cv2.multiply(mask, foreground)
+
+        # Multiply the background with ( 1 - alpha )
+        try:
+            background = cv2.multiply(1 - mask, background)
+        except:
+            print(background.shape, mask.shape)
+
+        # Add the masked foreground and background.
+        outImage = cv2.add(foreground, background)
+
+        # old
+        # output_img = np.multiply(output_img, seg_img)
+
+
+        return outImage, output_sh
+
+class ModelSegment_blend(Model):
+    def __init__(self, checkpoint_path, lab, resolution, dataset_name, sh_const=1.0, name='',post_flag=False):
+        super(ModelSegment_blend,self).__init__(checkpoint_path, lab, resolution, dataset_name, sh_const=1.0, name='')
+        self.post_flag = post_flag
+
+    def __call__(self, input_img, target_sh, *args, **kwargs):
+        output_img, output_sh = super().__call__(input_img, target_sh, *args, **kwargs)
+
+        rgb_img_path = kwargs['orig_img']
+
+        rgb_img = Image.open(osp.join(rgb_img_path))
+        segment = evaluate(rgb_img,face=self.post_flag)
+
+        rgb_img =  rgb_img.resize((input_img.shape[0], input_img.shape[1]), resample=Image.LANCZOS)
+        segment = np.array(
+            Image.fromarray(segment).resize((rgb_img.size[0], rgb_img.size[1]), resample=Image.LANCZOS))
+
+        vis_parsing_anno = segment.copy()
+        kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (7, 7))
+        closing = cv2.morphologyEx(vis_parsing_anno, cv2.MORPH_CLOSE, kernel)
+        closing = cv2.morphologyEx(closing, cv2.MORPH_OPEN, kernel)
+
+        new_img = np.zeros_like(closing)  # step 1
+        for val in np.unique(closing)[1:]:  # step 2
+            mask = np.uint8(closing == val)  # step 3
+            labels, stats = cv2.connectedComponentsWithStats(mask, 4)[1:3]  # step 4
+            largest_label = 1 + np.argmax(stats[1:, cv2.CC_STAT_AREA])  # step 5
+            new_img[labels == largest_label] = val
+
+        vis_parsing_anno = new_img.copy()
+
+        alpha_2 = np.zeros(shape=(vis_parsing_anno.shape[0],vis_parsing_anno.shape[1],3))
+        alpha_2[:,:,0] = np.copy(vis_parsing_anno)
+        alpha_2[:,:,1] = np.copy(vis_parsing_anno)
+        alpha_2[:,:,2] = np.copy(vis_parsing_anno)
+        kernel = np.ones((10, 10), np.uint8)
+        alpha_2 = cv2.erode(alpha_2, kernel, iterations=1)
+        alpha_2 = cv2.GaussianBlur(alpha_2,(29,29),15,15)
+        # Normalize the alpha mask to keep intensity between 0 and 1
+        alpha_2 = alpha_2.astype(float) / 255
+
+        mask = alpha_2.copy()
+        background = np.copy(rgb_img)
+        background = cv2.cvtColor(background,cv2.COLOR_RGB2BGR)
+        foreground = np.copy(output_img)
+        foreground = foreground.astype(float)
+        background = background.astype(float)
+
+        # Multiply the foreground with the alpha matte
+        foreground = cv2.multiply(mask, foreground)
+
+        # Multiply the background with ( 1 - alpha )
+        try:
+            background = cv2.multiply(1 - mask, background)
+        except:
+            print(background.shape,mask.shape)
+
+        # Add the masked foreground and background.
+        outImage = cv2.add(foreground, background)
+
+        return outImage, output_sh
 
 # dataset_test = DatasetDefault('path/to/files')
 dataset_3dulight_v0p8 = Dataset3DULightGT('/home/nedko/face_relight/dbs/3dulight_v0.8_256/train', n_samples=5, n_samples_offset=0) # DatasetDPR('/home/tushar/data2/DPR/train')
@@ -222,7 +308,7 @@ model_rgb_3dulight_02 = Model('/home/tushar/data2/checkpoints/face_relight/outpu
 model_lab_dpr_10k = Model('/home/tushar/data2/checkpoints/model_256_dprdata10k_lab/14_net_G.pth', lab=True, resolution=256, dataset_name='dpr', sh_const = 0.7, name='LAB DPR 10K')
 model_lab_pretrained = Model('models/trained/trained_model_03.t7', lab=True, resolution=512, dataset_name='dpr', sh_const = 0.7, name='Pretrained DPR') # '/home/tushar/data2/DPR_test/trained_model/trained_model_03.t7'
 
-model_lab_pretrained1 = ModelSegment('models/trained/trained_model_03.t7', lab=True, resolution=512, dataset_name='dpr', sh_const = 0.7, name='Pretrained DPR',post_flag =False ) # '/home/tushar/data2/DPR_test/trained_model/trained_model_03.t7'
+model_lab_pretrained1 = ModelSegment_blend('models/trained/trained_model_03.t7', lab=True, resolution=512, dataset_name='dpr', sh_const = 0.7, name='Pretrained DPR',post_flag =True ) # '/home/tushar/data2/DPR_test/trained_model/trained_model_03.t7'
 model_lab_pretrained2 = ModelSegment('models/trained/trained_model_03.t7', lab=True, resolution=512, dataset_name='dpr', sh_const = 0.7, name='Pretrained DPR',post_flag =True ) # '/home/tushar/data2/DPR_test/trained_model/trained_model_03.t7'
 
 
@@ -406,7 +492,7 @@ for orig_path, out_fname, gt_data in dataset.iterate():
                 target_sh = None
 
             extra_ops={}
-            if isinstance(model_obj, ModelSegment):
+            if isinstance(model_obj, ModelSegment) or isinstance(model_obj, ModelSegment_blend):
                 extra_ops['orig_img'] = orig_path
 
             result_img = test(model_obj, orig_img, lab=model_obj.lab, sh_constant=model_obj.sh_const, res=model_obj.resolution, sh_id=target_sh, sh_path=sh_path, sh_fname=sh_fname, extra_ops=extra_ops)
