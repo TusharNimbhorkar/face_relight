@@ -89,9 +89,9 @@ else:
 
 
 # lightFolder = 'test_data/00/'
-lightFolder = './test_data/sh_presets/vertical'
+lightFolder = './test_data/sh_presets/horizontal'
 
-sh_vals = ['07']#,'09','10']
+sh_vals = ['07','10']#,'09','10']
 
 for sh_v in sh_vals:
 
