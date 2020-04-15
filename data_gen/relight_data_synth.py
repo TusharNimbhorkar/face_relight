@@ -5,8 +5,10 @@ from relight import relight
 from os.path import join
 
 root = "/mnt/data2/users/morris/data_synth"
-dst_root = "/mnt/data2/users/morris/data_synth_relight2"
+dst_root = "/home/nedko/face_relight/outputs/3dulight_test"
 image_names = os.listdir(root)
+
+
 
 os.makedirs(dst_root, exist_ok=True)
 
@@ -22,5 +24,6 @@ for image_name in image_names:
         first_path = join(dst_dir, "0000.jpg")
         if os.path.getsize(first_path) < 70000:
             raise RuntimeError("ValidationError, Image seems empty!")        
-    except:
+    except Exception as e:
         print(f"ERROR executing {image_name}")
+        raise e
