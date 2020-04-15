@@ -6,13 +6,14 @@ from relight import relight
 from os.path import join, isfile
 
 root = "/mnt/data2/users/morris/data_DPR_relight"
-dst_root = "/mnt/data2/users/morris/data_DPR_relight_generated"
+dst_root = "/home/nedko/face_relight/outputs/3dulight_test"
 image_names = os.listdir(root)
 
 os.makedirs(dst_root, exist_ok=True)
 countme = 5
 
 for image_name in image_names:
+    print(image_name)
     img_path = join(root, image_name, f"frame.jpg")
     normal_path = join(root, image_name, f"normals_warped.png")
     if isfile(normal_path):

@@ -15,6 +15,7 @@ def dump(obj):
 def relight(image_path, normal_path, dest_folder, blender_name="datagen.blend", print_command=True):
     blender_relight_blend = join(os.path.dirname(os.path.abspath(__file__)), blender_name)
     command = "blender {} -b -P {} -- {} {} {}".format(blender_relight_blend, blender_relight_py, image_path, normal_path, dest_folder)
+    print(command)
     if print_command:
         print(command)
     p = Popen(command, stdout=PIPE, stderr=STDOUT, shell=True)
