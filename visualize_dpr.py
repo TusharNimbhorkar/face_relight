@@ -21,8 +21,12 @@ ap = argparse.ArgumentParser()
 ap.add_argument("-i", "--input", default='test_data/test_images', required=False,
 	help="Input Directory")
 ap.add_argument("-o", "--output", default='outputs/test', required=False,
-	help="output Directory")
+	help="Output Directory")
+ap.add_argument("-d", "--device", default='cuda', required=False, choices=['cuda','cpu'],
+	help="Device")
 args = vars(ap.parse_args())
+
+device = args['device']
 
 lightFolder_dpr = 'test_data/00/'
 lightFolder_3dulight_shfix = 'test_data/sh_presets/horizontal'
@@ -35,6 +39,7 @@ target_sh_id_3dulight_shfix = list(range(90))#75 # 19#89
 
 min_video_frames = 10
 min_resolution = 256
+
 
 os.makedirs(out_dir, exist_ok=True)
 
@@ -117,6 +122,7 @@ class Model:
         self.model = None
         self.sh_const = sh_const
         self.name=name
+        self.device = device ##TODO
         # self.post_flag = post_flag
 
 
@@ -131,7 +137,7 @@ class Model:
             self.target_sh = target_sh_id_3dulight_shfix
 
     def __call__(self, input_img, target_sh, *args, **kwargs):
-        target_sh = torch.autograd.Variable(torch.from_numpy(target_sh).cuda())
+        target_sh = torch.autograd.Variable(torch.from_numpy(target_sh).to(self.device))
 
         if self.lab:
             Lab = cv2.cvtColor(input_img, cv2.COLOR_BGR2LAB)
@@ -146,7 +152,7 @@ class Model:
             input_img = input_img.transpose((2, 0, 1))
             input_img = input_img[None, ...]
 
-        torch_input_img = torch.autograd.Variable(torch.from_numpy(input_img).cuda())
+        torch_input_img = torch.autograd.Variable(torch.from_numpy(input_img).to(self.device))
 
         model_output = self.model(torch_input_img, target_sh, *args)
         output_img, _, outputSH, _ = model_output
@@ -166,7 +172,7 @@ class Model:
 
 class ModelSegment(Model):
     def __init__(self, checkpoint_path, lab, resolution, dataset_name, sh_const=1.0, name='',post_flag=False):
-        super(ModelSegment,self).__init__(checkpoint_path, lab, resolution, dataset_name, sh_const=1.0, name='')
+        super(ModelSegment,self).__init__(checkpoint_path, lab, resolution, dataset_name, sh_const, name)
         self.post_flag = post_flag
 
     def __call__(self, input_img, target_sh, *args, **kwargs):
@@ -175,7 +181,7 @@ class ModelSegment(Model):
         rgb_img_path = kwargs['orig_img']
 
         rgb_img = Image.open(osp.join(rgb_img_path))
-        segment = evaluate(rgb_img,face=self.post_flag)
+        segment = evaluate(rgb_img, self.post_flag, self.device)
 
         segment[segment == 255] = 1
         segment = np.array(Image.fromarray(segment).resize((input_img.shape[0], input_img.shape[0]), resample=Image.LANCZOS))
@@ -194,10 +200,10 @@ dataset_3dulight_v0p8 = Dataset3DULightGT('/home/nedko/face_relight/dbs/3dulight
 dataset_3dulight_v0p7_randfix =  Dataset3DULightGT('/home/tushar/data2/face_relight/dbs/3dulight_v0.7_256_fix/train', n_samples=5, n_samples_offset=0) # DatasetDPR('/home/tushar/data2/DPR/train')
 dataset_3dulight_v0p6 = Dataset3DULightGT('/home/nedko/face_relight/dbs/3dulight_v0.6_256/train', n_samples=5, n_samples_offset=5) # DatasetDPR('/home/tushar/data2/DPR/train')
 
-model_lab_pretrained = Model('models/trained/trained_model_03.t7', lab=True, resolution=512, dataset_name='dpr', sh_const = 0.7, name='Pretrained DPR') # '/home/tushar/data2/DPR_test/trained_model/trained_model_03.t7'
+model_lab_3dulight_08_bs7 = Model('/home/nedko/face_relight/outputs/remote/outputs/model_256_lab_3dulight_v0.8_full_bs7/14_net_G.pth', lab=True, resolution=256, dataset_name='3dulight_shfix', name='LAB 3DUL v0.8 30k bs7')
+model_lab_3dulight_08_seg_face = Model('/home/nedko/face_relight/outputs/remote/outputs/3dulight_v0.8_256_seg_face/14_net_G.pth', lab=True, resolution=256, dataset_name='3dulight_shfix', name='LAB 3DULight v0.8 10k Segment')
 model_lab_dpr_seg = Model('/home/tushar/data2/checkpoints_debug/model_fulltrain_dpr7_mse_sumBS20_ogsegment/14_net_G.pth', lab=True, resolution=256, dataset_name='dpr', sh_const = 0.7, name='LAB DPR v0.8 10k Segment')
 model_lab_3dulight_08_seg = Model('/home/tushar/data2/face_relight/outputs/model_256_3du_v08_lab_seg/14_net_G.pth', lab=True, resolution=256, dataset_name='3dulight_shfix', name='LAB 3DULight v0.8 10k Segment')
-# model_lab_3dulight_08_full_11 = Model('/home/nedko/face_relight/outputs/model_256_lab_3dulight_v0.8_full/model_256_lab_3dulight_v0.8_full/11_net_G.pth', lab=True, resolution=256, dataset_name='3dulight_shfix', name='LAB 3DULight v0.8 30k')
 model_lab_3dulight_08_full_seg = Model('/home/nedko/face_relight/outputs/remote/outputs/3dulight_v0.8_256_full/14_net_G.pth', lab=True, resolution=256, dataset_name='3dulight_shfix', name='LAB 3DULight v0.8 30k Segment +hair')
 model_lab_3dulight_08_bs16 = Model('/home/nedko/face_relight/outputs/remote/outputs/3dulight_v0.8_256_bs16//14_net_G.pth', lab=True, resolution=256, dataset_name='3dulight_shfix', name='LAB 3DULight v0.8 bs16')
 model_rgb_3dulight_08_full = Model('/home/nedko/face_relight/outputs/model_256_rgb_3dulight_v0.8/model_256_rgb_3dulight_v0.8_full/14_net_G.pth', lab=False, resolution=256, dataset_name='3dulight_shfix', name='RGB 3DULight v0.8 30k')
@@ -214,18 +220,16 @@ model_lab_3dulight_03 = Model('/home/nedko/face_relight/outputs/model_256_lab_3d
 model_lab_3dulight_02 = Model('/home/tushar/data2/checkpoints/model_256_3dudataset_lab/model_256_3dudataset_lab/14_net_G.pth', lab=True, resolution=256, dataset_name='3dulight', name='LAB 3DULight v0.2')
 model_rgb_3dulight_02 = Model('/home/tushar/data2/checkpoints/face_relight/outputs/model_rgb_light3du/14_net_G.pth', lab=False, resolution=256, dataset_name='3dulight', name='RGB 3DULight v0.2')
 model_lab_dpr_10k = Model('/home/tushar/data2/checkpoints/model_256_dprdata10k_lab/14_net_G.pth', lab=True, resolution=256, dataset_name='dpr', sh_const = 0.7, name='LAB DPR 10K')
-
+model_lab_pretrained = Model('models/trained/trained_model_03.t7', lab=True, resolution=512, dataset_name='dpr', sh_const = 0.7, name='Pretrained DPR') # '/home/tushar/data2/DPR_test/trained_model/trained_model_03.t7'
 
 model_lab_pretrained1 = ModelSegment('models/trained/trained_model_03.t7', lab=True, resolution=512, dataset_name='dpr', sh_const = 0.7, name='Pretrained DPR',post_flag =False ) # '/home/tushar/data2/DPR_test/trained_model/trained_model_03.t7'
 model_lab_pretrained2 = ModelSegment('models/trained/trained_model_03.t7', lab=True, resolution=512, dataset_name='dpr', sh_const = 0.7, name='Pretrained DPR',post_flag =True ) # '/home/tushar/data2/DPR_test/trained_model/trained_model_03.t7'
 
 
 model_objs = [
-    model_lab_pretrained,
-    model_lab_pretrained1,
-    model_lab_pretrained2
-    # model_lab_3dulight_08_full_seg,
-    # model_lab_3dulight_08_seg,
+    model_lab_3dulight_08_bs16,
+    model_lab_3dulight_08_bs7,
+    model_lab_3dulight_08_full
     # model_lab_dpr_seg
 ]
 
@@ -265,10 +269,10 @@ def vis_parsing_maps(im, parsing_anno, stride, h=None, w=None,face=False):
     return vis_parsing_anno
 
 
-def evaluate(img,face):
+def evaluate(img,face,device):
     n_classes = 19
     net = BiSeNet(n_classes=n_classes)
-    net.cuda()
+    net.to(device)
     save_pth = osp.join('demo_segment/cp', '79999_iter.pth')
     net.load_state_dict(torch.load(save_pth))
     net.eval()
@@ -283,7 +287,7 @@ def evaluate(img,face):
         image = img.resize((512, 512), Image.BILINEAR)
         img = to_tensor(image)
         img = torch.unsqueeze(img, 0)
-        img = img.cuda()
+        img = img.to(device)
         out = net(img)[0]
         parsing = out.squeeze(0).cpu().numpy().argmax(0)
         output_img = vis_parsing_maps(image, parsing, stride=1, h=h, w=w,face=face)
@@ -291,7 +295,7 @@ def evaluate(img,face):
 
 
 
-def load_model(checkpoint_dir_cmd, lab=True):
+def load_model(checkpoint_dir_cmd, device, lab=True):
     if lab:
         my_network = HourglassNet()
     else:
@@ -299,7 +303,7 @@ def load_model(checkpoint_dir_cmd, lab=True):
 
     print(checkpoint_dir_cmd)
     my_network.load_state_dict(torch.load(checkpoint_dir_cmd))
-    my_network.cuda()
+    my_network.to(device)
     my_network.train(False)
     return my_network
 
@@ -355,7 +359,7 @@ def test(my_network, input_img, lab=True, sh_id=0, sh_constant=1.0, res=256, sh_
 
 
 for model_obj in model_objs:
-    model_obj.model = load_model(model_obj.checkpoint_path, lab=model_obj.lab)
+    model_obj.model = load_model(model_obj.checkpoint_path, model_obj.device, lab=model_obj.lab)
 
 for orig_path, out_fname, gt_data in dataset.iterate():
 

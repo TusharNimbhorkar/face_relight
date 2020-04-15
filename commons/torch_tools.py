@@ -1,7 +1,6 @@
 import time
 import torch
 
-
 class Chronometer:
     def __init__(self, device):
         self.device = device
