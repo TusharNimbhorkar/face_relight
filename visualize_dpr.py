@@ -270,15 +270,47 @@ def segment(img_, device):
         output_img = vis_parsing_maps(image, parsing, stride=1,h=h,w=w)
     return output_img
 
+
+def resize_pil(image, width=None, height=None, inter=Image.LANCZOS):
+    # initialize the dimensions of the image to be resized and
+    # grab the image size
+    dim = None
+    (h, w) = image.shape[:2]
+
+    # if both the width and height are None, then return the
+    # original image
+    if width is None and height is None:
+        return image
+
+    # check to see if the width is None
+    if width is None:
+        # calculate the ratio of the height and construct the
+        # dimensions
+        r = height / float(h)
+        dim = (int(w * r), height)
+
+    # otherwise, the height is None
+    else:
+        # calculate the ratio of the width and construct the
+        # dimensions
+        r = width / float(w)
+        dim = (width, int(h * r))
+
+    # resize the image
+    resized = np.array(
+        Image.fromarray(image.astype(np.uint8)).resize(dim, resample=Image.LANCZOS))
+    # return the resized image
+    return resized
+
 def preprocess(img, device, enable_segment):
     img = np.array(img)
     orig_size = img.shape
 
     if np.max(img.shape[:2]) > 1024:
         if img.shape[0] < img.shape[1]:
-            img_res = imutils.resize(img, width=1024)
+            img_res = resize_pil(img, width=1024)
         else:
-            img_res = imutils.resize(img, width=1024)
+            img_res = resize_pil(img, height=1024)
     else:
         img_res = img
 
@@ -617,7 +649,7 @@ for orig_path, out_fname, gt_data in dataset.iterate():
     # orig_img_show = orig_img
 
     if orig_img.shape[0] > min_resolution:
-        orig_img_show = imutils.resize(orig_img, height=min_resolution)
+        orig_img_show = resize_pil(orig_img, height=min_resolution)
     else:
         orig_img_show = orig_img
     # if orig_img.shape[max_dim] > min_resolution:
@@ -632,7 +664,7 @@ for orig_path, out_fname, gt_data in dataset.iterate():
         gt_img = cv2.imread(gt_path)
 
         if gt_img.shape[0] > min_resolution:
-            gt_img = imutils.resize(gt_img, height=min_resolution)
+            gt_img = resize_pil(gt_img, height=min_resolution)
 
         cv2.putText(gt_img, 'Ground Truth', (5, 20), cv2.FONT_HERSHEY_COMPLEX, 0.5, 255)
         results.append(gt_img)
@@ -670,7 +702,7 @@ for orig_path, out_fname, gt_data in dataset.iterate():
             result_img = handle_output(result_img, orig_img_proc.shape[1], orig_img_proc.shape[0], mask, orig_img_proc, orig_img, loc, crop_sz, border)
 
             if result_img.shape[0]>min_resolution:
-                result_img = imutils.resize(result_img, height=min_resolution)
+                result_img = resize_pil(result_img, height=min_resolution)
 
             result_img = np.ascontiguousarray(result_img, dtype=np.uint8)
             cv2.putText(result_img, model_obj.name, (5, 20), cv2.FONT_HERSHEY_COMPLEX, 0.5, 255)
