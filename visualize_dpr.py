@@ -694,8 +694,6 @@ for orig_path, out_fname, gt_data in dataset.iterate():
                 target_sh = None
 
             extra_ops={}
-            if isinstance(model_obj, ModelSegment) or isinstance(model_obj, ModelSegment_blend):
-                extra_ops['orig_img'] = orig_path
 
             result_img = test(model_obj, orig_img_proc, lab=model_obj.lab, sh_constant=model_obj.sh_const, res=model_obj.resolution, sh_id=target_sh, sh_path=sh_path, sh_fname=sh_fname, extra_ops=extra_ops)
 
