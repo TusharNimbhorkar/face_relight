@@ -7,6 +7,7 @@ import csv
 import numpy as np
 import argparse
 import shutil
+import cv2
 from commons.common_tools import sort_numerically
 import matplotlib.pyplot as plt
 
@@ -14,6 +15,8 @@ import matplotlib.pyplot as plt
 ap = argparse.ArgumentParser()
 ap.add_argument("-i", "--input_dir", required=True,
 	help="Input Data Directory")
+ap.add_argument("-s", "--size", required=False, default=-1, type=int,
+	help="Original image size")
 ap.add_argument("-p", "--prev_dir", required=True,
 	help="Older Data Directory")
 args = vars(ap.parse_args())
@@ -26,6 +29,8 @@ out_sh_fname = 'light_%s_sh.txt'
 orig_img_fname = '%s_05.png'
 orig_sh_fname = '%s_light_05.txt'
 out_orig_img_fname = 'orig.png'
+
+orig_size = args['size']
 
 entry_dirs = glob.glob(osp.join(data_dir, '*'))
 sort_numerically(entry_dirs)
@@ -53,5 +58,10 @@ for entry_dir in entry_dirs:
         out_orig_img_path = osp.join(entry_dir, out_orig_img_fname)
         out_orig_sh_path = osp.join(entry_dir, out_sh_fname % 'orig')
 
-        shutil.copyfile(orig_img_path, out_orig_img_path)
+        if orig_size > 0:
+            orig_img = cv2.imread(orig_img_path)
+            orig_img = cv2.resize(orig_img, (orig_size, orig_size))
+            cv2.imwrite(out_orig_img_path, orig_img)
+        else:
+            shutil.copyfile(orig_img_path, out_orig_img_path)
         shutil.copyfile(orig_sh_path, out_orig_sh_path)

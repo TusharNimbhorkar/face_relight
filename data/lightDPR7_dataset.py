@@ -104,12 +104,12 @@ class lightDPR7Dataset(BaseDataset):
 
     def _read_img(self, img_path, size):
         img = cv2.imread(img_path)
-        if size < img.shape[0]:
-            try:
-                    img = cv2.resize(img, (self.img_size, self.img_size))
-            except Exception as e:
-                print(img_path)
-                raise e
+        try:
+            if size < img.shape[0]:
+                img = cv2.resize(img, (self.img_size, self.img_size))
+        except Exception as e:
+            print(img_path)
+            raise e
 
         return img
 

@@ -20,6 +20,8 @@ from torchvision.utils import make_grid
 import torch
 import time
 import cv2
+import glob
+import os.path as osp
 
 
 ap = argparse.ArgumentParser()
@@ -31,6 +33,8 @@ ap.add_argument("-i", "--input", default='test_data/2.png', required=False,
 	help="Input Directory")
 ap.add_argument("-o", "--output", default='out_result/', required=False,
 	help="output Directory")
+ap.add_argument("-p", "--preset", default='horizontal', required=False,
+	help="SH Patter Name")
 ap.add_argument('--ft', default=False,action='store_true', help='whether fine-tune the model')
 
 args = vars(ap.parse_args())
@@ -89,10 +93,11 @@ else:
 
 
 # lightFolder = 'test_data/00/'
-lightFolder = './test_data/sh_presets/vertical'
+lightFolder = './test_data/sh_presets/' + args['preset']
 
 sh_vals = ['07']#,'09','10']
 
+n_files = len(glob.glob(osp.join(lightFolder, 'rotate_light_*.txt')))
 for sh_v in sh_vals:
 
 	saveFolder = os.path.join(args['output'], 'runresult',checkpoint_dir_cmd.split('/')[-2],sh_v)
@@ -126,7 +131,7 @@ for sh_v in sh_vals:
 	inputL = inputL[None,None,...]
 	inputL = Variable(torch.from_numpy(inputL).cuda())
 
-	for i in range(90):
+	for i in range(n_files):
 		sh = np.loadtxt(os.path.join(lightFolder, 'rotate_light_{:02d}.txt'.format(i)))
 		sh = sh[0:9]
 		sh = sh * sh_constant

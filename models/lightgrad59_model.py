@@ -45,6 +45,7 @@ class lightgrad59Model(BaseModel):
         self.netG.train(True)
 
         if self.isTrain:
+            self.epochs_G_only = 0
             self.netD = networks.define_D(2, opt.ndf, opt.netD,
                                           opt.n_layers_D, opt.norm, opt.init_type, opt.init_gain, self.gpu_ids)
 
@@ -124,8 +125,12 @@ class lightgrad59Model(BaseModel):
         # First, G(A) should fake the discriminator
 
         fake_AB = torch.cat((self.real_C, self.fake_B), 1)
-        pred_fake = self.netD(fake_AB)
-        self.loss_G_GAN = self.criterionGAN(pred_fake, True) * 0.5
+
+        self.loss_G_GAN = 0
+
+        if epoch>1:
+            pred_fake = self.netD(fake_AB)
+            self.loss_G_GAN = self.criterionGAN(pred_fake, True) * 0.5
 
         # Second, G(A) = B
         self.loss_G_L1 = self.criterionL1(self.real_B, self.fake_B)  # * self.opt.lambda_L1
@@ -148,12 +153,19 @@ class lightgrad59Model(BaseModel):
         self.loss_G.backward()
 
     def optimize_parameters(self, epoch):
+        if self.epochs_G_only!=0 and epoch/self.epochs_G_only<1:
+            epoch = 1
+        else:
+            epoch = epoch - self.epochs_G_only
+
         self.forward(epoch)
-        # update D
-        self.set_requires_grad(self.netD, True)
-        self.optimizer_D.zero_grad()
-        self.backward_D()
-        self.optimizer_D.step()
+
+        if epoch>1:
+            # update D
+            self.set_requires_grad(self.netD, True)
+            self.optimizer_D.zero_grad()
+            self.backward_D()
+            self.optimizer_D.step()
 
         # update G
         self.set_requires_grad(self.netD, False)

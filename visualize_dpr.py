@@ -2,6 +2,7 @@ import argparse
 import os.path as osp
 import glob
 import cv2
+import imutils
 import numpy as np
 import os
 import matplotlib.pyplot as plt
@@ -11,6 +12,7 @@ from models.skeleton512_rgb import HourglassNet as HourglassNet_RGB
 from models.skeleton512 import HourglassNet
 from PIL import  Image
 import torch
+import dlib
 
 # for segmentation
 from demo_segment.model import BiSeNet
@@ -24,13 +26,20 @@ ap.add_argument("-o", "--output", default='outputs/test', required=False,
 	help="Output Directory")
 ap.add_argument("-d", "--device", default='cuda', required=False, choices=['cuda','cpu'],
 	help="Device")
+ap.add_argument("-f", "--force_images", required=False, action="store_true",
+	help="Force generating images")
+ap.add_argument("-s", "--segment", required=False, action="store_true",
+	help="Force generating images")
 args = vars(ap.parse_args())
 
 device = args['device']
+enable_forced_image_out = args['force_images']
+enable_segment = args['segment']
 
 lightFolder_dpr = 'test_data/00/'
 lightFolder_3dulight_shfix = 'test_data/sh_presets/horizontal'
 lightFolder_3dulight = 'test_data/sh_presets/horizontal_old'
+model_dir = osp.abspath('./demo/data/model')
 out_dir = args["output"]#'/home/nedko/face_relight/dbs/comparison'
 
 target_sh_id_dpr = list(range(72)) + [71]*20#60#5 #60
@@ -39,7 +48,6 @@ target_sh_id_3dulight_shfix = list(range(90))#75 # 19#89
 
 min_video_frames = 10
 min_resolution = 256
-
 
 os.makedirs(out_dir, exist_ok=True)
 
@@ -170,117 +178,6 @@ class Model:
 
         return output_img, outputSH
 
-class ModelSegment(Model):
-    def __init__(self, checkpoint_path, lab, resolution, dataset_name, sh_const=1.0, name='',post_flag=False):
-        super(ModelSegment,self).__init__(checkpoint_path, lab, resolution, dataset_name, sh_const, name)
-        self.post_flag = post_flag
-
-    def __call__(self, input_img, target_sh, *args, **kwargs):
-        output_img, output_sh = super().__call__(input_img, target_sh, *args, **kwargs)
-
-        rgb_img_path = kwargs['orig_img']
-
-        rgb_img = Image.open(osp.join(rgb_img_path))
-        segment = evaluate(rgb_img,self.post_flag, self.device)
-        rgb_img = rgb_img.resize((input_img.shape[0], input_img.shape[1]), resample=Image.LANCZOS)
-        segment[segment == 255] = 1
-        segment = np.array(Image.fromarray(segment).resize((input_img.shape[0], input_img.shape[0]), resample=Image.LANCZOS))
-
-        seg_img = np.zeros_like(output_img)
-        seg_img[:, :, 0] = segment
-        seg_img[:, :, 1] = segment
-        seg_img[:, :, 2] = segment
-        # seg_img = np.array(Image.fromarray(seg_img).resize((res, res), resample=Image.LANCZOS))
-        output_img = np.multiply(output_img, seg_img)
-
-        mask = seg_img.copy()
-        background = np.copy(rgb_img)
-        background = cv2.cvtColor(background, cv2.COLOR_RGB2BGR)
-        foreground = np.copy(output_img)
-        mask = mask.astype(float)
-        foreground = foreground.astype(float)
-        background = background.astype(float)
-
-        # Multiply the foreground with the alpha matte
-        foreground = cv2.multiply(mask, foreground)
-
-        # Multiply the background with ( 1 - alpha )
-        try:
-            background = cv2.multiply(1 - mask, background)
-        except:
-            print(background.shape, mask.shape)
-
-        # Add the masked foreground and background.
-        outImage = cv2.add(foreground, background)
-
-        # old
-        # output_img = np.multiply(output_img, seg_img)
-
-
-        return outImage, output_sh
-
-class ModelSegment_blend(Model):
-    def __init__(self, checkpoint_path, lab, resolution, dataset_name, sh_const=1.0, name='',post_flag=False):
-        super(ModelSegment_blend,self).__init__(checkpoint_path, lab, resolution, dataset_name, sh_const=1.0, name='')
-        self.post_flag = post_flag
-
-    def __call__(self, input_img, target_sh, *args, **kwargs):
-        output_img, output_sh = super().__call__(input_img, target_sh, *args, **kwargs)
-
-        rgb_img_path = kwargs['orig_img']
-
-        rgb_img = Image.open(osp.join(rgb_img_path))
-        segment = evaluate(rgb_img,face=self.post_flag)
-
-        rgb_img =  rgb_img.resize((input_img.shape[0], input_img.shape[1]), resample=Image.LANCZOS)
-        segment = np.array(
-            Image.fromarray(segment).resize((rgb_img.size[0], rgb_img.size[1]), resample=Image.LANCZOS))
-
-        vis_parsing_anno = segment.copy()
-        kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (7, 7))
-        closing = cv2.morphologyEx(vis_parsing_anno, cv2.MORPH_CLOSE, kernel)
-        closing = cv2.morphologyEx(closing, cv2.MORPH_OPEN, kernel)
-
-        new_img = np.zeros_like(closing)  # step 1
-        for val in np.unique(closing)[1:]:  # step 2
-            mask = np.uint8(closing == val)  # step 3
-            labels, stats = cv2.connectedComponentsWithStats(mask, 4)[1:3]  # step 4
-            largest_label = 1 + np.argmax(stats[1:, cv2.CC_STAT_AREA])  # step 5
-            new_img[labels == largest_label] = val
-
-        vis_parsing_anno = new_img.copy()
-
-        alpha_2 = np.zeros(shape=(vis_parsing_anno.shape[0],vis_parsing_anno.shape[1],3))
-        alpha_2[:,:,0] = np.copy(vis_parsing_anno)
-        alpha_2[:,:,1] = np.copy(vis_parsing_anno)
-        alpha_2[:,:,2] = np.copy(vis_parsing_anno)
-        kernel = np.ones((10, 10), np.uint8)
-        alpha_2 = cv2.erode(alpha_2, kernel, iterations=1)
-        alpha_2 = cv2.GaussianBlur(alpha_2,(29,29),15,15)
-        # Normalize the alpha mask to keep intensity between 0 and 1
-        alpha_2 = alpha_2.astype(float) / 255
-
-        mask = alpha_2.copy()
-        background = np.copy(rgb_img)
-        background = cv2.cvtColor(background,cv2.COLOR_RGB2BGR)
-        foreground = np.copy(output_img)
-        foreground = foreground.astype(float)
-        background = background.astype(float)
-
-        # Multiply the foreground with the alpha matte
-        foreground = cv2.multiply(mask, foreground)
-
-        # Multiply the background with ( 1 - alpha )
-        try:
-            background = cv2.multiply(1 - mask, background)
-        except:
-            print(background.shape,mask.shape)
-
-        # Add the masked foreground and background.
-        outImage = cv2.add(foreground, background)
-
-        return outImage, output_sh
-
 # dataset_test = DatasetDefault('path/to/files')
 dataset_3dulight_v0p8 = Dataset3DULightGT('/home/nedko/face_relight/dbs/3dulight_v0.8_256/train', n_samples=5, n_samples_offset=0) # DatasetDPR('/home/tushar/data2/DPR/train')
 dataset_3dulight_v0p7_randfix =  Dataset3DULightGT('/home/tushar/data2/face_relight/dbs/3dulight_v0.7_256_fix/train', n_samples=5, n_samples_offset=0) # DatasetDPR('/home/tushar/data2/DPR/train')
@@ -308,13 +205,9 @@ model_rgb_3dulight_02 = Model('/home/tushar/data2/checkpoints/face_relight/outpu
 model_lab_dpr_10k = Model('/home/tushar/data2/checkpoints/model_256_dprdata10k_lab/14_net_G.pth', lab=True, resolution=256, dataset_name='dpr', sh_const = 0.7, name='LAB DPR 10K')
 model_lab_pretrained = Model('models/trained/trained_model_03.t7', lab=True, resolution=512, dataset_name='dpr', sh_const = 0.7, name='Pretrained DPR') # '/home/tushar/data2/DPR_test/trained_model/trained_model_03.t7'
 
-model_lab_pretrained1 = ModelSegment_blend('models/trained/trained_model_03.t7', lab=True, resolution=512, dataset_name='dpr', sh_const = 0.7, name='Pretrained DPR',post_flag =True ) # '/home/tushar/data2/DPR_test/trained_model/trained_model_03.t7'
-model_lab_pretrained2 = ModelSegment('models/trained/trained_model_03.t7', lab=True, resolution=512, dataset_name='dpr', sh_const = 0.7, name='Pretrained DPR',post_flag =True ) # '/home/tushar/data2/DPR_test/trained_model/trained_model_03.t7'
-
-
 model_objs = [
-    model_lab_3dulight_08_bs16,
-    model_lab_3dulight_08_bs7,
+    # model_lab_3dulight_08_bs16,
+    # model_lab_3dulight_08_bs7,
     model_lab_3dulight_08_full
     # model_lab_dpr_seg
 ]
@@ -326,11 +219,221 @@ dataset = DatasetDefault(args["input"])
 # checkpoint_tgt = '/home/tushar/data2/checkpoints/model_256_3dudataset_lab/model_256_3dudataset_lab/14_net_G.pth' #'/home/tushar/data2/checkpoints/face_relight/outputs/model_rgb_light3du/14_net_G.pth' #'/home/tushar/data2/DPR_test/trained_model/trained_model_03.t7'
 
 
+detector = dlib.get_frontal_face_detector()
+lmarks_model_path = osp.join(model_dir, 'shape_predictor_68_face_landmarks.dat')
+predictor = dlib.shape_predictor(lmarks_model_path)
 
-# Functions for segment parsing
+n_classes = 19
+segment_model = BiSeNet(n_classes=n_classes)
+segment_model.to(device)
+segment_model_path = osp.join(model_dir, 'face_parsing.pth')
+segment_model.load_state_dict(torch.load(segment_model_path))
+segment_model.eval()
 
-def vis_parsing_maps(im, parsing_anno, stride, h=None, w=None,face=False):
+def R(theta):
+    return np.array([[np.cos(theta), -np.sin(theta)],[np.sin(theta), np.cos(theta)]])
+
+R_90 = R(np.deg2rad(90))
+
+def shape_to_np(shape, dtype="int"):
+    # initialize the list of (x, y)-coordinates
+    coords = np.zeros((68, 2), dtype=dtype)
+
+    # loop over the 68 facial landmarks and convert them
+    # to a 2-tuple of (x, y)-coordinates
+    for i in range(0, 68):
+        coords[i] = (shape.part(i).x, shape.part(i).y)
+
+    # return the list of (x, y)-coordinates
+    return coords
+
+segment_norm = transforms.Compose([
+            transforms.ToTensor(),
+            transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
+        ])
+
+def segment(img_, device):
+    with torch.no_grad():
+
+        h, w, _ = img_.shape
+        image = cv2.resize(img_, (512, 512), interpolation=cv2.INTER_AREA)
+        img = segment_norm(image)
+        img = torch.unsqueeze(img, 0)
+        img = img.to(device)
+        out = segment_model(img)[0]
+        parsing = out.squeeze(0).cpu().numpy().argmax(0)
+        output_img = vis_parsing_maps(image, parsing, stride=1,h=h,w=w)
+    return output_img
+
+def preprocess(img, device, enable_segment):
+    img = np.array(img)
+    orig_size = img.shape
+
+    if np.max(img.shape[:2]) > 1024:
+        if img.shape[0] < img.shape[1]:
+            img_res = imutils.resize(img, width=1024)
+        else:
+            img_res = imutils.resize(img, width=1024)
+    else:
+        img_res = img
+
+    resize_ratio = orig_size[0] / img_res.shape[0]
+    gray = cv2.cvtColor(img_res, cv2.COLOR_BGR2GRAY)
+    rects, scores, idx = detector.run(gray, 1, -1)
+
+    loc = [0, 0]
+
+    if len(rects) > 0:
+
+        rect_id = np.argmax(scores)
+        rect = rects[rect_id]
+        # rect = rects[0]
+        shape = predictor(gray, rect)
+        shape = shape_to_np(shape)
+        # (x, y, w, h) = rect_to_bb(rect)
+        e0 = np.array(shape[38])
+        e1 = np.array(shape[43])
+        m0 = np.array(shape[48])
+        m1 = np.array(shape[54])
+
+        x_p = e1 - e0
+        y_p = 0.5 * (e0 + e1) - 0.5 * (m0 + m1)
+        c = 0.5 * (e0 + e1) - 0.1 * y_p
+        s = np.max([4.0 * np.linalg.norm(x_p), 3.6 * np.linalg.norm(y_p)])
+        xv = x_p - np.dot(R_90, y_p)
+        xv /= np.linalg.norm(xv)
+        yv = np.dot(R_90, y_p)
+
+        s *= resize_ratio
+        c[0] *= resize_ratio
+        c[1] *= resize_ratio
+
+        c1_ms = np.max([0, int(c[1] - s / 2)])
+        c1_ps = np.min([img.shape[0], int(c[1] + s / 2)])
+        c0_ms = np.max([0, int(c[0] - s / 2)])
+        c0_ps = np.min([img.shape[1], int(c[0] + s / 2)])
+
+        top = -np.min([0, int(c[1] - s / 2)])
+        bottom = -np.min([0, img.shape[0] - int(c[1] + s / 2)])
+        left = -np.min([0, int(c[0] - s / 2)])
+        right = -np.min([0, img.shape[1] - int(c[0] + s / 2)])
+
+        loc[0] = int(c1_ms)
+        loc[1] = int(c0_ms)
+
+        img = img[int(c1_ms):int(c1_ps), int(c0_ms):int(c0_ps)]
+
+        if enable_segment:
+            mask = segment(img, device)
+        else:
+            mask = None
+        # mask = mask[int(c1_ms):int(c1_ps), int(c0_ms):int(c0_ps)]
+
+        img = cv2.copyMakeBorder(img, top, bottom, left, right, cv2.BORDER_CONSTANT, value=[0, 0, 0])
+
+        if enable_segment:
+            mask = cv2.copyMakeBorder(mask, top, bottom, left, right, cv2.BORDER_CONSTANT, 0)
+
+        border = [top, bottom, left, right]
+
+        crop_sz = img.shape
+        if np.max(img.shape[:2]) > 1024:
+            img = cv2.resize(img, (1024, 1024))
+
+            if enable_segment:
+                mask = cv2.resize(mask, (1024, 1024))
+    else:
+        img = None
+        mask = None
+        crop_sz = None
+        border = None
+
+    return img, mask, loc, crop_sz, border
+
+
+def handle_output(outputImg, col, row, mask, img_p, img_orig, loc, crop_sz, border):
+
+    # mask = (mask/255.0)[:,:, np.newaxis]
+    result = cv2.resize(outputImg, (col, row))
+
+    # do something here
+    # make a gauss blur
+
+    # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!  TODO add original image which will be background  CHECK AGAIN  !!!!!!!!!!!
+
+    if mask is not None:
+        background = np.copy(img_p)
+        foreground = np.copy(result)
+        foreground = foreground.astype(float)
+        background = background.astype(float)
+
+        # Multiply the foreground with the alpha matte
+        foreground = cv2.multiply(mask, foreground)
+
+        # Multiply the background with ( 1 - alpha )
+        background = cv2.multiply(1 - mask, background)
+
+        # Add the masked foreground and background.
+        out_img = cv2.add(foreground, background)
+    else:
+        out_img = np.copy(result)
+
+    out_img = cv2.resize(out_img, (crop_sz[1], crop_sz[0]))
+
+    top, bottom, left, right = border
+
+    right = -right
+    bottom = -bottom
+
+    if bottom == 0:
+        bottom = None
+
+    if right == 0:
+        right = None
+
+    out_img = out_img[top:bottom, left:right]
+
+    img_overlayed = np.copy(img_orig)
+    img_overlayed[loc[0]:loc[0] + out_img.shape[0], loc[1]:loc[1] + out_img.shape[1]] = out_img
+    # print(loc[0] - 10,loc[0] + outImage.shape[0] + 10, loc[1] - 10,loc[1] + outImage.shape[1] + 10)
+
+    '''
+    # blending fr the bounding box
+    img1 = np.ones_like(img_overlayed)
+
+    img1[loc[0]+2:loc[0] + outImage.shape[0]-2, loc[1]+2:loc[1] + outImage.shape[1]-2] = 0
+    mask = cv2.bitwise_not(img1)
+    mask[mask < 255] = 0
+
+
+    # blending
+
+    mask = cv2.GaussianBlur(mask, (7, 7), 7, 7)
+    # Normalize the alpha mask to kee   p intensity between 0 and 1
+    mask = mask.astype(float) / 255
+    background = np.copy(img_orig)
+    foreground = np.copy(img_overlayed)
+    foreground = foreground.astype(float)
+    background = background.astype(float)
+
+    # Multiply the foreground with the alpha matte
+    foreground = cv2.multiply(mask, foreground)
+
+    # Multiply the background with ( 1 - alpha )
+    background = cv2.multiply(1 - mask, background)
+
+    # Add the masked foreground and background.
+    outImage = cv2.add(foreground, background)
+
+    # 
+    cv2.imwrite(filepath, outImage)
+    '''
+    return img_overlayed
+
+
+def vis_parsing_maps(im, parsing_anno, stride, h=None, w=None):
     im = np.array(im)
+    alpha_2 = np.zeros((h, w, 3))
     vis_im = im.copy().astype(np.uint8)
     vis_parsing_anno = parsing_anno.copy().astype(np.uint8)
     vis_parsing_anno = cv2.resize(vis_parsing_anno, None, fx=stride, fy=stride, interpolation=cv2.INTER_NEAREST)
@@ -340,19 +443,60 @@ def vis_parsing_maps(im, parsing_anno, stride, h=None, w=None,face=False):
     vis_im = cv2.addWeighted(cv2.cvtColor(vis_im, cv2.COLOR_RGB2BGR), 0.4, vis_parsing_anno_color, 0.6, 0)
     # MASK
     vis_parsing_anno = cv2.resize(vis_parsing_anno, (w, h))
-
-    # only face skin
     vis_parsing_anno[vis_parsing_anno == 16] = 0
+    # vis_parsing_anno[vis_parsing_anno==17]=0
     vis_parsing_anno[vis_parsing_anno == 14] = 0
-    vis_parsing_anno[vis_parsing_anno == 7] = 0
-    vis_parsing_anno[vis_parsing_anno == 8] = 0
-    if face:
-        vis_parsing_anno[vis_parsing_anno==17]=0
-
     vis_parsing_anno[vis_parsing_anno > 0] = 255
 
+    kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (7, 7))
+    closing = cv2.morphologyEx(vis_parsing_anno, cv2.MORPH_CLOSE, kernel)
+    closing = cv2.morphologyEx(closing, cv2.MORPH_OPEN, kernel)
 
-    return vis_parsing_anno
+    new_img = np.zeros_like(closing)  # step 1
+    for val in np.unique(closing)[1:]:  # step 2
+        mask = np.uint8(closing == val)  # step 3
+        labels, stats = cv2.connectedComponentsWithStats(mask, 4)[1:3]  # step 4
+        largest_label = 1 + np.argmax(stats[1:, cv2.CC_STAT_AREA])  # step 5
+        new_img[labels == largest_label] = val
+
+    vis_parsing_anno = new_img.copy()
+
+    # alpha_2 = cv2.imread(segment_path_ear)
+    alpha_2[:, :, 0] = np.copy(vis_parsing_anno)
+    alpha_2[:, :, 1] = np.copy(vis_parsing_anno)
+    alpha_2[:, :, 2] = np.copy(vis_parsing_anno)
+    kernel = np.ones((10, 10), np.uint8)
+    alpha_2 = cv2.erode(alpha_2, kernel, iterations=1)
+    alpha_2 = cv2.GaussianBlur(alpha_2, (29, 29), 15, 15)
+    # Normalize the alpha mask to keep intensity between 0 and 1
+    alpha_2 = alpha_2.astype(float) / 255
+    return alpha_2
+
+# # Functions for segment parsing
+# def vis_parsing_maps(im, parsing_anno, stride, h=None, w=None,face=False):
+#     im = np.array(im)
+#     vis_im = im.copy().astype(np.uint8)
+#     vis_parsing_anno = parsing_anno.copy().astype(np.uint8)
+#     vis_parsing_anno = cv2.resize(vis_parsing_anno, None, fx=stride, fy=stride, interpolation=cv2.INTER_NEAREST)
+#     vis_parsing_anno_color = np.zeros((vis_parsing_anno.shape[0], vis_parsing_anno.shape[1], 3)) + 255
+#     num_of_class = np.max(vis_parsing_anno)
+#     vis_parsing_anno_color = vis_parsing_anno_color.astype(np.uint8)
+#     vis_im = cv2.addWeighted(cv2.cvtColor(vis_im, cv2.COLOR_RGB2BGR), 0.4, vis_parsing_anno_color, 0.6, 0)
+#     # MASK
+#     vis_parsing_anno = cv2.resize(vis_parsing_anno, (w, h))
+#
+#     # only face skin
+#     vis_parsing_anno[vis_parsing_anno == 16] = 0
+#     vis_parsing_anno[vis_parsing_anno == 14] = 0
+#     vis_parsing_anno[vis_parsing_anno == 7] = 0
+#     vis_parsing_anno[vis_parsing_anno == 8] = 0
+#     if face:
+#         vis_parsing_anno[vis_parsing_anno==17]=0
+#
+#     vis_parsing_anno[vis_parsing_anno > 0] = 255
+#
+#
+#     return vis_parsing_anno
 
 
 def evaluate(img,face,device):
@@ -378,8 +522,6 @@ def evaluate(img,face,device):
         parsing = out.squeeze(0).cpu().numpy().argmax(0)
         output_img = vis_parsing_maps(image, parsing, stride=1, h=h, w=w,face=face)
     return output_img
-
-
 
 def load_model(checkpoint_dir_cmd, device, lab=True):
     if lab:
@@ -440,7 +582,6 @@ def test(my_network, input_img, lab=True, sh_id=0, sh_constant=1.0, res=256, sh_
 
     output_img, output_sh = my_network(img, sh, 0, **extra_ops)
 
-
     return output_img
 
 
@@ -461,10 +602,20 @@ for orig_path, out_fname, gt_data in dataset.iterate():
     orig_img = cv2.imread(orig_path)
     # left_img = cv2.imread(left_path)
 
-    if orig_img.shape[0] > min_resolution:
-        orig_img = cv2.resize(orig_img, (min_resolution,min_resolution))
+    # max_dim = np.argmax([orig_img.shape[0], orig_img.shape[1]])
+    # orig_img_show = orig_img
 
-    results = [orig_img]
+    if orig_img.shape[0] > min_resolution:
+        orig_img_show = imutils.resize(orig_img, height=min_resolution)
+    else:
+        orig_img_show = orig_img
+    # if orig_img.shape[max_dim] > min_resolution:
+    #     if max_dim == 0:
+    #
+    #     elif max_dim == 1:
+    #         orig_img_show = imutils.resize(orig_img, width=min_resolution)
+
+    results = [orig_img_show]
 
     if gt_path is not None:
         gt_img = cv2.imread(gt_path)
@@ -479,6 +630,14 @@ for orig_path, out_fname, gt_data in dataset.iterate():
         min_sh_list_len = min([len(model_obj.target_sh) for model_obj in model_objs])
     else:
         min_sh_list_len = 1
+
+
+    orig_img_proc, mask, loc, crop_sz, border = preprocess(orig_img, device, enable_segment)
+    is_face_found = orig_img is not None
+
+    if not is_face_found:
+        print('No face found: ', orig_path)
+        continue
 
     for sh_idx in range(min_sh_list_len):
         results_frame = []
@@ -495,10 +654,12 @@ for orig_path, out_fname, gt_data in dataset.iterate():
             if isinstance(model_obj, ModelSegment) or isinstance(model_obj, ModelSegment_blend):
                 extra_ops['orig_img'] = orig_path
 
-            result_img = test(model_obj, orig_img, lab=model_obj.lab, sh_constant=model_obj.sh_const, res=model_obj.resolution, sh_id=target_sh, sh_path=sh_path, sh_fname=sh_fname, extra_ops=extra_ops)
+            result_img = test(model_obj, orig_img_proc, lab=model_obj.lab, sh_constant=model_obj.sh_const, res=model_obj.resolution, sh_id=target_sh, sh_path=sh_path, sh_fname=sh_fname, extra_ops=extra_ops)
+
+            result_img = handle_output(result_img, orig_img_proc.shape[1], orig_img_proc.shape[0], mask, orig_img_proc, orig_img, loc, crop_sz, border)
 
             if result_img.shape[0]>min_resolution:
-                result_img = cv2.resize(result_img, (min_resolution,min_resolution))
+                result_img = imutils.resize(result_img, height=min_resolution)
 
             result_img = np.ascontiguousarray(result_img, dtype=np.uint8)
             cv2.putText(result_img, model_obj.name, (5, 20), cv2.FONT_HERSHEY_COMPLEX, 0.5, 255)
@@ -509,10 +670,10 @@ for orig_path, out_fname, gt_data in dataset.iterate():
         out_img = np.concatenate(results + results_frame, axis=1)
         print(orig_path, gt_path)
 
-        if min_sh_list_len > min_video_frames:
+        if min_sh_list_len > min_video_frames and not enable_forced_image_out:
             video_out.post(out_img)
         else:
-            cv2.imwrite(osp.join(out_dir, out_fname.rsplit('.', 1)[0] + '_' + str(sh_idx) + '.' + out_fname.rsplit('.', 1)[1]), out_img)
+            cv2.imwrite(osp.join(out_dir, out_fname.rsplit('.', 1)[0] + '_%03d' % sh_idx + '.' + out_fname.rsplit('.', 1)[1]), out_img)
 
 
     video_out.close()
