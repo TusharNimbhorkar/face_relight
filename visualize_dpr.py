@@ -32,23 +32,27 @@ ap.add_argument("-d", "--device", default='cuda', required=False, choices=['cuda
 	help="Device")
 ap.add_argument("-f", "--force_images", required=False, action="store_true",
 	help="Force generating images")
+ap.add_argument("-c", "--crops_only", required=False, action="store_true",
+	help="Output cropped faces")
 ap.add_argument("-s", "--segment", required=False, action="store_true",
-	help="Force generating images")
+	help="Apply segmentation")
+ap.add_argument("-t", "--test", required=False, action="store_true",
+	help="Remove text labels and original image comparison")
 args = vars(ap.parse_args())
 
 device = args['device']
 enable_forced_image_out = args['force_images']
 enable_segment = args['segment']
+enable_face_boxes = args['crops_only']
+enable_test_mode = args['test']
 
 lightFolder_dpr = 'test_data/00/'
-lightFolder_3dulight_shfix = 'test_data/sh_presets/horizontal'
-lightFolder_3dulight = 'test_data/sh_presets/horizontal_old'
+lightFolder_3dulight = 'test_data/sh_presets/horizontal'
 model_dir = osp.abspath('./demo/data/model')
 out_dir = args["output"]#'/home/nedko/face_relight/dbs/comparison'
 
 target_sh_id_dpr = list(range(72)) + [71]*20#60#5 #60
-target_sh_id_3dulight = list(range(90))# 70 # 19#89
-target_sh_id_3dulight_shfix = list(range(90))#75 # 19#89
+target_sh_id_3dulight = list(range(90 - 22 - 45, 90 - 22 + 1))#75 # 19#89
 
 min_video_frames = 10
 min_resolution = 256
@@ -145,9 +149,9 @@ class Model:
         elif dataset_name == '3dulight':
             self.sh_path = lightFolder_3dulight
             self.target_sh = target_sh_id_3dulight
-        elif dataset_name == '3dulight_shfix':
-            self.sh_path = lightFolder_3dulight_shfix
-            self.target_sh = target_sh_id_3dulight_shfix
+        elif dataset_name == '3dulight':
+            self.sh_path = lightFolder_3dulight
+            self.target_sh = target_sh_id_3dulight
 
     def __call__(self, input_img, target_sh, *args, **kwargs):
         target_sh = torch.autograd.Variable(torch.from_numpy(target_sh).to(self.device))
@@ -188,32 +192,29 @@ dataset_3dulight_v0p8 = Dataset3DULightGT('/home/nedko/face_relight/dbs/3dulight
 dataset_3dulight_v0p7_randfix =  Dataset3DULightGT('/home/tushar/data2/face_relight/dbs/3dulight_v0.7_256_fix/train', n_samples=5, n_samples_offset=0) # DatasetDPR('/home/tushar/data2/DPR/train')
 dataset_3dulight_v0p6 = Dataset3DULightGT('/home/nedko/face_relight/dbs/3dulight_v0.6_256/train', n_samples=5, n_samples_offset=5) # DatasetDPR('/home/tushar/data2/DPR/train')
 
-model_lab_3dulight_08_bs7 = Model('/home/nedko/face_relight/outputs/remote/outputs/model_256_lab_3dulight_v0.8_full_bs7/14_net_G.pth', lab=True, resolution=256, dataset_name='3dulight_shfix', name='LAB 3DUL v0.8 30k bs7')
-model_lab_3dulight_08_seg_face = Model('/home/nedko/face_relight/outputs/remote/outputs/3dulight_v0.8_256_seg_face/14_net_G.pth', lab=True, resolution=256, dataset_name='3dulight_shfix', name='LAB 3DULight v0.8 10k Segment')
+model_lab_3dulight_08_1024_10k = Model('/home/tushar/data2/face_relight/outputs/model_1024_3du_v08_lab_third/14_net_G.pth', lab=True, resolution=1024, dataset_name='3dulight', name='LAB 3DUL v0.8 1024 10k', model_1024=True)
+model_lab_3dulight_08_bs7 = Model('/home/nedko/face_relight/outputs/remote/outputs/model_256_lab_3dulight_v0.8_full_bs7/14_net_G.pth', lab=True, resolution=256, dataset_name='3dulight', name='LAB 3DUL v0.8 30k bs7')
+model_lab_3dulight_08_seg_face = Model('/home/nedko/face_relight/outputs/remote/outputs/3dulight_v0.8_256_seg_face/14_net_G.pth', lab=True, resolution=256, dataset_name='3dulight', name='LAB 3DULight v0.8 10k Segment')
 model_lab_dpr_seg = Model('/home/tushar/data2/checkpoints_debug/model_fulltrain_dpr7_mse_sumBS20_ogsegment/14_net_G.pth', lab=True, resolution=256, dataset_name='dpr', sh_const = 0.7, name='LAB DPR v0.8 10k Segment')
-model_lab_3dulight_08_seg = Model('/home/tushar/data2/face_relight/outputs/model_256_3du_v08_lab_seg/14_net_G.pth', lab=True, resolution=256, dataset_name='3dulight_shfix', name='LAB 3DULight v0.8 10k Segment')
-model_lab_3dulight_08_full_seg = Model('/home/nedko/face_relight/outputs/remote/outputs/3dulight_v0.8_256_full/14_net_G.pth', lab=True, resolution=256, dataset_name='3dulight_shfix', name='LAB 3DULight v0.8 30k Segment +hair')
-model_lab_3dulight_08_bs16 = Model('/home/nedko/face_relight/outputs/remote/outputs/3dulight_v0.8_256_bs16//14_net_G.pth', lab=True, resolution=256, dataset_name='3dulight_shfix', name='LAB 3DULight v0.8 bs16')
-model_rgb_3dulight_08_full = Model('/home/nedko/face_relight/outputs/model_256_rgb_3dulight_v0.8/model_256_rgb_3dulight_v0.8_full/14_net_G.pth', lab=False, resolution=256, dataset_name='3dulight_shfix', name='RGB 3DULight v0.8 30k')
-model_rgb_3dulight_08 = Model('/home/nedko/face_relight/outputs/model_256_rgb_3dulight_v0.8/model_256_rgb_3dulight_v08_rgb/14_net_G.pth', lab=False, resolution=256, dataset_name='3dulight_shfix', name='RGB 3DULight v0.8')
-model_lab_3dulight_08_full = Model('/home/nedko/face_relight/outputs/model_256_lab_3dulight_v0.8_full/model_256_lab_3dulight_v0.8_full/14_net_G.pth', lab=True, resolution=256, dataset_name='3dulight_shfix', name='LAB 3DULight v0.8 30k')
-model_lab_3dulight_08 = Model('/home/nedko/face_relight/outputs/model_256_lab_3dulight_v0.8/model_256_lab_3dulight_v0.8/14_net_G.pth', lab=True, resolution=256, dataset_name='3dulight_shfix', name='LAB 3DULight v0.8')
-model_lab_3dulight_07_randfix = Model('/home/tushar/data2/face_relight/outputs/model_256_lab_3dulight_v0.7_random_ns5/model_256_lab_3dulight_v0.7_random_ns5/14_net_G.pth', lab=True, resolution=256, dataset_name='3dulight_shfix', name='LAB 3DULight v0.7 RANDFIX')
-model_lab_3dulight_07 = Model('/home/nedko/face_relight/outputs/model_256_lab_3dulight_v0.7_dlfix_ns15/model_256_lab_3dulight_v0.7_dlfix_ns15/14_net_G.pth', lab=True, resolution=256, dataset_name='3dulight_shfix', name='LAB 3DULight v0.7')
-model_lab_3dulight_06 = Model('/home/nedko/face_relight/outputs/model_256_lab_3dulight_v0.6_dlfix_ns15/model_256_lab_3dulight_v0.6_dlfix_ns15/14_net_G.pth', lab=True, resolution=256, dataset_name='3dulight_shfix', name='LAB 3DULight v0.6')
-model_lab_3dulight_05_shfix = Model('/home/nedko/face_relight/outputs/model_256_lab_3dulight_v0.5_shfix/model_256_lab_3dulight_v0.5_shfix/14_net_G.pth', lab=True, resolution=256, dataset_name='3dulight_shfix', name='LAB 3DULight v0.5 SHFIX')
-model_lab_3dulight_05 = Model('/home/nedko/face_relight/outputs/model_256_lab_3dulight_v0.5/model_256_lab_3dulight_v0.5/14_net_G.pth', lab=True, resolution=256, dataset_name='3dulight', name='LAB 3DULight v0.5')
-model_lab_3dulight_04 = Model('/home/nedko/face_relight/outputs/model_256_lab_3dulight_v0.4/model_256_lab_3dulight_v0.4/14_net_G.pth', lab=True, resolution=256, dataset_name='3dulight', name='LAB 3DULight v0.4')
-model_lab_3dulight_03 = Model('/home/nedko/face_relight/outputs/model_256_lab_3dulight_v0.3/model_256_lab_3dulight_v0.3/14_net_G.pth', lab=True, resolution=256, dataset_name='3dulight', name='LAB 3DULight v0.3')
-model_lab_3dulight_02 = Model('/home/tushar/data2/checkpoints/model_256_3dudataset_lab/model_256_3dudataset_lab/14_net_G.pth', lab=True, resolution=256, dataset_name='3dulight', name='LAB 3DULight v0.2')
-model_rgb_3dulight_02 = Model('/home/tushar/data2/checkpoints/face_relight/outputs/model_rgb_light3du/14_net_G.pth', lab=False, resolution=256, dataset_name='3dulight', name='RGB 3DULight v0.2')
+model_lab_3dulight_08_seg = Model('/home/tushar/data2/face_relight/outputs/model_256_3du_v08_lab_seg/14_net_G.pth', lab=True, resolution=256, dataset_name='3dulight', name='LAB 3DULight v0.8 10k Segment')
+model_lab_3dulight_08_full_seg = Model('/home/nedko/face_relight/outputs/remote/outputs/3dulight_v0.8_256_full/14_net_G.pth', lab=True, resolution=256, dataset_name='3dulight', name='LAB 3DULight v0.8 30k Segment +hair')
+model_lab_3dulight_08_bs16 = Model('/home/nedko/face_relight/outputs/remote/outputs/3dulight_v0.8_256_bs16//14_net_G.pth', lab=True, resolution=256, dataset_name='3dulight', name='LAB 3DULight v0.8 bs16')
+model_rgb_3dulight_08_full = Model('/home/nedko/face_relight/outputs/model_256_rgb_3dulight_v0.8/model_256_rgb_3dulight_v0.8_full/14_net_G.pth', lab=False, resolution=256, dataset_name='3dulight', name='RGB 3DULight v0.8 30k')
+model_rgb_3dulight_08 = Model('/home/nedko/face_relight/outputs/model_256_rgb_3dulight_v0.8/model_256_rgb_3dulight_v08_rgb/14_net_G.pth', lab=False, resolution=256, dataset_name='3dulight', name='RGB 3DULight v0.8')
+model_lab_3dulight_08_full = Model('/home/nedko/face_relight/outputs/model_256_lab_3dulight_v0.8_full/model_256_lab_3dulight_v0.8_full/14_net_G.pth', lab=True, resolution=256, dataset_name='3dulight', name='LAB 3DULight v0.8 30k')
+model_lab_3dulight_08 = Model('/home/nedko/face_relight/outputs/model_256_lab_3dulight_v0.8/model_256_lab_3dulight_v0.8/14_net_G.pth', lab=True, resolution=256, dataset_name='3dulight', name='LAB 3DULight v0.8')
+model_lab_3dulight_07_randfix = Model('/home/tushar/data2/face_relight/outputs/model_256_lab_3dulight_v0.7_random_ns5/model_256_lab_3dulight_v0.7_random_ns5/14_net_G.pth', lab=True, resolution=256, dataset_name='3dulight', name='LAB 3DULight v0.7 RANDFIX')
+model_lab_3dulight_07 = Model('/home/nedko/face_relight/outputs/model_256_lab_3dulight_v0.7_dlfix_ns15/model_256_lab_3dulight_v0.7_dlfix_ns15/14_net_G.pth', lab=True, resolution=256, dataset_name='3dulight', name='LAB 3DULight v0.7')
+model_lab_3dulight_06 = Model('/home/nedko/face_relight/outputs/model_256_lab_3dulight_v0.6_dlfix_ns15/model_256_lab_3dulight_v0.6_dlfix_ns15/14_net_G.pth', lab=True, resolution=256, dataset_name='3dulight', name='LAB 3DULight v0.6')
+model_lab_3dulight_05_shfix = Model('/home/nedko/face_relight/outputs/model_256_lab_3dulight_v0.5_shfix/model_256_lab_3dulight_v0.5_shfix/14_net_G.pth', lab=True, resolution=256, dataset_name='3dulight', name='LAB 3DULight v0.5 SHFIX')
 model_lab_dpr_10k = Model('/home/tushar/data2/checkpoints/model_256_dprdata10k_lab/14_net_G.pth', lab=True, resolution=256, dataset_name='dpr', sh_const = 0.7, name='LAB DPR 10K')
 model_lab_pretrained = Model('models/trained/trained_model_03.t7', lab=True, resolution=512, dataset_name='dpr', sh_const = 0.7, name='Pretrained DPR') # '/home/tushar/data2/DPR_test/trained_model/trained_model_03.t7'
 
 model_objs = [
     # model_lab_3dulight_08_bs16,
     # model_lab_3dulight_08_bs7,
-    model_lab_3dulight_08_full
+    model_lab_3dulight_08_full,
+    model_lab_3dulight_08_1024_10k
     # model_lab_dpr_seg
 ]
 
@@ -228,12 +229,13 @@ detector = dlib.get_frontal_face_detector()
 lmarks_model_path = osp.join(model_dir, 'shape_predictor_68_face_landmarks.dat')
 predictor = dlib.shape_predictor(lmarks_model_path)
 
-n_classes = 19
-segment_model = BiSeNet(n_classes=n_classes)
-segment_model.to(device)
-segment_model_path = osp.join(model_dir, 'face_parsing.pth')
-segment_model.load_state_dict(torch.load(segment_model_path))
-segment_model.eval()
+if enable_segment:
+    n_classes = 19
+    segment_model = BiSeNet(n_classes=n_classes)
+    segment_model.to(device)
+    segment_model_path = osp.join(model_dir, 'face_parsing.pth')
+    segment_model.load_state_dict(torch.load(segment_model_path))
+    segment_model.eval()
 
 def R(theta):
     return np.array([[np.cos(theta), -np.sin(theta)],[np.sin(theta), np.cos(theta)]])
@@ -259,7 +261,6 @@ segment_norm = transforms.Compose([
 
 def segment(img_, device):
     with torch.no_grad():
-
         h, w, _ = img_.shape
         image = cv2.resize(img_, (512, 512), interpolation=cv2.INTER_AREA)
         img = segment_norm(image)
@@ -388,7 +389,20 @@ def preprocess(img, device, enable_segment):
     return img, mask, loc, crop_sz, border
 
 
-def handle_output(outputImg, col, row, mask, img_p, img_orig, loc, crop_sz, border):
+def handle_output(outputImg, col, row, mask, img_p, img_orig, loc, crop_sz, border, enable_face_boxes, item_name, idx):
+    render_data_dir = '/home/nedko/face_relight/dbs/rendering'
+    model_data_dir = '/home/nedko/face_relight/outputs/test_bg'
+    out_dir = '/home/nedko/face_relight/outputs/test_bg_replace'
+    masks_fname = 'mask_full.png'
+    norms_fname = 'normals_diffused.png'
+
+    # mask_path = osp.join(render_data_dir, item_name, masks_fname)
+    # norms_path = osp.join(render_data_dir, item_name, norms_fname)
+    # render_path = osp.join(render_data_dir, item_name, '%04d.jpg' % idx)
+    # print(mask_path, norms_path)
+    # mask_full = (cv2.imread(mask_path) / 255).astype(np.uint8)
+    # norms = cv2.imread(norms_path)
+    # render_img = cv2.imread(render_path)
 
     # mask = (mask/255.0)[:,:, np.newaxis]
     result = cv2.resize(outputImg, (col, row))
@@ -417,54 +431,62 @@ def handle_output(outputImg, col, row, mask, img_p, img_orig, loc, crop_sz, bord
 
     out_img = cv2.resize(out_img, (crop_sz[1], crop_sz[0]))
 
-    top, bottom, left, right = border
-
-    right = -right
-    bottom = -bottom
-
-    if bottom == 0:
-        bottom = None
-
-    if right == 0:
-        right = None
-
-    out_img = out_img[top:bottom, left:right]
-
-    img_overlayed = np.copy(img_orig)
-    img_overlayed[loc[0]:loc[0] + out_img.shape[0], loc[1]:loc[1] + out_img.shape[1]] = out_img
-    # print(loc[0] - 10,loc[0] + outImage.shape[0] + 10, loc[1] - 10,loc[1] + outImage.shape[1] + 10)
-
-    '''
-    # blending fr the bounding box
-    img1 = np.ones_like(img_overlayed)
-
-    img1[loc[0]+2:loc[0] + outImage.shape[0]-2, loc[1]+2:loc[1] + outImage.shape[1]-2] = 0
-    mask = cv2.bitwise_not(img1)
-    mask[mask < 255] = 0
 
 
-    # blending
+    if not enable_face_boxes:
+        top, bottom, left, right = border
 
-    mask = cv2.GaussianBlur(mask, (7, 7), 7, 7)
-    # Normalize the alpha mask to kee   p intensity between 0 and 1
-    mask = mask.astype(float) / 255
-    background = np.copy(img_orig)
-    foreground = np.copy(img_overlayed)
-    foreground = foreground.astype(float)
-    background = background.astype(float)
+        right = -right
+        bottom = -bottom
 
-    # Multiply the foreground with the alpha matte
-    foreground = cv2.multiply(mask, foreground)
+        if bottom == 0:
+            bottom = None
 
-    # Multiply the background with ( 1 - alpha )
-    background = cv2.multiply(1 - mask, background)
+        if right == 0:
+            right = None
 
-    # Add the masked foreground and background.
-    outImage = cv2.add(foreground, background)
+        out_img = out_img[top:bottom, left:right]
 
-    # 
-    cv2.imwrite(filepath, outImage)
-    '''
+        img_overlayed = np.copy(img_orig)
+        img_overlayed[loc[0]:loc[0] + out_img.shape[0], loc[1]:loc[1] + out_img.shape[1]] = out_img
+    else:
+        img_overlayed = out_img
+
+
+
+    # # print(loc[0] - 10,loc[0] + outImage.shape[0] + 10, loc[1] - 10,loc[1] + outImage.shape[1] + 10)
+    #
+    #
+    # # blending fr the bounding box
+    # img1 = np.ones_like(img_overlayed)
+    #
+    # img1[loc[0]+2:loc[0] + out_img.shape[0]-2, loc[1]+2:loc[1] + out_img.shape[1]-2] = 0
+    # mask = cv2.bitwise_not(img1)
+    # mask[mask < 255] = 0
+    #
+    #
+    # # blending
+    #
+    # mask = cv2.GaussianBlur(mask, (7, 7), 7, 7)
+    # # Normalize the alpha mask to kee   p intensity between 0 and 1
+    # mask = mask.astype(float) / 255
+    # background = np.copy(img_orig)
+    # foreground = np.copy(img_overlayed)
+    # foreground = foreground.astype(float)
+    # background = background.astype(float)
+    #
+    # # Multiply the foreground with the alpha matte
+    # foreground = cv2.multiply(mask, foreground)
+    #
+    # # Multiply the background with ( 1 - alpha )
+    # background = cv2.multiply(1 - mask, background)
+    #
+    # # Add the masked foreground and background.
+    # out_img = cv2.add(foreground, background)
+    #
+    # #
+    # # cv2.imwrite(filepath, outImage)
+
     return img_overlayed
 
 
@@ -534,33 +556,6 @@ def vis_parsing_maps(im, parsing_anno, stride, h=None, w=None):
 #
 #
 #     return vis_parsing_anno
-
-
-def evaluate(img,face,device):
-    n_classes = 19
-    net = BiSeNet(n_classes=n_classes)
-    net.to(device)
-    save_pth = osp.join('demo_segment/cp', '79999_iter.pth')
-    net.load_state_dict(torch.load(save_pth))
-    net.eval()
-
-    to_tensor = transforms.Compose([
-        transforms.ToTensor(),
-        transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
-    ])
-    with torch.no_grad():
-        w,h = img.size
-        # h = img.shape[1]
-        image = img.resize((512, 512), Image.BILINEAR)
-        img = to_tensor(image)
-        img = torch.unsqueeze(img, 0)
-        img = img.to(device)
-        out = net(img)[0]
-        parsing = out.squeeze(0).cpu().numpy().argmax(0)
-        output_img = vis_parsing_maps(image, parsing, stride=1, h=h, w=w,face=face)
-    return output_img
-
-
 
 def load_model(checkpoint_dir_cmd, device, lab=True, model_1024=False):
     if lab:
@@ -633,47 +628,13 @@ for model_obj in model_objs:
 
 for orig_path, out_fname, gt_data in dataset.iterate():
 
-    video_out = FileOutput(osp.join(out_dir, out_fname.rsplit('.',1)[0]+'.mp4'))
     sh_path_dataset = None
     gt_path = None
 
     if gt_data is not None:
         gt_path, sh_path_dataset = gt_data
 
-    # orig_path = osp.join(dir, dir.rsplit('/',1)[-1] + '_05.png')
-    # left_path = osp.join(dir, dir.rsplit('/', 1)[-1] + '_00.png')
     orig_img = cv2.imread(orig_path)
-    # left_img = cv2.imread(left_path)
-
-    # max_dim = np.argmax([orig_img.shape[0], orig_img.shape[1]])
-    # orig_img_show = orig_img
-
-    if orig_img.shape[0] > min_resolution:
-        orig_img_show = resize_pil(orig_img, height=min_resolution)
-    else:
-        orig_img_show = orig_img
-    # if orig_img.shape[max_dim] > min_resolution:
-    #     if max_dim == 0:
-    #
-    #     elif max_dim == 1:
-    #         orig_img_show = imutils.resize(orig_img, width=min_resolution)
-
-    results = [orig_img_show]
-
-    if gt_path is not None:
-        gt_img = cv2.imread(gt_path)
-
-        if gt_img.shape[0] > min_resolution:
-            gt_img = resize_pil(gt_img, height=min_resolution)
-
-        cv2.putText(gt_img, 'Ground Truth', (5, 20), cv2.FONT_HERSHEY_COMPLEX, 0.5, 255)
-        results.append(gt_img)
-
-    if sh_path_dataset is None:
-        min_sh_list_len = min([len(model_obj.target_sh) for model_obj in model_objs])
-    else:
-        min_sh_list_len = 1
-
 
     orig_img_proc, mask, loc, crop_sz, border = preprocess(orig_img, device, enable_segment)
     is_face_found = orig_img is not None
@@ -681,6 +642,39 @@ for orig_path, out_fname, gt_data in dataset.iterate():
     if not is_face_found:
         print('No face found: ', orig_path)
         continue
+
+    if enable_test_mode:
+        results = []
+    else:
+        if enable_face_boxes:
+            orig_img_show = orig_img_proc
+        else:
+            orig_img_show = orig_img
+
+        if orig_img_show.shape[0] > min_resolution:
+            orig_img_show = resize_pil(orig_img_show, height=min_resolution)
+
+        results = [orig_img_show]
+
+    if gt_path is not None:
+        gt_img = cv2.imread(gt_path)
+
+        if gt_img.shape[0] > min_resolution:
+            gt_img = resize_pil(gt_img, height=min_resolution)
+
+        if not enable_test_mode:
+            cv2.putText(gt_img, 'Ground Truth', (5, 20), cv2.FONT_HERSHEY_COMPLEX, 0.5, 255)
+        results.append(gt_img)
+
+    if sh_path_dataset is None:
+        min_sh_list_len = min([len(model_obj.target_sh) for model_obj in model_objs])
+    else:
+        min_sh_list_len = 1
+
+    enable_video_out = min_sh_list_len > min_video_frames and not enable_forced_image_out
+
+    if enable_video_out:
+        video_out = FileOutput(osp.join(out_dir, out_fname.rsplit('.',1)[0]+'.mp4'))
 
     for sh_idx in range(min_sh_list_len):
         results_frame = []
@@ -697,7 +691,7 @@ for orig_path, out_fname, gt_data in dataset.iterate():
 
             result_img = test(model_obj, orig_img_proc, lab=model_obj.lab, sh_constant=model_obj.sh_const, res=model_obj.resolution, sh_id=target_sh, sh_path=sh_path, sh_fname=sh_fname, extra_ops=extra_ops)
 
-            result_img = handle_output(result_img, orig_img_proc.shape[1], orig_img_proc.shape[0], mask, orig_img_proc, orig_img, loc, crop_sz, border)
+            result_img = handle_output(result_img, orig_img_proc.shape[1], orig_img_proc.shape[0], mask, orig_img_proc, orig_img, loc, crop_sz, border, enable_face_boxes, orig_path.rsplit('/', 1)[-1].rsplit('.', 1)[0], sh_idx)
 
             if result_img.shape[0]>min_resolution:
                 result_img = resize_pil(result_img, height=min_resolution)
@@ -711,12 +705,12 @@ for orig_path, out_fname, gt_data in dataset.iterate():
         out_img = np.concatenate(results + results_frame, axis=1)
         print(orig_path, gt_path)
 
-        if min_sh_list_len > min_video_frames and not enable_forced_image_out:
+        if enable_video_out:
             video_out.post(out_img)
         else:
             cv2.imwrite(osp.join(out_dir, out_fname.rsplit('.', 1)[0] + '_%03d' % sh_idx + '.' + out_fname.rsplit('.', 1)[1]), out_img)
 
-
-    video_out.close()
+    if enable_video_out:
+        video_out.close()
     # plt.imshow(out_img[:,:,::-1])
     # plt.show()
