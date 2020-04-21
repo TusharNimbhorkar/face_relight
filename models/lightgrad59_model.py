@@ -160,7 +160,7 @@ class lightgrad59Model(BaseModel):
 
         self.forward(epoch)
 
-        if epoch>1:
+        if self.epochs_G_only==0 or epoch>1:
             # update D
             self.set_requires_grad(self.netD, True)
             self.optimizer_D.zero_grad()
