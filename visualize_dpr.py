@@ -7,7 +7,7 @@ import numpy as np
 import os
 import matplotlib.pyplot as plt
 from commons.common_tools import FileOutput
-from utils.utils_SH import get_shading
+from utils.utils_SH import get_shading, SH_basis
 from models.skeleton512_rgb import HourglassNet as HourglassNet_RGB
 from models.skeleton512 import HourglassNet
 # for 1024 skeleton
@@ -55,7 +55,7 @@ target_sh_id_dpr = list(range(72)) + [71]*20#60#5 #60
 target_sh_id_3dulight = list(range(90 - 22 - 45, 90 - 22 + 1))#75 # 19#89
 
 min_video_frames = 10
-min_resolution = 256
+min_resolution = 512
 
 os.makedirs(out_dir, exist_ok=True)
 
@@ -189,16 +189,20 @@ class Model:
 
 # dataset_test = DatasetDefault('path/to/files')
 dataset_3dulight_v0p8 = Dataset3DULightGT('/home/nedko/face_relight/dbs/3dulight_v0.8_256/train', n_samples=5, n_samples_offset=0) # DatasetDPR('/home/tushar/data2/DPR/train')
-dataset_3dulight_v0p7_randfix =  Dataset3DULightGT('/home/tushar/data2/face_relight/dbs/3dulight_v0.7_256_fix/train', n_samples=5, n_samples_offset=0) # DatasetDPR('/home/tushar/data2/DPR/train')
+dataset_3dulight_v0p7_randfix = Dataset3DULightGT('/home/tushar/data2/face_relight/dbs/3dulight_v0.7_256_fix/train', n_samples=5, n_samples_offset=0) # DatasetDPR('/home/tushar/data2/DPR/train')
 dataset_3dulight_v0p6 = Dataset3DULightGT('/home/nedko/face_relight/dbs/3dulight_v0.6_256/train', n_samples=5, n_samples_offset=5) # DatasetDPR('/home/tushar/data2/DPR/train')
 
-model_lab_3dulight_08_1024_10k = Model('/home/tushar/data2/face_relight/outputs/model_1024_3du_v08_lab_third/14_net_G.pth', lab=True, resolution=1024, dataset_name='3dulight', name='LAB 3DUL v0.8 1024 10k', model_1024=True)
-model_lab_3dulight_08_bs7 = Model('/home/nedko/face_relight/outputs/remote/outputs/model_256_lab_3dulight_v0.8_full_bs7/14_net_G.pth', lab=True, resolution=256, dataset_name='3dulight', name='LAB 3DUL v0.8 30k bs7')
+model_lab_3dulight_08_512_30k_bs7 = Model('/home/nedko/face_relight/outputs/remote/outputs/model_512_lab_3dulight_v0.8_full_bs7/7_net_G.pth', lab=True, resolution=512, dataset_name='3dulight', name='LAB 3DUL v0.8 512 30k BS7')
+model_lab_3dulight_08_1024_10k = Model('/home/tushar/data2/face_relight/outputs/model_1024_3du_v08_lab_10k_lg59/13_net_G.pth', lab=True, resolution=1024, dataset_name='3dulight', sh_const = 0.7, name='LAB DPR v0.8 1024 10k', model_1024=True)
+model_lab_dpr_08_1024_30k = Model('/home/tushar/data2/checkpoints_debug/model_fulltrain_dpr7_gan_BS7_1024/10_net_G.pth', lab=True, resolution=1024, dataset_name='dpr', sh_const = 0.7,name='LAB DPR v0.8 1024 30k')
+model_lab_3dulight_08_512_30k = Model('/home/nedko/face_relight/outputs/remote/outputs/model_512_lab_3dulight_v0.8_full_bs7/14_net_G.pth', lab=True, resolution=512, dataset_name='3dulight', name='LAB 3DUL v0.8 512 30k')
+model_lab_3dulight_08_1024_10k_third = Model('/home/tushar/data2/face_relight/outputs/model_1024_3du_v08_lab_third/13_net_G.pth', lab=True, resolution=1024, dataset_name='3dulight', name='LAB 3DUL v0.8 1024 10k Old', model_1024=True)
+model_lab_3dulight_08_bs20 = Model('/home/nedko/face_relight/outputs/remote/outputs/model_256_lab_3dulight_v0.8_full_bs7/14_net_G.pth', lab=True, resolution=256, dataset_name='3dulight', name='LAB 3DUL v0.8 30k bs7')
 model_lab_3dulight_08_seg_face = Model('/home/nedko/face_relight/outputs/remote/outputs/3dulight_v0.8_256_seg_face/14_net_G.pth', lab=True, resolution=256, dataset_name='3dulight', name='LAB 3DULight v0.8 10k Segment')
 model_lab_dpr_seg = Model('/home/tushar/data2/checkpoints_debug/model_fulltrain_dpr7_mse_sumBS20_ogsegment/14_net_G.pth', lab=True, resolution=256, dataset_name='dpr', sh_const = 0.7, name='LAB DPR v0.8 10k Segment')
 model_lab_3dulight_08_seg = Model('/home/tushar/data2/face_relight/outputs/model_256_3du_v08_lab_seg/14_net_G.pth', lab=True, resolution=256, dataset_name='3dulight', name='LAB 3DULight v0.8 10k Segment')
 model_lab_3dulight_08_full_seg = Model('/home/nedko/face_relight/outputs/remote/outputs/3dulight_v0.8_256_full/14_net_G.pth', lab=True, resolution=256, dataset_name='3dulight', name='LAB 3DULight v0.8 30k Segment +hair')
-model_lab_3dulight_08_bs16 = Model('/home/nedko/face_relight/outputs/remote/outputs/3dulight_v0.8_256_bs16//14_net_G.pth', lab=True, resolution=256, dataset_name='3dulight', name='LAB 3DULight v0.8 bs16')
+model_lab_3dulight_08_bs16 = Model('/home/nedko/face_relight/outputs/remote/outputs/3dulight_v0.8_256_bs16/14_net_G.pth', lab=True, resolution=256, dataset_name='3dulight', name='LAB 3DULight v0.8 bs16')
 model_rgb_3dulight_08_full = Model('/home/nedko/face_relight/outputs/model_256_rgb_3dulight_v0.8/model_256_rgb_3dulight_v0.8_full/14_net_G.pth', lab=False, resolution=256, dataset_name='3dulight', name='RGB 3DULight v0.8 30k')
 model_rgb_3dulight_08 = Model('/home/nedko/face_relight/outputs/model_256_rgb_3dulight_v0.8/model_256_rgb_3dulight_v08_rgb/14_net_G.pth', lab=False, resolution=256, dataset_name='3dulight', name='RGB 3DULight v0.8')
 model_lab_3dulight_08_full = Model('/home/nedko/face_relight/outputs/model_256_lab_3dulight_v0.8_full/model_256_lab_3dulight_v0.8_full/14_net_G.pth', lab=True, resolution=256, dataset_name='3dulight', name='LAB 3DULight v0.8 30k')
@@ -208,18 +212,27 @@ model_lab_3dulight_07 = Model('/home/nedko/face_relight/outputs/model_256_lab_3d
 model_lab_3dulight_06 = Model('/home/nedko/face_relight/outputs/model_256_lab_3dulight_v0.6_dlfix_ns15/model_256_lab_3dulight_v0.6_dlfix_ns15/14_net_G.pth', lab=True, resolution=256, dataset_name='3dulight', name='LAB 3DULight v0.6')
 model_lab_3dulight_05_shfix = Model('/home/nedko/face_relight/outputs/model_256_lab_3dulight_v0.5_shfix/model_256_lab_3dulight_v0.5_shfix/14_net_G.pth', lab=True, resolution=256, dataset_name='3dulight', name='LAB 3DULight v0.5 SHFIX')
 model_lab_dpr_10k = Model('/home/tushar/data2/checkpoints/model_256_dprdata10k_lab/14_net_G.pth', lab=True, resolution=256, dataset_name='dpr', sh_const = 0.7, name='LAB DPR 10K')
+model_lab_dpr_512_30k = Model('/home/tushar/data2/checkpoints_debug/model_fulltrain_dpr7_mse_sumBS20/14_net_G.pth', lab=True, resolution=512, dataset_name='dpr', sh_const = 0.7, name='LAB DPR 512 30K')
 model_lab_pretrained = Model('models/trained/trained_model_03.t7', lab=True, resolution=512, dataset_name='dpr', sh_const = 0.7, name='Pretrained DPR') # '/home/tushar/data2/DPR_test/trained_model/trained_model_03.t7'
 
 model_objs = [
     # model_lab_3dulight_08_bs16,
     # model_lab_3dulight_08_bs7,
-    model_lab_3dulight_08_full,
-    model_lab_3dulight_08_1024_10k
+    # model_lab_3dulight_08_full,
+    # model_lab_dpr_512_30k,
+    # model_lab_3dulight_08_1024_10k,
+    # model_lab_3dulight_08_1024_10k_third,
+    # model_lab_3dulight_08_512_30k,
+    model_lab_3dulight_08_full
+    # model_lab_dpr_512_30k,
+    # model_lab_3dulight_08_1024_10k
     # model_lab_dpr_seg
 ]
 
 # dataset = dataset_3dulight_v0p8
 dataset = DatasetDefault(args["input"])
+
+min_resolution = np.min([min_resolution] + [model_obj.resolution for model_obj in model_objs])
 
 # checkpoint_src = '/home/nedko/face_relight/outputs/model_256_lab_3dulight_v0.3/model_256_lab_3dulight_v0.3/14_net_G.pth'
 # checkpoint_tgt = '/home/tushar/data2/checkpoints/model_256_3dudataset_lab/model_256_3dudataset_lab/14_net_G.pth' #'/home/tushar/data2/checkpoints/face_relight/outputs/model_rgb_light3du/14_net_G.pth' #'/home/tushar/data2/DPR_test/trained_model/trained_model_03.t7'
@@ -241,6 +254,31 @@ def R(theta):
     return np.array([[np.cos(theta), -np.sin(theta)],[np.sin(theta), np.cos(theta)]])
 
 R_90 = R(np.deg2rad(90))
+
+
+def Rx(x, sx):
+    return np.array([
+            [sx, 0, 0],
+            [0, np.cos(x), -np.sin(x)],
+            [0, np.sin(x), np.cos(x)]
+        ])
+
+def Ry(y, sy):
+    return np.array([
+            [np.cos(y), 0, np.sin(y)],
+            [0, sy, 0],
+            [-np.sin(y), 0, np.cos(y)]
+        ])
+
+def Rz(z, sz):
+    return np.array([
+            [np.cos(z), -np.sin(z), 0],
+            [np.sin(z), np.cos(z), 0],
+            [0, 0, sz]
+        ])
+
+def R(x, y, z, sx=1, sy=1, sz=1):
+    return Rz(z, sz) @ Ry(y, sy) @ Rx(x, sx)
 
 def shape_to_np(shape, dtype="int"):
     # initialize the list of (x, y)-coordinates
@@ -389,23 +427,43 @@ def preprocess(img, device, enable_segment):
     return img, mask, loc, crop_sz, border
 
 
-def handle_output(outputImg, col, row, mask, img_p, img_orig, loc, crop_sz, border, enable_face_boxes, item_name, idx):
+def handle_output(out_img, col, row, mask, img_p, img_orig, loc, crop_sz, border, enable_face_boxes, item_name, sh_id, sh):
     render_data_dir = '/home/nedko/face_relight/dbs/rendering'
     model_data_dir = '/home/nedko/face_relight/outputs/test_bg'
     out_dir = '/home/nedko/face_relight/outputs/test_bg_replace'
     masks_fname = 'mask_full.png'
-    norms_fname = 'normals_diffused.png'
+    norms_fname = 'normals_warped.png'
 
-    # mask_path = osp.join(render_data_dir, item_name, masks_fname)
-    # norms_path = osp.join(render_data_dir, item_name, norms_fname)
-    # render_path = osp.join(render_data_dir, item_name, '%04d.jpg' % idx)
-    # print(mask_path, norms_path)
-    # mask_full = (cv2.imread(mask_path) / 255).astype(np.uint8)
-    # norms = cv2.imread(norms_path)
-    # render_img = cv2.imread(render_path)
+    mask_path = osp.join(render_data_dir, item_name, masks_fname)
+    norms_path = osp.join(render_data_dir, item_name, norms_fname)
+    render_path = osp.join(render_data_dir, item_name, '%04d.jpg' % (sh_id * 2))
+    print(mask_path, norms_path, render_path)
+
+    if osp.exists(mask_path) and osp.exists(norms_path) and osp.exists(render_path):
+        mask_rendering = (np.asarray(cv2.imread(mask_path)) / 255)
+        # mask = mask_rendering[loc[0]:loc[0] + mask.shape[0], loc[1]:loc[1] + mask.shape[1]]
+        norms = np.asarray(cv2.imread(norms_path)).astype(np.float)
+        norms[:, :, 0] = norms[:, :, 0]  / 127.5 - 1
+        norms[:, :, 1] = norms[:, :, 1]  / 127.5 - 1
+        norms[:, :, 2] = (norms[:, :, 2] - 127.5) / 127.5
+        # norms = norms[:,:,::-1]
+        norms[:,:,1], norms[:,:,2] = np.copy(norms[:,:,2]), np.copy(norms[:,:,1])
+
+        r = R(np.deg2rad(0), np.deg2rad(0), np.deg2rad(0), sx=-1)[np.newaxis,...]
+
+        shp = norms.shape
+        norms= np.reshape(norms, (norms.shape[0]*norms.shape[1],3, 1))
+
+        norms = r@norms
+        norms = np.reshape(norms, (shp[0], shp[1], 3))
+        img_rendered = cv2.imread(render_path)
+    else:
+        mask_rendering = None
+        img_rendered = None
+        norms = None
 
     # mask = (mask/255.0)[:,:, np.newaxis]
-    result = cv2.resize(outputImg, (col, row))
+    result = cv2.resize(out_img, (col, row))
 
     # do something here
     # make a gauss blur
@@ -447,8 +505,41 @@ def handle_output(outputImg, col, row, mask, img_p, img_orig, loc, crop_sz, bord
 
         out_img = out_img[top:bottom, left:right]
 
-        img_overlayed = np.copy(img_orig)
-        img_overlayed[loc[0]:loc[0] + out_img.shape[0], loc[1]:loc[1] + out_img.shape[1]] = out_img
+        if img_rendered is not None:
+            img_overlayed = np.copy(img_orig)
+            img_overlayed[loc[0]:loc[0] + out_img.shape[0], loc[1]:loc[1] + out_img.shape[1]] = out_img
+            mask_rendering_crop = mask_rendering[loc[0]:loc[0] + out_img.shape[0], loc[1]:loc[1] + out_img.shape[1]]
+
+            # basis = SH_basis([[1,1,1]])
+            # print(norms.shape)
+            sh = np.reshape(sh, (9,1))
+            shading = get_shading(np.reshape(norms, (norms.shape[0]*norms.shape[1], 3)), sh)
+            # value = np.percentile(shading, 95)
+            # ind = shading > value
+            # shading[ind] = value
+
+            shading = np.reshape(shading, (norms.shape[0], norms.shape[1], 1))
+            shaded = np.array(img_orig).astype(np.float) * shading
+            img = (255*(shaded/np.max(shaded))).astype(np.uint8)
+
+            # shading = (shading - np.min(shading)) / (np.max(shading) - np.min(shading))
+            # shading = np.reshape(shading, (norms.shape[0], norms.shape[1],1))
+            # img = (np.array(img_orig).astype(np.float)*shading).astype(np.uint8)
+
+            # mask_rendering = cv2.GaussianBlur(mask_rendering, (15, 15), 15, 15)
+
+            # background = cv2.multiply(1-mask_rendering, np.array(img_rendered).astype(np.float))
+            # foreground = cv2.multiply(mask_rendering, np.array(img_overlayed).astype(np.float))
+            # img_overlayed = cv2.add(background, foreground)
+
+            print(img_rendered.shape, mask_rendering.shape, out_img.shape)
+
+            out_img = out_img.astype(np.uint8)
+            img_rendered = img_rendered.astype(np.uint8)
+            img_overlayed = cv2.seamlessClone(out_img, img_rendered, np.ones((out_img.shape[0], out_img.shape[1], 3))*255, (int(img_rendered.shape[0]/2),int(img_rendered.shape[1])), cv2.MIXED_CLONE)
+        else:
+            img_overlayed = np.copy(img_orig)
+            img_overlayed[loc[0]:loc[0] + out_img.shape[0], loc[1]:loc[1] + out_img.shape[1]] = out_img
     else:
         img_overlayed = out_img
 
@@ -531,32 +622,6 @@ def vis_parsing_maps(im, parsing_anno, stride, h=None, w=None):
     alpha_2 = alpha_2.astype(float) / 255
     return alpha_2
 
-# # Functions for segment parsing
-# def vis_parsing_maps(im, parsing_anno, stride, h=None, w=None,face=False):
-#     im = np.array(im)
-#     vis_im = im.copy().astype(np.uint8)
-#     vis_parsing_anno = parsing_anno.copy().astype(np.uint8)
-#     vis_parsing_anno = cv2.resize(vis_parsing_anno, None, fx=stride, fy=stride, interpolation=cv2.INTER_NEAREST)
-#     vis_parsing_anno_color = np.zeros((vis_parsing_anno.shape[0], vis_parsing_anno.shape[1], 3)) + 255
-#     num_of_class = np.max(vis_parsing_anno)
-#     vis_parsing_anno_color = vis_parsing_anno_color.astype(np.uint8)
-#     vis_im = cv2.addWeighted(cv2.cvtColor(vis_im, cv2.COLOR_RGB2BGR), 0.4, vis_parsing_anno_color, 0.6, 0)
-#     # MASK
-#     vis_parsing_anno = cv2.resize(vis_parsing_anno, (w, h))
-#
-#     # only face skin
-#     vis_parsing_anno[vis_parsing_anno == 16] = 0
-#     vis_parsing_anno[vis_parsing_anno == 14] = 0
-#     vis_parsing_anno[vis_parsing_anno == 7] = 0
-#     vis_parsing_anno[vis_parsing_anno == 8] = 0
-#     if face:
-#         vis_parsing_anno[vis_parsing_anno==17]=0
-#
-#     vis_parsing_anno[vis_parsing_anno > 0] = 255
-#
-#
-#     return vis_parsing_anno
-
 def load_model(checkpoint_dir_cmd, device, lab=True, model_1024=False):
     if lab:
         if model_1024:
@@ -620,7 +685,7 @@ def test(my_network, input_img, lab=True, sh_id=0, sh_constant=1.0, res=256, sh_
 
     output_img, output_sh = my_network(img, sh, 0, **extra_ops)
 
-    return output_img
+    return output_img, sh
 
 
 for model_obj in model_objs:
@@ -689,15 +754,17 @@ for orig_path, out_fname, gt_data in dataset.iterate():
 
             extra_ops={}
 
-            result_img = test(model_obj, orig_img_proc, lab=model_obj.lab, sh_constant=model_obj.sh_const, res=model_obj.resolution, sh_id=target_sh, sh_path=sh_path, sh_fname=sh_fname, extra_ops=extra_ops)
+            result_img, sh = test(model_obj, orig_img_proc, lab=model_obj.lab, sh_constant=model_obj.sh_const, res=model_obj.resolution, sh_id=target_sh, sh_path=sh_path, sh_fname=sh_fname, extra_ops=extra_ops)
 
-            result_img = handle_output(result_img, orig_img_proc.shape[1], orig_img_proc.shape[0], mask, orig_img_proc, orig_img, loc, crop_sz, border, enable_face_boxes, orig_path.rsplit('/', 1)[-1].rsplit('.', 1)[0], sh_idx)
+            result_img = handle_output(result_img, orig_img_proc.shape[1], orig_img_proc.shape[0], mask, orig_img_proc, orig_img, loc, crop_sz, border, enable_face_boxes, orig_path.rsplit('/', 1)[-1].rsplit('.', 1)[0], target_sh, sh)
 
             if result_img.shape[0]>min_resolution:
                 result_img = resize_pil(result_img, height=min_resolution)
 
             result_img = np.ascontiguousarray(result_img, dtype=np.uint8)
-            cv2.putText(result_img, model_obj.name, (5, 20), cv2.FONT_HERSHEY_COMPLEX, 0.5, 255)
+
+            if not enable_test_mode:
+                cv2.putText(result_img, model_obj.name, (5, 20), cv2.FONT_HERSHEY_COMPLEX, 0.5, 255)
             results_frame.append(result_img)
 
         # tgt_result = cv2.resize(tgt_result, (256,256))
