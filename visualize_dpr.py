@@ -5,6 +5,7 @@ import cv2
 import imutils
 import numpy as np
 import os
+from enum import Enum
 import matplotlib.pyplot as plt
 from commons.common_tools import FileOutput
 from utils.utils_SH import get_shading, SH_basis
@@ -22,6 +23,10 @@ import dlib
 from demo_segment.model import BiSeNet
 import torchvision.transforms as transforms
 
+class BlendEnum(Enum):
+    NONE = "none"
+    POISSON = "poisson"
+    RENDER_ONLY = "render_only"
 
 ap = argparse.ArgumentParser()
 ap.add_argument("-i", "--input", default='test_data/test_images', required=False,
@@ -30,6 +35,8 @@ ap.add_argument("-o", "--output", default='outputs/test', required=False,
 	help="Output Directory")
 ap.add_argument("-d", "--device", default='cuda', required=False, choices=['cuda','cpu'],
 	help="Device")
+ap.add_argument("-b", "--blend_mode", default=BlendEnum.POISSON, required=False, choices=[blend for blend in BlendEnum],
+	help="Blending mode")
 ap.add_argument("-f", "--force_images", required=False, action="store_true",
 	help="Force generating images")
 ap.add_argument("-c", "--crops_only", required=False, action="store_true",
@@ -41,6 +48,7 @@ ap.add_argument("-t", "--test", required=False, action="store_true",
 args = vars(ap.parse_args())
 
 device = args['device']
+blend_mode = BlendEnum(args["blend_mode"])
 enable_forced_image_out = args['force_images']
 enable_segment = args['segment']
 enable_face_boxes = args['crops_only']
@@ -131,7 +139,7 @@ class Dataset3DULightGT(Dataset3DULight):
 
 
 class Model:
-    def __init__(self, checkpoint_path, lab, resolution, dataset_name, sh_const=1.0, name='',model_1024=False):
+    def __init__(self, checkpoint_path, lab, resolution, dataset_name, sh_const=1.0, name='',model_1024=False, blend_mode=blend_mode):
         self.checkpoint_path = checkpoint_path
         self.lab = lab
         self.resolution = resolution
@@ -140,6 +148,7 @@ class Model:
         self.name=name
         self.device = device ##TODO
         self.model_1024=model_1024
+        self.blend_mode = blend_mode
         # self.post_flag = post_flag
 
 
@@ -192,11 +201,13 @@ dataset_3dulight_v0p8 = Dataset3DULightGT('/home/nedko/face_relight/dbs/3dulight
 dataset_3dulight_v0p7_randfix = Dataset3DULightGT('/home/tushar/data2/face_relight/dbs/3dulight_v0.7_256_fix/train', n_samples=5, n_samples_offset=0) # DatasetDPR('/home/tushar/data2/DPR/train')
 dataset_3dulight_v0p6 = Dataset3DULightGT('/home/nedko/face_relight/dbs/3dulight_v0.6_256/train', n_samples=5, n_samples_offset=5) # DatasetDPR('/home/tushar/data2/DPR/train')
 
-model_lab_3dulight_08_512_30k_bs7 = Model('/home/nedko/face_relight/outputs/remote/outputs/model_512_lab_3dulight_v0.8_full_bs7/7_net_G.pth', lab=True, resolution=512, dataset_name='3dulight', name='LAB 3DUL v0.8 512 30k BS7')
-model_lab_3dulight_08_1024_10k = Model('/home/tushar/data2/face_relight/outputs/model_1024_3du_v08_lab_10k_lg59/13_net_G.pth', lab=True, resolution=1024, dataset_name='3dulight', sh_const = 0.7, name='LAB DPR v0.8 1024 10k', model_1024=True)
+model_lab_3dulight_08_512_30k_bs7 = Model('/home/nedko/face_relight/outputs/remote/outputs/model_512_lab_3dulight_v0.8_full_bs7/9_net_G.pth', lab=True, resolution=512, dataset_name='3dulight', name='LAB 3DUL v0.8 512 30k BS7')
+model_lab_3dulight_08_1024_10k = Model('/home/tushar/data2/face_relight/outputs/model_1024_3du_v08_lab_10k_lg59/13_net_G.pth', lab=True, resolution=1024, dataset_name='3dulight', name='LAB DPR v0.8 1024 10k', model_1024=True)
 model_lab_dpr_08_1024_30k = Model('/home/tushar/data2/checkpoints_debug/model_fulltrain_dpr7_gan_BS7_1024/10_net_G.pth', lab=True, resolution=1024, dataset_name='dpr', sh_const = 0.7,name='LAB DPR v0.8 1024 30k')
+model_lab_3dulight_08_512_30k_render = Model('/home/nedko/face_relight/outputs/remote/outputs/model_512_lab_3dulight_v0.8_full_bs7/14_net_G.pth', lab=True, resolution=512, dataset_name='3dulight', name='LAB 3DUL v0.8 512 30k Render', blend_mode=BlendEnum.RENDER_ONLY)
+model_lab_3dulight_08_512_30k_noblend = Model('/home/nedko/face_relight/outputs/remote/outputs/model_512_lab_3dulight_v0.8_full_bs7/14_net_G.pth', lab=True, resolution=512, dataset_name='3dulight', name='LAB 3DUL v0.8 512 30k No Blend', blend_mode=BlendEnum.NONE)
 model_lab_3dulight_08_512_30k = Model('/home/nedko/face_relight/outputs/remote/outputs/model_512_lab_3dulight_v0.8_full_bs7/14_net_G.pth', lab=True, resolution=512, dataset_name='3dulight', name='LAB 3DUL v0.8 512 30k')
-model_lab_3dulight_08_1024_10k_third = Model('/home/tushar/data2/face_relight/outputs/model_1024_3du_v08_lab_third/13_net_G.pth', lab=True, resolution=1024, dataset_name='3dulight', name='LAB 3DUL v0.8 1024 10k Old', model_1024=True)
+model_lab_3dulight_08_1024_10k_third = Model('/home/tushar/data2/face_relight/outputs/model_1024_3du_v08_lab_third/14_net_G.pth', lab=True, resolution=1024, dataset_name='3dulight', name='LAB 3DUL v0.8 1024 10k Old', model_1024=True)
 model_lab_3dulight_08_bs20 = Model('/home/nedko/face_relight/outputs/remote/outputs/model_256_lab_3dulight_v0.8_full_bs7/14_net_G.pth', lab=True, resolution=256, dataset_name='3dulight', name='LAB 3DUL v0.8 30k bs7')
 model_lab_3dulight_08_seg_face = Model('/home/nedko/face_relight/outputs/remote/outputs/3dulight_v0.8_256_seg_face/14_net_G.pth', lab=True, resolution=256, dataset_name='3dulight', name='LAB 3DULight v0.8 10k Segment')
 model_lab_dpr_seg = Model('/home/tushar/data2/checkpoints_debug/model_fulltrain_dpr7_mse_sumBS20_ogsegment/14_net_G.pth', lab=True, resolution=256, dataset_name='dpr', sh_const = 0.7, name='LAB DPR v0.8 10k Segment')
@@ -223,7 +234,7 @@ model_objs = [
     # model_lab_3dulight_08_1024_10k,
     # model_lab_3dulight_08_1024_10k_third,
     # model_lab_3dulight_08_512_30k,
-    model_lab_3dulight_08_full
+    model_lab_3dulight_08_1024_10k_third,
     # model_lab_dpr_512_30k,
     # model_lab_3dulight_08_1024_10k
     # model_lab_dpr_seg
@@ -427,7 +438,7 @@ def preprocess(img, device, enable_segment):
     return img, mask, loc, crop_sz, border
 
 
-def handle_output(out_img, col, row, mask, img_p, img_orig, loc, crop_sz, border, enable_face_boxes, item_name, sh_id, sh):
+def handle_output(out_img, col, row, mask, img_p, img_orig, loc, crop_sz, border, enable_face_boxes, item_name, sh_id, sh, blend_mode):
     render_data_dir = '/home/nedko/face_relight/dbs/rendering'
     model_data_dir = '/home/nedko/face_relight/outputs/test_bg'
     out_dir = '/home/nedko/face_relight/outputs/test_bg_replace'
@@ -439,7 +450,7 @@ def handle_output(out_img, col, row, mask, img_p, img_orig, loc, crop_sz, border
     render_path = osp.join(render_data_dir, item_name, '%04d.jpg' % (sh_id * 2))
     print(mask_path, norms_path, render_path)
 
-    if osp.exists(mask_path) and osp.exists(norms_path) and osp.exists(render_path):
+    if osp.exists(mask_path) and osp.exists(norms_path) and osp.exists(render_path) and blend_mode in [BlendEnum.POISSON, BlendEnum.RENDER_ONLY]:
         mask_rendering = (np.asarray(cv2.imread(mask_path)) / 255)
         # mask = mask_rendering[loc[0]:loc[0] + mask.shape[0], loc[1]:loc[1] + mask.shape[1]]
         norms = np.asarray(cv2.imread(norms_path)).astype(np.float)
@@ -470,7 +481,7 @@ def handle_output(out_img, col, row, mask, img_p, img_orig, loc, crop_sz, border
 
     # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!  TODO add original image which will be background  CHECK AGAIN  !!!!!!!!!!!
 
-    if mask is not None:
+    if mask is not None and img_rendered is None:
         background = np.copy(img_p)
         foreground = np.copy(result)
         foreground = foreground.astype(float)
@@ -513,6 +524,7 @@ def handle_output(out_img, col, row, mask, img_p, img_orig, loc, crop_sz, border
             # basis = SH_basis([[1,1,1]])
             # print(norms.shape)
             sh = np.reshape(sh, (9,1))
+            sh[0,0]*=3
             shading = get_shading(np.reshape(norms, (norms.shape[0]*norms.shape[1], 3)), sh)
             # value = np.percentile(shading, 95)
             # ind = shading > value
@@ -520,7 +532,7 @@ def handle_output(out_img, col, row, mask, img_p, img_orig, loc, crop_sz, border
 
             shading = np.reshape(shading, (norms.shape[0], norms.shape[1], 1))
             shaded = np.array(img_orig).astype(np.float) * shading
-            img = (255*(shaded/np.max(shaded))).astype(np.uint8)
+            img_rendered = (255*(shaded/np.max(shaded))).astype(np.uint8)
 
             # shading = (shading - np.min(shading)) / (np.max(shading) - np.min(shading))
             # shading = np.reshape(shading, (norms.shape[0], norms.shape[1],1))
@@ -532,11 +544,47 @@ def handle_output(out_img, col, row, mask, img_p, img_orig, loc, crop_sz, border
             # foreground = cv2.multiply(mask_rendering, np.array(img_overlayed).astype(np.float))
             # img_overlayed = cv2.add(background, foreground)
 
-            print(img_rendered.shape, mask_rendering.shape, out_img.shape)
 
             out_img = out_img.astype(np.uint8)
             img_rendered = img_rendered.astype(np.uint8)
-            img_overlayed = cv2.seamlessClone(out_img, img_rendered, np.ones((out_img.shape[0], out_img.shape[1], 3))*255, (int(img_rendered.shape[0]/2),int(img_rendered.shape[1])), cv2.MIXED_CLONE)
+
+            # Create an all white mask
+            mask = 255 * np.ones(out_img.shape, out_img.dtype)
+
+            # The location of the center of the src in the dst
+            width, height, channels = out_img.shape
+            # loc[0]: loc[0] + out_img.shape[0], loc[1]: loc[1] + out_img.shape[1]
+            center = (loc[1] + int(out_img.shape[1]/2), loc[0] + int(out_img.shape[0]/2))
+            # center = ( int(out_img.shape[1] / 2), int(out_img.shape[0] / 2))
+
+
+            if blend_mode == BlendEnum.POISSON:
+                from commons.torch_tools import Chronometer
+                chron = Chronometer(torch.device('cpu'))
+                chron.tick()
+                # out_img_expanded = np.copy(img_orig)
+                # out_img_expanded[loc[0]:loc[0] + out_img.shape[0], loc[1]:loc[1] + out_img.shape[1]] = out_img
+                # mask_rendering_extended = np.zeros(out_img_expanded.shape)
+                # mask_rendering_extended[loc[0]:loc[0] + out_img.shape[0], loc[1]:loc[1] + out_img.shape[1]] = mask_rendering_crop
+                # mask_rendering_crop = mask_rendering_extended
+
+                mask_rendering_crop_gt0 = mask_rendering_crop > 0
+                mask_rendering_crop[mask_rendering_crop_gt0]=255
+
+                # mask_rendering_crop = np.abs(mask_rendering_crop - 255)
+                # mask_rendering_crop_gt0 = ~mask_rendering_crop_gt0
+
+                mask_rendering_crop = mask_rendering_crop.astype(np.uint8)
+                occurences = np.where(mask_rendering_crop_gt0)
+                mask_loc = [np.min(occurences[0]), np.min(occurences[1])]
+                mask_sz = [np.max(occurences[0])-mask_loc[0]+1, np.max(occurences[1])-mask_loc[1]+1]
+                center = (loc[1] + mask_loc[1] + int(mask_sz[1]/2), loc[0] + mask_loc[0] + int(mask_sz[0]/2))
+                print(center, mask_sz, mask_rendering_crop.shape, mask_rendering_crop_gt0.shape)
+
+                img_overlayed = cv2.seamlessClone(out_img, img_rendered, mask_rendering_crop, center, cv2.NORMAL_CLONE)
+                print('TIME', chron.tock())
+            elif blend_mode == BlendEnum.RENDER_ONLY:
+                img_overlayed = img_rendered
         else:
             img_overlayed = np.copy(img_orig)
             img_overlayed[loc[0]:loc[0] + out_img.shape[0], loc[1]:loc[1] + out_img.shape[1]] = out_img
@@ -756,7 +804,7 @@ for orig_path, out_fname, gt_data in dataset.iterate():
 
             result_img, sh = test(model_obj, orig_img_proc, lab=model_obj.lab, sh_constant=model_obj.sh_const, res=model_obj.resolution, sh_id=target_sh, sh_path=sh_path, sh_fname=sh_fname, extra_ops=extra_ops)
 
-            result_img = handle_output(result_img, orig_img_proc.shape[1], orig_img_proc.shape[0], mask, orig_img_proc, orig_img, loc, crop_sz, border, enable_face_boxes, orig_path.rsplit('/', 1)[-1].rsplit('.', 1)[0], target_sh, sh)
+            result_img = handle_output(result_img, orig_img_proc.shape[1], orig_img_proc.shape[0], mask, orig_img_proc, orig_img, loc, crop_sz, border, enable_face_boxes, orig_path.rsplit('/', 1)[-1].rsplit('.', 1)[0], target_sh, sh, model_obj.blend_mode)
 
             if result_img.shape[0]>min_resolution:
                 result_img = resize_pil(result_img, height=min_resolution)
