@@ -121,12 +121,12 @@ class lightDPR7Dataset(BaseDataset):
         #Real discriminator image
         img_real = cv2.imread(real_path)
 
-        if self.img_size < img_real.shape[0]:
-            try:
+        try:
+            if self.img_size < img_real.shape[0]:
                     img_real = cv2.resize(img_real, (self.img_size, self.img_size))
-            except Exception as e:
-                print(real_path)
-                raise e
+        except Exception as e:
+            print(real_path)
+            raise e
 
         input_real = self._img_to_input(img_real)
 
