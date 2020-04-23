@@ -203,7 +203,7 @@ dataset_3dulight_v0p6 = Dataset3DULightGT('/home/nedko/face_relight/dbs/3dulight
 
 model_lab_3dulight_08_512_30k_bs7 = Model('/home/nedko/face_relight/outputs/remote/outputs/model_512_lab_3dulight_v0.8_full_bs7/9_net_G.pth', lab=True, resolution=512, dataset_name='3dulight', name='LAB 3DUL v0.8 512 30k BS7')
 model_lab_3dulight_08_1024_10k = Model('/home/tushar/data2/face_relight/outputs/model_1024_3du_v08_lab_10k_lg59/13_net_G.pth', lab=True, resolution=1024, dataset_name='3dulight', name='LAB DPR v0.8 1024 10k', model_1024=True)
-model_lab_dpr_08_1024_30k = Model('/home/tushar/data2/checkpoints_debug/model_fulltrain_dpr7_gan_BS7_1024/10_net_G.pth', lab=True, resolution=1024, dataset_name='dpr',name='LAB DPR v0.8 1024 30k')
+model_lab_dpr_08_1024_30k = Model('/home/tushar/data2/checkpoints_debug/model_fulltrain_dpr7_gan_BS7_1024/10_net_G.pth', lab=True, resolution=1024, dataset_name='dpr', sh_const = 0.7,name='LAB DPR v0.8 1024 30k')
 model_lab_3dulight_08_512_30k_render = Model('/home/nedko/face_relight/outputs/remote/outputs/model_512_lab_3dulight_v0.8_full_bs7/14_net_G.pth', lab=True, resolution=512, dataset_name='3dulight', name='LAB 3DUL v0.8 512 30k Render', blend_mode=BlendEnum.RENDER_ONLY)
 model_lab_3dulight_08_512_30k_noblend = Model('/home/nedko/face_relight/outputs/remote/outputs/model_512_lab_3dulight_v0.8_full_bs7/14_net_G.pth', lab=True, resolution=512, dataset_name='3dulight', name='LAB 3DUL v0.8 512 30k No Blend', blend_mode=BlendEnum.NONE)
 model_lab_3dulight_08_512_30k = Model('/home/nedko/face_relight/outputs/remote/outputs/model_512_lab_3dulight_v0.8_full_bs7/14_net_G.pth', lab=True, resolution=512, dataset_name='3dulight', name='LAB 3DUL v0.8 512 30k')
