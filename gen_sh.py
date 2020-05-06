@@ -1,6 +1,6 @@
 #Generates SH coefficients from light direction
 
-from utils.utils_SH import SH_basis, euler_to_dir, gen_half_sphere
+from utils.utils_SH import SH_basis, euler_to_dir, gen_half_sphere, convert_sh_to_3dul
 import glob
 import os.path as osp
 import csv
@@ -64,4 +64,12 @@ for entry_dir in entry_dirs:
             cv2.imwrite(out_orig_img_path, orig_img)
         else:
             shutil.copyfile(orig_img_path, out_orig_img_path)
-        shutil.copyfile(orig_sh_path, out_orig_sh_path)
+
+        sh = np.loadtxt(orig_sh_path)
+        # plt.imshow(gen_half_sphere(sh))
+        # plt.show()
+
+        sh_rot = convert_sh_to_3dul(sh)
+        sh_rot[0]=8.862269254527579410e-01
+        np.savetxt(out_orig_sh_path, sh_rot)
+        # shutil.copyfile(orig_sh_path, out_orig_sh_path)
