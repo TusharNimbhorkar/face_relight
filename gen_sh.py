@@ -25,10 +25,13 @@ data_dir = args['input_dir'] #'/home/nedko/face_relight/dbs/example_data'
 older_date_dir = args['prev_dir'] #/home/tushar/data2/DPR/train
 light_info_fname = 'index.txt'
 out_sh_fname = 'light_%s_sh.txt'
-
-orig_img_fname = '%s_05.png'
-orig_sh_fname = '%s_light_05.txt'
 out_orig_img_fname = 'orig.png'
+
+# orig_img_fname = '%s_05.png'
+# orig_sh_fname = '%s_light_05.txt'
+
+orig_img_fname = '%s.png'
+orig_sh_fname = 'ori_sh.txt'
 
 orig_size = args['size']
 
@@ -54,7 +57,7 @@ for entry_dir in entry_dirs:
 
         entry_subname = entry_dir.rsplit('/',1)[-1]
         orig_img_path = osp.join(older_date_dir, entry_subname, orig_img_fname % entry_subname)
-        orig_sh_path = osp.join(older_date_dir, entry_subname, orig_sh_fname % entry_subname)
+        orig_sh_path = osp.join(older_date_dir, entry_subname, orig_sh_fname) #% entry_subname)
         out_orig_img_path = osp.join(entry_dir, out_orig_img_fname)
         out_orig_sh_path = osp.join(entry_dir, out_sh_fname % 'orig')
 

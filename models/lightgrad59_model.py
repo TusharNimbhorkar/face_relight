@@ -24,6 +24,7 @@ class lightgrad59Model(BaseModel):
         if is_train:
             parser.set_defaults(pool_size=0, gan_mode='lsgan')
             parser.add_argument('--lambda_L1', type=float, default=100.0, help='weight for L1 loss')
+            parser.add_argument('--enable_neutral', action='store_true', help='Enable or disable input target sh')
 
         return parser
 
@@ -39,7 +40,8 @@ class lightgrad59Model(BaseModel):
         else:  # during test time, only load Gs
             self.model_names = ['G']
 
-        self.netG = HourglassNet().to(self.device)
+        self.enable_target = not opt.enable_neutral
+        self.netG = HourglassNet(enable_target=self.enable_target).to(self.device)
         if 'cpu' not in str(self.device):
             self.netG = torch.nn.DataParallel(self.netG, self.opt.gpu_ids)
         self.netG.train(True)

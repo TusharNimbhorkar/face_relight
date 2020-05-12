@@ -87,53 +87,67 @@ class HourglassBlock(nn.Module):
         return out, out_feat, out_middle
 
 
-class lightingNet(nn.Module):
-    '''
-        define lighting network
-    '''
-    def __init__(self, ncInput, ncOutput, ncMiddle):
-        super(lightingNet, self).__init__()
-        self.ncInput = ncInput
-        self.ncOutput = ncOutput
-        self.ncMiddle = ncMiddle
-
-        # basic idea is to compute the average of the channel corresponding to lighting
-        # using fully connected layers to get the lighting
-        # then fully connected layers to get back to the output size
-
-        self.predict_FC1 = nn.Conv2d(self.ncInput, self.ncMiddle, kernel_size=1, stride=1, bias=False)
-        self.predict_relu1 = nn.PReLU()
-        self.predict_FC2 = nn.Conv2d(self.ncMiddle, self.ncOutput, kernel_size=1, stride=1, bias=False)
-
-        self.post_FC1 = nn.Conv2d(self.ncOutput, self.ncMiddle, kernel_size=1, stride=1, bias=False)
-        self.post_relu1 = nn.PReLU()
-        self.post_FC2 = nn.Conv2d(self.ncMiddle, self.ncInput, kernel_size=1, stride=1, bias=False)
-        self.post_relu2 = nn.ReLU()  # to be consistance with the original feature
-
-    def forward(self, innerFeat, target_light, count, skip_count):
-        x = innerFeat[:, 0:self.ncInput, :, :]  # lighting feature
-        _, _, row, col = x.shape
-
-        # predict lighting
-        feat = x.mean(dim=(2, 3), keepdim=True)
-        light = self.predict_relu1(self.predict_FC1(feat))
-        light = self.predict_FC2(light)
-
-        # get back the feature space
-        upFeat = self.post_relu1(self.post_FC1(target_light))
-        upFeat = self.post_relu2(self.post_FC2(upFeat))
-        upFeat = upFeat.repeat((1, 1, row, col))
-        innerFeat[:, 0:self.ncInput, :, :] = upFeat
-        return innerFeat, innerFeat[:, self.ncInput:, :, :], light
-
-
 class HourglassNet(nn.Module):
     '''
     	basic idea: low layers are shared, upper layers are different
     	            lighting should be estimated from the inner most layer
         NOTE: we split the bottle neck layer into albedo, normal and lighting
     '''
-    def __init__(self, baseFilter=16, gray=True):
+
+    class LightingNet(nn.Module):
+        '''
+            define lighting network
+        '''
+
+        def __init__(self, ncInput, ncOutput, ncMiddle, enable_target=True):
+            '''
+
+            :param ncInput:
+            :param ncOutput:
+            :param ncMiddle:
+            :param disable_target: Disables the input for target lighting. Used for neutralization.
+            '''
+
+            super(HourglassNet.LightingNet, self).__init__()
+            self.ncInput = ncInput
+            self.ncOutput = ncOutput
+            self.ncMiddle = ncMiddle
+            self.enable_target = enable_target
+
+            # basic idea is to compute the average of the channel corresponding to lighting
+            # using fully connected layers to get the lighting
+            # then fully connected layers to get back to the output size
+
+            self.predict_FC1 = nn.Conv2d(self.ncInput, self.ncMiddle, kernel_size=1, stride=1, bias=False)
+            self.predict_relu1 = nn.PReLU()
+            self.predict_FC2 = nn.Conv2d(self.ncMiddle, self.ncOutput, kernel_size=1, stride=1, bias=False)
+
+            if enable_target:
+                self.post_FC1 = nn.Conv2d(self.ncOutput, self.ncMiddle, kernel_size=1, stride=1, bias=False)
+                self.post_relu1 = nn.PReLU()
+                self.post_FC2 = nn.Conv2d(self.ncMiddle, self.ncInput, kernel_size=1, stride=1, bias=False)
+                self.post_relu2 = nn.ReLU()  # to be consistance with the original feature
+
+
+        def forward(self, innerFeat, target_light, count, skip_count):
+            x = innerFeat[:, 0:self.ncInput, :, :]  # lighting feature
+            _, _, row, col = x.shape
+
+            # predict lighting
+            feat = x.mean(dim=(2, 3), keepdim=True)
+            light = self.predict_relu1(self.predict_FC1(feat))
+            light = self.predict_FC2(light)
+
+            # get back the feature space
+            if self.enable_target:
+                upFeat = self.post_relu1(self.post_FC1(target_light))
+                upFeat = self.post_relu2(self.post_FC2(upFeat))
+                upFeat = upFeat.repeat((1, 1, row, col))
+                innerFeat[:, 0:self.ncInput, :, :] = upFeat
+
+            return innerFeat, innerFeat[:, self.ncInput:, :, :], light
+
+    def __init__(self, baseFilter=16, gray=True, enable_target=True):
         super(HourglassNet, self).__init__()
 
         self.ncLight = 27  # number of channels for input to lighting network
@@ -156,7 +170,7 @@ class HourglassNet(nn.Module):
         self.pre_conv = nn.Conv2d(1, self.ncPre, kernel_size=5, stride=1, padding=2)
         self.pre_bn = nn.BatchNorm2d(self.ncPre)
 
-        self.light = lightingNet(self.ncLight, self.ncOutLight, 128)
+        self.light = self.LightingNet(self.ncLight, self.ncOutLight, 128, enable_target=enable_target)
         self.HG0 = HourglassBlock(self.ncHG1, self.ncHG0, self.light)
         self.HG1 = HourglassBlock(self.ncHG2, self.ncHG1, self.HG0)
         self.HG2 = HourglassBlock(self.ncHG3, self.ncHG2, self.HG1)
@@ -175,7 +189,7 @@ class HourglassNet(nn.Module):
         feat = self.pre_conv(x)
         feat = F.relu(self.pre_bn(feat))
 
-        feat,out_feat, out_light = self.HG3(feat, target_light, 0, skip_count)
+        feat, out_feat, out_light = self.HG3(feat, target_light, 0, skip_count)
 
         out_feat_ori = None
         if not oriImg is None:

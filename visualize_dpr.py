@@ -33,9 +33,9 @@ ap.add_argument("-i", "--input", default='test_data/test_images', required=False
 	help="Input Directory")
 ap.add_argument("-o", "--output", default='outputs/test', required=False,
 	help="Output Directory")
-ap.add_argument("-d", "--device", default='cuda', required=False, choices=['cuda','cpu'],
+ap.add_argument("-d", "--device", default='cuda', required=False, choices=['cuda:0', 'cuda:1', 'cuda','cpu'],
 	help="Device")
-ap.add_argument("-b", "--blend_mode", default=BlendEnum.POISSON, required=False, choices=[blend for blend in BlendEnum],
+ap.add_argument("-b", "--blend_mode", default=BlendEnum.NONE, required=False, choices=[blend for blend in BlendEnum],
 	help="Blending mode")
 ap.add_argument("-f", "--force_images", required=False, action="store_true",
 	help="Force generating images")
@@ -143,7 +143,7 @@ class Dataset3DULightGT(Dataset3DULight):
                 yield orig_path, out_fname, [path, sh_path]
 
 class Model:
-    def __init__(self, checkpoint_path, lab, resolution, dataset_name, sh_const=1.0, name='',model_1024=False, blend_mode=blend_mode):
+    def __init__(self, checkpoint_path, lab, resolution, dataset_name, sh_const=1.0, name='', model_1024=False, blend_mode=blend_mode, model_neutral=False):
         self.checkpoint_path = checkpoint_path
         self.lab = lab
         self.resolution = resolution
@@ -153,8 +153,7 @@ class Model:
         self.device = device ##TODO
         self.model_1024=model_1024
         self.blend_mode = blend_mode
-        # self.post_flag = post_flag
-
+        self.model_neutral = model_neutral
 
         if dataset_name == 'dpr':
             self.sh_path = lightFolder_dpr
@@ -214,6 +213,14 @@ dataset_3dulight_v0p8 = Dataset3DULightGT('/home/nedko/face_relight/dbs/3dulight
 dataset_3dulight_v0p7_randfix = Dataset3DULightGT('/home/tushar/data2/face_relight/dbs/3dulight_v0.7_256_fix/train', n_samples=5, n_samples_offset=0) # DatasetDPR('/home/tushar/data2/DPR/train')
 dataset_3dulight_v0p6 = Dataset3DULightGT('/home/nedko/face_relight/dbs/3dulight_v0.6_256/train', n_samples=5, n_samples_offset=5) # DatasetDPR('/home/tushar/data2/DPR/train')
 
+# model_256_lab_3dulab_0.8_test_10k
+model_lab_stylegan_08_neutral_256_10k = Model('/home/nedko/face_relight/outputs/remote/outputs/model_256_lab_neutral_sgan_0.1_10k/14_net_G.pth', lab=True, resolution=256, dataset_name='3dulight_shfix2', name='LAB sGAN v0.1 256 Neutral 10k', model_neutral=True)
+model_lab_stylegan_08_256_10k = Model('/home/nedko/face_relight/outputs/remote/outputs/model_256_lab_sgan_0.1_10k/14_net_G.pth', lab=True, resolution=256, dataset_name='3dulight_shfix2', name='LAB sGAN v0.1 256 10k')
+model_lab_3dulight_08_256_10k_shfix2_test = Model('/home/nedko/face_relight/outputs/model_256_lab_3dulab_0.8_test_10k_2/14_net_G.pth', lab=True, resolution=256, dataset_name='3dulight_shfix2', name='LAB 3DUL 256 10k New')
+# model_lab_3dulight_08_256_10k_shfix2_test = Model('/home/nedko/face_relight/outputs/model_256_lab_3dulab_0.8_test_10k/13_net_G.pth', lab=True, resolution=256, dataset_name='3dulight_shfix2', name='LAB 3DUL 256 10k New')
+model_lab_3dulight_08_256_full_shfix2 = Model('/home/nedko/face_relight/outputs/model_256_lab_3dulab_0.8_test/14_net_G.pth', lab=True, resolution=256, dataset_name='3dulight_shfix2', name='LAB 3DUL 256 30k')
+model_lab_stylegan_01_256_neutral_full = Model('/home/nedko/face_relight/outputs/model_neutral_256_lab_stylegan_v0.1/14_net_G.pth', lab=True, resolution=256, dataset_name='3dulight_shfix2', name='LAB sGAN v0.1 Neutral 256 30k', model_neutral=True)
+model_lab_stylegan_01_256_full = Model('/home/nedko/face_relight/outputs/model_256_lab_stylegan_v0.1/14_net_G.pth', lab=True, resolution=256, dataset_name='3dulight_shfix2', name='LAB sGAN v0.1 256 30k')
 model_lab_3dulight_08_256_full_bs7 = Model('/home/nedko/face_relight/outputs/model_256_lab_3dulight_v0.8_full_bs7/14_net_G.pth', lab=True, resolution=256, dataset_name='3dulight', name='LAB 3DUL v0.8 256 30k BS7')
 model_lab_3dulight_08_256_10k_shfix2 = Model('/home/nedko/face_relight/outputs/model_256_lab_3dulight_v0.8_shfix2/14_net_G.pth', lab=True, resolution=256, dataset_name='3dulight_shfix2', name='LAB 3DUL v0.8 256 10k SHFIX2')
 model_lab_3dulight_08_512_30k_bs7 = Model('/home/nedko/face_relight/outputs/remote/outputs/model_512_lab_3dulight_v0.8_full_bs7_bs7/14_net_G.pth', lab=True, resolution=512, dataset_name='3dulight', name='LAB 3DUL v0.8 512 30k BS7')
@@ -241,8 +248,11 @@ model_lab_dpr_512_30k = Model('/home/tushar/data2/checkpoints_debug/model_fulltr
 model_lab_pretrained = Model('models/trained/trained_model_03.t7', lab=True, resolution=512, dataset_name='dpr', sh_const = 0.7, name='Pretrained DPR') # '/home/tushar/data2/DPR_test/trained_model/trained_model_03.t7'
 
 model_objs = [
-    model_lab_3dulight_08_bs20,
-    model_lab_3dulight_08_256_full_bs7
+    model_lab_3dulight_08_256_10k_shfix2,
+    model_lab_stylegan_08_256_10k,
+    model_lab_stylegan_08_neutral_256_10k
+    # model_lab_stylegan_01_256_full,
+    # model_lab_stylegan_01_256_neutral_full,
 ]
 
 # dataset = dataset_3dulight_v0p8
@@ -675,13 +685,13 @@ def vis_parsing_maps(im, parsing_anno, stride, h=None, w=None):
     alpha_2 = alpha_2.astype(float) / 255
     return alpha_2
 
-def load_model(checkpoint_dir_cmd, device, lab=True, model_1024=False):
+def load_model(checkpoint_dir_cmd, device, lab=True, model_1024=False, model_neutral=False):
     if lab:
         if model_1024:
             my_network_512 = HourglassNet_512_1024(16)
             my_network = HourglassNet_1024(my_network_512, 16)
         else:
-            my_network = HourglassNet()
+            my_network = HourglassNet(enable_target=not model_neutral)
     else:
         my_network = HourglassNet_RGB()
 
@@ -742,7 +752,7 @@ def test(my_network, input_img, lab=True, sh_id=0, sh_constant=1.0, res=256, sh_
 
 
 for model_obj in model_objs:
-    model_obj.model = load_model(model_obj.checkpoint_path, model_obj.device, lab=model_obj.lab, model_1024=model_obj.model_1024)
+    model_obj.model = load_model(model_obj.checkpoint_path, model_obj.device, lab=model_obj.lab, model_1024=model_obj.model_1024, model_neutral=model_obj.model_neutral)
 
 for orig_path, out_fname, gt_data in dataset.iterate():
 

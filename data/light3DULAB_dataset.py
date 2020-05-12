@@ -6,13 +6,6 @@ class light3DULABDataset(lightDPR7Dataset):
     A dataloader to work with the 3DU face relight dataset
     '''
 
-    @staticmethod
-    def modify_commandline_options(parser, is_train=True):
-        if is_train:
-            parser.add_argument('--ffhq', type=int, default=70000, help='sample size ffhq')
-
-        return parser
-
     def __init__(self, opt):
         super(light3DULABDataset,self).__init__(opt)
 

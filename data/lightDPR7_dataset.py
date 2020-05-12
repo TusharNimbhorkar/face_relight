@@ -20,16 +20,53 @@ log = Logger("DataLoader", tag_color=BColors.LightBlue)
 class lightDPR7Dataset(BaseDataset):
     @staticmethod
     def modify_commandline_options(parser, is_train=True):
+        # parser.add_argument('--enable_neutral', action='store_true', help='Enable or disable input target sh')
+        parser.add_argument('--n_ids', type=int, default=None, help='Select the amount of identities to take from the dataset. If not used, taking all identities.')
         if is_train:
             parser.add_argument('--ffhq', type=int, default=70000, help='sample size ffhq')
 
         return parser
 
+    def _random_derangement(self, n):
+        while True:
+            v = list(range(n))
+            for j in range(n - 1, -1, -1):
+                p = random.randint(0, j)
+                if v[p] == j:
+                    break
+                else:
+                    v[j], v[p] = v[p], v[j]
+            else:
+                if v[0] != 0:
+                    return tuple(v)
+
+    def _get_all_derangements(self, n):
+
+        # enumerate all derangements for testing
+        import itertools
+        counter = {}
+        for p in itertools.permutations(range(n)):
+            if all(p[i] != i for i in p):
+                counter[p] = 0
+
+        # make M probes for each derangement
+        M = 5000
+        for _ in range(M * len(counter)):
+            # generate a random derangement
+            p = self._random_derangement(n)
+            # is it really?
+            assert p in counter
+            # ok, record it
+            counter[p] += 1
+
+        # the distribution looks uniform
+        return [p for p, _ in sorted(counter.items())]
+
     def __init__(self, opt):
         BaseDataset.__init__(self, opt)
+        self.enable_target = not opt.enable_neutral
         self.dir_AB = os.path.join(opt.dataroot, opt.phase)
-        self.AB_paths_ = make_dataset(self.dir_AB)
-        self.AB_paths = []
+        self.AB_paths_ = make_dataset(self.dir_AB, n_ids=opt.n_ids)
         self.dict_AB = {}
         self.list_AB = []
 
@@ -39,31 +76,60 @@ class lightDPR7Dataset(BaseDataset):
         n_want = self.opt.n_first
         n_per_id = synth_n_per_id + 1
 
+        # der = self._get_all_derangements(n_per_id)
+
         for i in range(0, len(self.AB_paths_) - n_per_id, n_per_id):
 
-            ori_img = self.AB_paths_[i+synth_n_per_id]
-            self.list_AB.append([ori_img, ori_img])
+            orig_img_path = self.AB_paths_[i+synth_n_per_id]
+            sample_paths = self.AB_paths_[i:i + n_want]
+            sample_paths.append(orig_img_path)
 
-            i1 = self.AB_paths_[i:i + n_want]
-            i1.append(ori_img)
-            i2 = deepcopy(i1)
+            pairs = self.gen_sample_pairs(sample_paths, n_per_id)
 
-            self.AB_paths.append(i1[-1])
-            for k in range(len(i1)):
-                a = [i1.pop(random.randrange(len(i1))) for _ in range(1)]
-                blist = list(set(i2) - set(a))
-                b = [blist.pop(random.randrange(len(blist))) for _ in range(1)]
-                # blist_final = list(set(blist).add(set(a)))
-                blist.append(a[0])
-                i2 = blist
-                self.AB_paths.append(a[0])
-                self.list_AB.append([a[0] , b[0]])
+            self.list_AB.extend(pairs)
+            # print()
         random.shuffle(self.list_AB)
 
         assert(opt.resize_or_crop == 'resize_and_crop')  # only support this mode
         assert(self.opt.loadSize >= self.opt.fineSize)
 
         self.transform_A = get_simple_transform(grayscale=False)
+
+    def gen_sample_pairs(self, sample_paths, n_per_id):
+        # i2 = deepcopy(sample_paths)
+        orig_img_path = sample_paths[-1]
+        src_paths = sample_paths
+        np.random.shuffle(src_paths)
+
+        pairs = []
+        if self.enable_target:
+            pairs.append([orig_img_path, orig_img_path])
+            sel_der = self._random_derangement(n_per_id-1)
+            i2 = [src_paths[i] for i in sel_der]
+        else:
+            i2 = [orig_img_path]*len(src_paths)
+
+        for src_path, tgt_path in zip(src_paths, i2):
+
+            # blist = list(set(i2) - set([src_path]))
+            #
+            # tgt_path = blist.pop(np.random.randint(len(blist)))
+
+            # if src_path in i2:
+            #     blist.append(src_path)
+            # else:
+            #     print('yep')
+            #
+            # i2 = blist
+
+            # print([p.rsplit('/',1)[-1] for p in blist])
+
+            # print(src_path, tgt_path)
+            pairs.append([src_path, tgt_path])
+
+        # print()
+
+        return pairs
 
     def _get_paths(self, real_img_id, input_img_id):
         AB_path = self.list_AB[input_img_id]

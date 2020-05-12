@@ -6,6 +6,7 @@ directory as well as the subdirectories
 
 import torch.utils.data as data
 
+from commons.common_tools import sort_numerically
 from PIL import Image
 import os
 import os.path
@@ -21,10 +22,13 @@ def is_image_file(filename):
     return any(filename.endswith(extension) for extension in IMG_EXTENSIONS)
 
 
-def make_dataset(dir, n_per_dir=-1):
+def make_dataset(dir, n_ids=None, n_per_dir=-1):
     images = []
     assert os.path.isdir(dir), '%s is not a valid directory' % dir
-    for entry_dir in sorted(glob.glob(os.path.join(dir,'*'))):
+    entry_dirs = glob.glob(os.path.join(dir,'*'))
+    sort_numerically(entry_dirs)
+    entry_dirs = entry_dirs[:n_ids]
+    for entry_dir in entry_dirs:
         paths = sorted(glob.glob(os.path.join(entry_dir,'*')))
         paths = [path for path in paths if is_image_file(path)]
 
