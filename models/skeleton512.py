@@ -147,7 +147,7 @@ class HourglassNet(nn.Module):
 
             return innerFeat, innerFeat[:, self.ncInput:, :, :], light
 
-    def __init__(self, baseFilter=16, gray=True, enable_target=True):
+    def __init__(self, baseFilter=16, gray=True, enable_target=True, ncImg=1):
         super(HourglassNet, self).__init__()
 
         self.ncLight = 27  # number of channels for input to lighting network
@@ -159,6 +159,7 @@ class HourglassNet(nn.Module):
         else:
             self.ncOutLight = 27  # color: channel is 3
 
+        self.ncImg = ncImg
         self.ncPre = self.baseFilter  # number of channels for pre-convolution
 
         # number of channels
@@ -167,7 +168,7 @@ class HourglassNet(nn.Module):
         self.ncHG1 = 4 * self.baseFilter
         self.ncHG0 = 8 * self.baseFilter + self.ncLight
 
-        self.pre_conv = nn.Conv2d(1, self.ncPre, kernel_size=5, stride=1, padding=2)
+        self.pre_conv = nn.Conv2d(self.ncImg, self.ncPre, kernel_size=5, stride=1, padding=2)
         self.pre_bn = nn.BatchNorm2d(self.ncPre)
 
         self.light = self.LightingNet(self.ncLight, self.ncOutLight, 128, enable_target=enable_target)
@@ -183,7 +184,7 @@ class HourglassNet(nn.Module):
         self.conv_3 = nn.Conv2d(self.ncPre, self.ncPre, kernel_size=1, stride=1, padding=0)
         self.bn_3 = nn.BatchNorm2d(self.ncPre)
 
-        self.output = nn.Conv2d(self.ncPre, 1, kernel_size=1, stride=1, padding=0)
+        self.output = nn.Conv2d(self.ncPre, self.ncImg, kernel_size=1, stride=1, padding=0)
 
     def forward(self, x, target_light, skip_count, oriImg=None):
         feat = self.pre_conv(x)

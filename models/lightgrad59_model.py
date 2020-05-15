@@ -2,6 +2,8 @@
 # Default model
 import torch
 import sys
+
+from commons.common_tools import overrides
 from util.image_pool import ImagePool
 from .base_model import BaseModel
 from . import networks
@@ -12,7 +14,7 @@ from .skeleton512 import *
 import torch.nn as nn
 from torch.autograd import Variable
 import numpy as np
-#
+import os.path as osp
 
 class lightgrad59Model(BaseModel):
     def name(self):
@@ -28,6 +30,32 @@ class lightgrad59Model(BaseModel):
 
         return parser
 
+    # def load_networks(self, epoch):
+    #     """Load models from the disk"""
+    #     for name in self.model_names:
+    #         print(name)
+    #         if name=='G' or name=='D':
+    #             if isinstance(name, str):
+    #                 load_filename = '%s_net_%s.pth' % (epoch, name)
+    #                 load_path = osp.join(self.save_dir, load_filename)
+    #                 net = getattr(self, 'net' + name)
+    #                 if isinstance(net, torch.nn.DataParallel):
+    #                     net = net.module
+    #                 print('loading the model from %s' % load_path)
+    #                 # if you are using PyTorch newer than 0.4 (e.g., built from
+    #                 # GitHub source), you can remove str() on self.device
+    #                 state_dict = torch.load(load_path, map_location=str(self.device))
+    #                 if hasattr(state_dict, '_metadata'):
+    #                     del state_dict._metadata
+    #
+    #                 # patch InstanceNorm checkpoints prior to 0.4
+    #                 print(name)
+    #                 print(state_dict.keys())
+    #                 print()
+    #                 for key in list(state_dict.keys()):  # need to copy keys here because we mutate in loop
+    #                     self._patch_instance_norm_state_dict(state_dict, net, key.split('.'))
+    #                 net.load_state_dict(state_dict)
+
     def __init__(self, opt):
         BaseModel.__init__(self, opt)
         # specify the training losses you want to print out. The program will call base_model.get_current_losses
@@ -41,14 +69,21 @@ class lightgrad59Model(BaseModel):
             self.model_names = ['G']
 
         self.enable_target = not opt.enable_neutral
-        self.netG = HourglassNet(enable_target=self.enable_target).to(self.device)
+        self.input_mode = opt.input_mode
+
+        if self.input_mode in ['RGB', 'LAB']:
+            self.nc_img = 3
+        elif self.input_mode in ['L']:
+            self.nc_img = 1
+
+        self.netG = HourglassNet(enable_target=self.enable_target, ncImg=self.nc_img).to(self.device)
         if 'cpu' not in str(self.device):
             self.netG = torch.nn.DataParallel(self.netG, self.opt.gpu_ids)
         self.netG.train(True)
 
         if self.isTrain:
             self.epochs_G_only = 0
-            self.netD = networks.define_D(2, opt.ndf, opt.netD,
+            self.netD = networks.define_D(2*self.nc_img, opt.ndf, opt.netD,
                                           opt.n_layers_D, opt.norm, opt.init_type, opt.init_gain, self.gpu_ids)
 
         if self.isTrain:
@@ -95,13 +130,27 @@ class lightgrad59Model(BaseModel):
 
     def calc_gradient(self, x):
         a = np.array([[1, 0, -1], [2, 0, -2], [1, 0, -1]])
-        conv1 = nn.Conv2d(1, 1, kernel_size=3, stride=1, padding=1, bias=False)
+
+        if x.shape[1] == 3:
+            if self.input_mode == 'LAB':
+                grad_input = x[:,0:1,:, :]
+            elif self.input_mode == 'RGB':
+
+                grad_input = torch.ones((x.shape[0], 1, x.shape[2], x.shape[3])).to(self.device)
+
+                # 0.2989 * R + 0.5870 * G + 0.1140 * B
+                #           B           G           R
+                grad_input[:, 0] = x[:, 0]*0.1140 + x[:, 1]*0.5870 + x[:, 2]*0.2989
+        else:
+            grad_input = x
+
+        conv1 = nn.Conv2d(self.nc_img, 1, kernel_size=3, stride=1, padding=1, bias=False)
         conv1.weight = nn.Parameter(torch.from_numpy(a).float().unsqueeze(0).unsqueeze(0).to(self.device))
-        G_x = conv1(Variable(x))
+        G_x = conv1(Variable(grad_input))
         b = np.array([[1, 2, 1], [0, 0, 0], [-1, -2, -1]])
-        conv2 = nn.Conv2d(1, 1, kernel_size=3, stride=1, padding=1, bias=False)
+        conv2 = nn.Conv2d(self.nc_img, 1, kernel_size=3, stride=1, padding=1, bias=False)
         conv2.weight = nn.Parameter(torch.from_numpy(b).float().unsqueeze(0).unsqueeze(0).to(self.device))
-        G_y = conv2(Variable(x))
+        G_y = conv2(Variable(grad_input))
         G = torch.sqrt(torch.pow(G_x, 2) + torch.pow(G_y, 2))
 
         return G
@@ -130,7 +179,7 @@ class lightgrad59Model(BaseModel):
 
         self.loss_G_GAN = 0
 
-        if epoch>1:
+        if self.epochs_G_only==0 or epoch>1:
             pred_fake = self.netD(fake_AB)
             self.loss_G_GAN = self.criterionGAN(pred_fake, True) * 0.5
 

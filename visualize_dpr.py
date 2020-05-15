@@ -8,6 +8,8 @@ import os
 from enum import Enum
 import matplotlib.pyplot as plt
 from commons.common_tools import FileOutput
+from data.base_dataset import get_simple_transform
+from models.common.data import img_to_input, output_to_img
 from utils.utils_SH import get_shading, SH_basis
 from models.skeleton512_rgb import HourglassNet as HourglassNet_RGB
 from models.skeleton512 import HourglassNet
@@ -143,9 +145,9 @@ class Dataset3DULightGT(Dataset3DULight):
                 yield orig_path, out_fname, [path, sh_path]
 
 class Model:
-    def __init__(self, checkpoint_path, lab, resolution, dataset_name, sh_const=1.0, name='', model_1024=False, blend_mode=blend_mode, model_neutral=False):
+    def __init__(self, checkpoint_path, input_mode, resolution, dataset_name, sh_const=1.0, name='', model_1024=False, blend_mode=blend_mode, model_neutral=False):
         self.checkpoint_path = checkpoint_path
-        self.lab = lab
+        self.input_mode = input_mode
         self.resolution = resolution
         self.model = None
         self.sh_const = sh_const
@@ -154,6 +156,8 @@ class Model:
         self.model_1024=model_1024
         self.blend_mode = blend_mode
         self.model_neutral = model_neutral
+
+        self.transform_src = get_simple_transform(grayscale=False)
 
         if dataset_name == 'dpr':
             self.sh_path = lightFolder_dpr
@@ -177,80 +181,78 @@ class Model:
     def __call__(self, input_img, target_sh, *args, **kwargs):
         target_sh = torch.autograd.Variable(torch.from_numpy(target_sh).to(self.device))
 
-        if self.lab:
-            Lab = cv2.cvtColor(input_img, cv2.COLOR_BGR2LAB)
-            input_img = Lab[:, :, 0]
-            input_img = input_img.astype(np.float32) / 255.0
-            input_img = input_img.transpose((0, 1))
-            input_img = input_img[None, None, ...]
-        else:
-            input_img = input_img
-            input_img = input_img.astype(np.float32)
-            input_img = input_img / 255.0
-            input_img = input_img.transpose((2, 0, 1))
-            input_img = input_img[None, ...]
+        input_img_tensor = img_to_input(input_img, self.input_mode, transform=self.transform_src)
+        # if self.input_mode:
+        #     Lab = cv2.cvtColor(input_img, cv2.COLOR_BGR2LAB)
+        #     input_img = Lab[:, :, 0]
+        #     input_img = input_img.astype(np.float32) / 255.0
+        #     input_img = input_img.transpose((0, 1))
+        #     input_img = input_img[None, None, ...]
+        # else:
+        #     input_img = input_img
+        #     input_img = input_img.astype(np.float32)
+        #     input_img = input_img / 255.0
+        #     input_img = input_img.transpose((2, 0, 1))
+        #     input_img = input_img[None, ...]
 
-        torch_input_img = torch.autograd.Variable(torch.from_numpy(input_img).to(self.device))
+        input_img_tensor = input_img_tensor[None, ...]
+
+        torch_input_img = torch.autograd.Variable(input_img_tensor.to(self.device))
 
         model_output = self.model(torch_input_img, target_sh, *args)
-        output_img, _, outputSH, _ = model_output
+        output_img, _, output_sh, _ = model_output
 
-        output_img = output_img[0].cpu().data.numpy()
-        output_img = output_img.transpose((1, 2, 0))
-        output_img = np.squeeze(output_img)  # *1.45
-        output_img = (output_img * 255.0).astype(np.uint8)
+        output_img = output_to_img(output_img, self.input_mode, input_img=input_img)
 
-        if self.lab:
-            Lab[:, :, 0] = output_img
-            output_img = cv2.cvtColor(Lab, cv2.COLOR_LAB2BGR)
-        else:
-            output_img = output_img
-
-        return output_img, outputSH
+        return output_img, output_sh
 
 # dataset_test = DatasetDefault('path/to/files')
 dataset_3dulight_v0p8 = Dataset3DULightGT('/home/nedko/face_relight/dbs/3dulight_v0.8_256/train', n_samples=5, n_samples_offset=0) # DatasetDPR('/home/tushar/data2/DPR/train')
-dataset_3dulight_v0p7_randfix = Dataset3DULightGT('/home/tushar/data2/face_relight/dbs/3dulight_v0.7_256_fix/train', n_samples=5, n_samples_offset=0) # DatasetDPR('/home/tushar/data2/DPR/train')
-dataset_3dulight_v0p6 = Dataset3DULightGT('/home/nedko/face_relight/dbs/3dulight_v0.6_256/train', n_samples=5, n_samples_offset=5) # DatasetDPR('/home/tushar/data2/DPR/train')
+dataset_3dulight_v0p7_randfix = Dataset3DULightGT('/home/tushar/data2/face_relight/dbs/3dulight_v0.7_256_fix/train', n_samples=5, n_samples_offset=0)
+dataset_3dulight_v0p6 = Dataset3DULightGT('/home/nedko/face_relight/dbs/3dulight_v0.6_256/train', n_samples=5, n_samples_offset=5)
 
-# model_256_lab_3dulab_0.8_test_10k
-model_lab_stylegan_08_neutral_256_10k = Model('/home/nedko/face_relight/outputs/remote/outputs/model_256_lab_neutral_sgan_0.1_10k/14_net_G.pth', lab=True, resolution=256, dataset_name='3dulight_shfix2', name='LAB sGAN v0.1 256 Neutral 10k', model_neutral=True)
-model_lab_stylegan_08_256_10k = Model('/home/nedko/face_relight/outputs/remote/outputs/model_256_lab_sgan_0.1_10k/14_net_G.pth', lab=True, resolution=256, dataset_name='3dulight_shfix2', name='LAB sGAN v0.1 256 10k')
-model_lab_3dulight_08_256_10k_shfix2_test = Model('/home/nedko/face_relight/outputs/model_256_lab_3dulab_0.8_test_10k_2/14_net_G.pth', lab=True, resolution=256, dataset_name='3dulight_shfix2', name='LAB 3DUL 256 10k New')
-# model_lab_3dulight_08_256_10k_shfix2_test = Model('/home/nedko/face_relight/outputs/model_256_lab_3dulab_0.8_test_10k/13_net_G.pth', lab=True, resolution=256, dataset_name='3dulight_shfix2', name='LAB 3DUL 256 10k New')
-model_lab_3dulight_08_256_full_shfix2 = Model('/home/nedko/face_relight/outputs/model_256_lab_3dulab_0.8_test/14_net_G.pth', lab=True, resolution=256, dataset_name='3dulight_shfix2', name='LAB 3DUL 256 30k')
-model_lab_stylegan_01_256_neutral_full = Model('/home/nedko/face_relight/outputs/model_neutral_256_lab_stylegan_v0.1/14_net_G.pth', lab=True, resolution=256, dataset_name='3dulight_shfix2', name='LAB sGAN v0.1 Neutral 256 30k', model_neutral=True)
-model_lab_stylegan_01_256_full = Model('/home/nedko/face_relight/outputs/model_256_lab_stylegan_v0.1/14_net_G.pth', lab=True, resolution=256, dataset_name='3dulight_shfix2', name='LAB sGAN v0.1 256 30k')
-model_lab_3dulight_08_256_full_bs7 = Model('/home/nedko/face_relight/outputs/model_256_lab_3dulight_v0.8_full_bs7/14_net_G.pth', lab=True, resolution=256, dataset_name='3dulight', name='LAB 3DUL v0.8 256 30k BS7')
-model_lab_3dulight_08_256_10k_shfix2 = Model('/home/nedko/face_relight/outputs/model_256_lab_3dulight_v0.8_shfix2/14_net_G.pth', lab=True, resolution=256, dataset_name='3dulight_shfix2', name='LAB 3DUL v0.8 256 10k SHFIX2')
-model_lab_3dulight_08_512_30k_bs7 = Model('/home/nedko/face_relight/outputs/remote/outputs/model_512_lab_3dulight_v0.8_full_bs7_bs7/14_net_G.pth', lab=True, resolution=512, dataset_name='3dulight', name='LAB 3DUL v0.8 512 30k BS7')
-model_lab_3dulight_08_1024_10k = Model('/home/tushar/data2/face_relight/outputs/model_1024_3du_v08_lab_10k_lg59/13_net_G.pth', lab=True, resolution=1024, dataset_name='3dulight', name='LAB DPR v0.8 1024 10k', model_1024=True)
-model_lab_dpr_08_1024_30k = Model('/home/tushar/data2/checkpoints_debug/model_fulltrain_dpr7_gan_BS7_1024/10_net_G.pth', lab=True, resolution=1024, dataset_name='dpr', sh_const = 0.7,name='LAB DPR v0.8 1024 30k')
-model_lab_3dulight_08_512_30k_render = Model('/home/nedko/face_relight/outputs/remote/outputs/model_512_lab_3dulight_v0.8_full_bs7/14_net_G.pth', lab=True, resolution=512, dataset_name='3dulight', name='LAB 3DUL v0.8 512 30k Render', blend_mode=BlendEnum.RENDER_ONLY)
-model_lab_3dulight_08_512_30k_noblend = Model('/home/nedko/face_relight/outputs/remote/outputs/model_512_lab_3dulight_v0.8_full_bs7/14_net_G.pth', lab=True, resolution=512, dataset_name='3dulight', name='LAB 3DUL v0.8 512 30k No Blend', blend_mode=BlendEnum.NONE)
-model_lab_3dulight_08_512_30k = Model('/home/nedko/face_relight/outputs/remote/outputs/model_512_lab_3dulight_v0.8_full_bs7/14_net_G.pth', lab=True, resolution=512, dataset_name='3dulight', name='LAB 3DUL v0.8 512 30k')
-model_lab_3dulight_08_1024_10k_third = Model('/home/tushar/data2/face_relight/outputs/model_1024_3du_v08_lab_third/14_net_G.pth', lab=True, resolution=1024, dataset_name='3dulight', name='LAB 3DUL v0.8 1024 10k Old', model_1024=True)
-model_lab_3dulight_08_bs20 = Model('/home/nedko/face_relight/outputs/remote/outputs/model_256_lab_3dulight_v0.8_full_bs7/14_net_G.pth', lab=True, resolution=256, dataset_name='3dulight', name='LAB 3DUL v0.8 30k bs20')
-model_lab_3dulight_08_seg_face = Model('/home/nedko/face_relight/outputs/remote/outputs/3dulight_v0.8_256_seg_face/14_net_G.pth', lab=True, resolution=256, dataset_name='3dulight', name='LAB 3DUL v0.8 10k Segment')
-model_lab_dpr_seg = Model('/home/tushar/data2/checkpoints_debug/model_fulltrain_dpr7_mse_sumBS20_ogsegment/14_net_G.pth', lab=True, resolution=256, dataset_name='dpr', sh_const = 0.7, name='LAB DPR v0.8 10k Segment')
-model_lab_3dulight_08_seg = Model('/home/tushar/data2/face_relight/outputs/model_256_3du_v08_lab_seg/14_net_G.pth', lab=True, resolution=256, dataset_name='3dulight', name='LAB 3DUL v0.8 10k Segment')
-model_lab_3dulight_08_full_seg = Model('/home/nedko/face_relight/outputs/remote/outputs/3dulight_v0.8_256_full/14_net_G.pth', lab=True, resolution=256, dataset_name='3dulight', name='LAB 3DUL v0.8 30k Segment +hair')
-model_lab_3dulight_08_bs16 = Model('/home/nedko/face_relight/outputs/remote/outputs/3dulight_v0.8_256_bs16/14_net_G.pth', lab=True, resolution=256, dataset_name='3dulight', name='LAB 3DUL v0.8 bs16')
-model_rgb_3dulight_08_full = Model('/home/nedko/face_relight/outputs/model_256_rgb_3dulight_v0.8/model_256_rgb_3dulight_v0.8_full/14_net_G.pth', lab=False, resolution=256, dataset_name='3dulight', name='RGB 3DUL v0.8 30k')
-model_rgb_3dulight_08 = Model('/home/nedko/face_relight/outputs/model_256_rgb_3dulight_v0.8/model_256_rgb_3dulight_v08_rgb/14_net_G.pth', lab=False, resolution=256, dataset_name='3dulight', name='RGB 3DUL v0.8')
-model_lab_3dulight_08_full = Model('/home/nedko/face_relight/outputs/model_256_lab_3dulight_v0.8_full/model_256_lab_3dulight_v0.8_full/14_net_G.pth', lab=True, resolution=256, dataset_name='3dulight', name='LAB 3DUL v0.8 30k')
-model_rgb_3dulight_08_rot_test = Model('/home/nedko/face_relight/outputs/model_256_rgb_3dulight_v0.8/model_256_rgb_3dulight_v08_rgb/14_net_G.pth', lab=False, resolution=256, dataset_name='dpr_rot_test', name='RGB 3DUL v0.8')
-model_rgb_3dulight_08_3dul_test = Model('/home/nedko/face_relight/outputs/model_256_rgb_3dulight_v0.8/model_256_rgb_3dulight_v08_rgb/14_net_G.pth', lab=False, resolution=256, dataset_name='3dul_test', name='RGB 3DUL v0.8')
-model_lab_3dulight_08 = Model('/home/nedko/face_relight/outputs/model_256_lab_3dulight_v0.8/model_256_lab_3dulight_v0.8/14_net_G.pth', lab=True, resolution=256, dataset_name='3dulight', name='LAB 3DUL v0.8')
-model_lab_3dulight_05_shfix = Model('/home/nedko/face_relight/outputs/model_256_lab_3dulight_v0.5_shfix/model_256_lab_3dulight_v0.5_shfix/14_net_G.pth', lab=True, resolution=256, dataset_name='3dulight', name='LAB 3DULight v0.5 SHFIX')
-model_lab_dpr_10k = Model('/home/tushar/data2/checkpoints/model_256_dprdata10k_lab/14_net_G.pth', lab=True, resolution=256, dataset_name='dpr', sh_const = 0.7, name='LAB DPR 10K')
-model_lab_dpr_512_30k = Model('/home/tushar/data2/checkpoints_debug/model_fulltrain_dpr7_mse_sumBS20/14_net_G.pth', lab=True, resolution=512, dataset_name='dpr', sh_const = 0.7, name='LAB DPR 512 30K')
-model_lab_pretrained = Model('models/trained/trained_model_03.t7', lab=True, resolution=512, dataset_name='dpr', sh_const = 0.7, name='Pretrained DPR') # '/home/tushar/data2/DPR_test/trained_model/trained_model_03.t7'
+#model_256_lab_stylegan_0.2_10k
+model_l_stylegan_02_neutral_256_10k = Model('/home/nedko/face_relight/outputs/model_256_lab_stylegan_0.2_10k/14_net_G.pth', input_mode='L', resolution=256, dataset_name='3dulight_shfix2', name='LAB sGAN v0.2 256 Neutral 10k', model_neutral=True)
+model_lab_stylegan_01_256_10k = Model('/home/nedko/face_relight/outputs/remote/outputs/model_256_lab_3dulab_0.8_10k_l+ab/14_net_G.pth', input_mode='LAB', resolution=256, dataset_name='3dulight_shfix2', name='L+AB sGAN v0.1 256 10k')
+model_l_stylegan_01_256_10k_ep1fix = Model('/home/nedko/face_relight/outputs/model_256_lab_sgan_0.1_10k_ep1fix/14_net_G.pth', input_mode='L', resolution=256, dataset_name='3dulight_shfix2', name='LAB sGAN v0.1 256 10k ep1fix')
+
+model_l_stylegan_01_neutral_256_10k = Model('/home/nedko/face_relight/outputs/remote/outputs/model_256_lab_neutral_sgan_0.1_10k/14_net_G.pth', input_mode='L', resolution=256, dataset_name='3dulight_shfix2', name='LAB sGAN v0.1 256 Neutral 10k', model_neutral=True)
+model_l_stylegan_01_256_10k = Model('/home/nedko/face_relight/outputs/remote/outputs/model_256_lab_sgan_0.1_10k/14_net_G.pth', input_mode='L', resolution=256, dataset_name='3dulight_shfix2', name='LAB sGAN v0.1 256 10k')
+model_l_3dulight_08_256_10k_shfix2_test = Model('/home/nedko/face_relight/outputs/model_256_lab_3dulab_0.8_test_10k_2/14_net_G.pth', input_mode='L', resolution=256, dataset_name='3dulight_shfix2', name='LAB 3DUL 256 10k')
+# model_l_3dulight_08_256_10k_shfix2_test = Model('/home/nedko/face_relight/outputs/model_256_lab_3dulab_0.8_test_10k/13_net_G.pth', input_mode='L', resolution=256, dataset_name='3dulight_shfix2', name='LAB 3DUL 256 10k New')
+model_l_3dulight_08_256_full_shfix2 = Model('/home/nedko/face_relight/outputs/model_256_lab_3dulab_0.8_test/14_net_G.pth', input_mode='L', resolution=256, dataset_name='3dulight_shfix2', name='LAB 3DUL 256 30k')
+model_l_stylegan_01_256_neutral_full = Model('/home/nedko/face_relight/outputs/model_neutral_256_lab_stylegan_v0.1/14_net_G.pth', input_mode='L', resolution=256, dataset_name='3dulight_shfix2', name='LAB sGAN v0.1 Neutral 256 30k', model_neutral=True)
+model_l_stylegan_01_256_full = Model('/home/nedko/face_relight/outputs/model_256_lab_stylegan_v0.1/14_net_G.pth', input_mode='L', resolution=256, dataset_name='3dulight_shfix2', name='LAB sGAN v0.1 256 30k')
+model_l_3dulight_08_256_full_bs7 = Model('/home/nedko/face_relight/outputs/model_256_lab_3dulight_v0.8_full_bs7/14_net_G.pth', input_mode='L', resolution=256, dataset_name='3dulight', name='LAB 3DUL v0.8 256 30k BS7')
+model_l_3dulight_08_256_10k_shfix2 = Model('/home/nedko/face_relight/outputs/model_256_lab_3dulight_v0.8_shfix2/14_net_G.pth', input_mode='L', resolution=256, dataset_name='3dulight_shfix2', name='LAB 3DUL v0.8 256 10k SHFIX2')
+model_l_3dulight_08_512_30k_bs7 = Model('/home/nedko/face_relight/outputs/remote/outputs/model_512_lab_3dulight_v0.8_full_bs7_bs7/14_net_G.pth', input_mode='L', resolution=512, dataset_name='3dulight', name='LAB 3DUL v0.8 512 30k BS7')
+model_l_3dulight_08_1024_10k = Model('/home/tushar/data2/face_relight/outputs/model_1024_3du_v08_lab_10k_lg59/13_net_G.pth', input_mode='L', resolution=1024, dataset_name='3dulight', name='LAB DPR v0.8 1024 10k', model_1024=True)
+model_l_dpr_08_1024_30k = Model('/home/tushar/data2/checkpoints_debug/model_fulltrain_dpr7_gan_BS7_1024/10_net_G.pth', input_mode='L', resolution=1024, dataset_name='dpr', sh_const = 0.7,name='LAB DPR v0.8 1024 30k')
+model_l_3dulight_08_512_30k_render = Model('/home/nedko/face_relight/outputs/remote/outputs/model_512_lab_3dulight_v0.8_full_bs7/14_net_G.pth', input_mode='L', resolution=512, dataset_name='3dulight', name='LAB 3DUL v0.8 512 30k Render', blend_mode=BlendEnum.RENDER_ONLY)
+model_l_3dulight_08_512_30k_noblend = Model('/home/nedko/face_relight/outputs/remote/outputs/model_512_lab_3dulight_v0.8_full_bs7/14_net_G.pth', input_mode='L', resolution=512, dataset_name='3dulight', name='LAB 3DUL v0.8 512 30k No Blend', blend_mode=BlendEnum.NONE)
+model_l_3dulight_08_512_30k = Model('/home/nedko/face_relight/outputs/remote/outputs/model_512_lab_3dulight_v0.8_full_bs7/14_net_G.pth', input_mode='L', resolution=512, dataset_name='3dulight', name='LAB 3DUL v0.8 512 30k')
+model_l_3dulight_08_1024_10k_third = Model('/home/tushar/data2/face_relight/outputs/model_1024_3du_v08_lab_third/14_net_G.pth', input_mode='L', resolution=1024, dataset_name='3dulight', name='LAB 3DUL v0.8 1024 10k Old', model_1024=True)
+model_l_3dulight_08_bs20 = Model('/home/nedko/face_relight/outputs/remote/outputs/model_256_lab_3dulight_v0.8_full_bs7/14_net_G.pth', input_mode='L', resolution=256, dataset_name='3dulight', name='LAB 3DUL v0.8 30k bs20')
+model_l_3dulight_08_seg_face = Model('/home/nedko/face_relight/outputs/remote/outputs/3dulight_v0.8_256_seg_face/14_net_G.pth', input_mode='L', resolution=256, dataset_name='3dulight', name='LAB 3DUL v0.8 10k Segment')
+model_l_dpr_seg = Model('/home/tushar/data2/checkpoints_debug/model_fulltrain_dpr7_mse_sumBS20_ogsegment/14_net_G.pth', input_mode='L', resolution=256, dataset_name='dpr', sh_const = 0.7, name='LAB DPR v0.8 10k Segment')
+model_l_3dulight_08_seg = Model('/home/tushar/data2/face_relight/outputs/model_256_3du_v08_lab_seg/14_net_G.pth', input_mode='L', resolution=256, dataset_name='3dulight', name='LAB 3DUL v0.8 10k Segment')
+model_l_3dulight_08_full_seg = Model('/home/nedko/face_relight/outputs/remote/outputs/3dulight_v0.8_256_full/14_net_G.pth', input_mode='L', resolution=256, dataset_name='3dulight', name='LAB 3DUL v0.8 30k Segment +hair')
+model_l_3dulight_08_bs16 = Model('/home/nedko/face_relight/outputs/remote/outputs/3dulight_v0.8_256_bs16/14_net_G.pth', input_mode='L', resolution=256, dataset_name='3dulight', name='LAB 3DUL v0.8 bs16')
+model_rgb_3dulight_08_full = Model('/home/nedko/face_relight/outputs/model_256_rgb_3dulight_v0.8/model_256_rgb_3dulight_v0.8_full/14_net_G.pth', input_mode='RGB', resolution=256, dataset_name='3dulight', name='RGB 3DUL v0.8 30k')
+model_rgb_3dulight_08 = Model('/home/nedko/face_relight/outputs/model_256_rgb_3dulight_v0.8/model_256_rgb_3dulight_v08_rgb/14_net_G.pth', input_mode='RGB', resolution=256, dataset_name='3dulight', name='RGB 3DUL v0.8')
+model_l_3dulight_08_full = Model('/home/nedko/face_relight/outputs/model_256_lab_3dulight_v0.8_full/model_256_lab_3dulight_v0.8_full/14_net_G.pth', input_mode='L', resolution=256, dataset_name='3dulight', name='LAB 3DUL v0.8 30k')
+model_rgb_3dulight_08_rot_test = Model('/home/nedko/face_relight/outputs/model_256_rgb_3dulight_v0.8/model_256_rgb_3dulight_v08_rgb/14_net_G.pth', input_mode='RGB', resolution=256, dataset_name='dpr_rot_test', name='RGB 3DUL v0.8')
+model_rgb_3dulight_08_3dul_test = Model('/home/nedko/face_relight/outputs/model_256_rgb_3dulight_v0.8/model_256_rgb_3dulight_v08_rgb/14_net_G.pth', input_mode='RGB', resolution=256, dataset_name='3dul_test', name='RGB 3DUL v0.8')
+model_l_3dulight_08 = Model('/home/nedko/face_relight/outputs/model_256_lab_3dulight_v0.8/model_256_lab_3dulight_v0.8/14_net_G.pth', input_mode='L', resolution=256, dataset_name='3dulight', name='LAB 3DUL v0.8')
+model_l_3dulight_05_shfix = Model('/home/nedko/face_relight/outputs/model_256_lab_3dulight_v0.5_shfix/model_256_lab_3dulight_v0.5_shfix/14_net_G.pth', input_mode='L', resolution=256, dataset_name='3dulight', name='LAB 3DULight v0.5 SHFIX')
+model_l_dpr_10k = Model('/home/tushar/data2/checkpoints/model_256_dprdata10k_lab/14_net_G.pth', input_mode='L', resolution=256, dataset_name='dpr', sh_const = 0.7, name='LAB DPR 10K')
+model_l_dpr_512_30k = Model('/home/tushar/data2/checkpoints_debug/model_fulltrain_dpr7_mse_sumBS20/14_net_G.pth', input_mode='L', resolution=512, dataset_name='dpr', sh_const = 0.7, name='LAB DPR 512 30K')
+model_l_pretrained = Model('models/trained/trained_model_03.t7', input_mode='L', resolution=512, dataset_name='dpr', sh_const = 0.7, name='Pretrained DPR') # '/home/tushar/data2/DPR_test/trained_model/trained_model_03.t7'
 
 model_objs = [
-    model_lab_3dulight_08_256_10k_shfix2,
-    model_lab_stylegan_08_256_10k,
-    model_lab_stylegan_08_neutral_256_10k
+    model_l_stylegan_01_neutral_256_10k,
+    model_l_stylegan_02_neutral_256_10k,
+    # model_lab_stylegan_01_256_10k,
     # model_lab_stylegan_01_256_full,
     # model_lab_stylegan_01_256_neutral_full,
 ]
@@ -685,13 +687,14 @@ def vis_parsing_maps(im, parsing_anno, stride, h=None, w=None):
     alpha_2 = alpha_2.astype(float) / 255
     return alpha_2
 
-def load_model(checkpoint_dir_cmd, device, lab=True, model_1024=False, model_neutral=False):
-    if lab:
+def load_model(checkpoint_dir_cmd, device, input_mode='L', model_1024=False, model_neutral=False):
+    if input_mode in ['L', 'LAB']:
+        nc_img = 3 if input_mode == 'LAB' else 1
         if model_1024:
             my_network_512 = HourglassNet_512_1024(16)
             my_network = HourglassNet_1024(my_network_512, 16)
         else:
-            my_network = HourglassNet(enable_target=not model_neutral)
+            my_network = HourglassNet(enable_target=not model_neutral, ncImg=nc_img)
     else:
         my_network = HourglassNet_RGB()
 
@@ -717,7 +720,7 @@ def gen_norm():
     normal = np.reshape(normal, (-1, 3))
     return normal, valid
 
-def test(my_network, input_img, lab=True, sh_id=0, sh_constant=1.0, res=256, sh_path=lightFolder_3dulight, sh_fname=None, extra_ops={}):
+def test(my_network, input_img, sh_id=0, sh_constant=1.0, res=256, sh_path=lightFolder_3dulight, sh_fname=None, extra_ops={}):
     img = input_img
     row, col, _ = img.shape
     # img = cv2.resize(img, size_re)
@@ -751,8 +754,11 @@ def test(my_network, input_img, lab=True, sh_id=0, sh_constant=1.0, res=256, sh_
     return output_img, sh
 
 
+enable_target_sh = False
 for model_obj in model_objs:
-    model_obj.model = load_model(model_obj.checkpoint_path, model_obj.device, lab=model_obj.lab, model_1024=model_obj.model_1024, model_neutral=model_obj.model_neutral)
+    if not model_obj.model_neutral:
+        enable_target_sh = True
+    model_obj.model = load_model(model_obj.checkpoint_path, model_obj.device, input_mode=model_obj.input_mode, model_1024=model_obj.model_1024, model_neutral=model_obj.model_neutral)
 
 for orig_path, out_fname, gt_data in dataset.iterate():
 
@@ -795,7 +801,7 @@ for orig_path, out_fname, gt_data in dataset.iterate():
             cv2.putText(gt_img, 'Ground Truth', (5, 20), cv2.FONT_HERSHEY_COMPLEX, 0.5, 255)
         results.append(gt_img)
 
-    if sh_path_dataset is None:
+    if sh_path_dataset is None and enable_target_sh:
         min_sh_list_len = min([len(model_obj.target_sh) for model_obj in model_objs])
     else:
         min_sh_list_len = 1
@@ -828,7 +834,7 @@ for orig_path, out_fname, gt_data in dataset.iterate():
 
             extra_ops={}
 
-            result_img, sh = test(model_obj, orig_img_proc, lab=model_obj.lab, sh_constant=model_obj.sh_const, res=model_obj.resolution, sh_id=target_sh, sh_path=sh_path, sh_fname=sh_fname, extra_ops=extra_ops)
+            result_img, sh = test(model_obj, orig_img_proc, sh_constant=model_obj.sh_const, res=model_obj.resolution, sh_id=target_sh, sh_path=sh_path, sh_fname=sh_fname, extra_ops=extra_ops)
 
             result_img = handle_output(result_img, orig_img_proc.shape[1], orig_img_proc.shape[0], mask, orig_img_proc, orig_img, loc, crop_sz, border, enable_face_boxes, orig_path.rsplit('/', 1)[-1].rsplit('.', 1)[0], target_sh, sh, model_obj.blend_mode)
 

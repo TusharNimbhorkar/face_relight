@@ -15,13 +15,16 @@ import matplotlib.pyplot as plt
 from commons.common_tools import Logger, BColors
 from copy import deepcopy
 
+from models.common.data import img_to_input
+
 log = Logger("DataLoader", tag_color=BColors.LightBlue)
 
 class lightDPR7Dataset(BaseDataset):
     @staticmethod
     def modify_commandline_options(parser, is_train=True):
-        # parser.add_argument('--enable_neutral', action='store_true', help='Enable or disable input target sh')
+        # parser.add_argument('--enabele_neutral', action='store_true', help='Enable or disable input target sh')
         parser.add_argument('--n_ids', type=int, default=None, help='Select the amount of identities to take from the dataset. If not used, taking all identities.')
+        parser.add_argument('--input_mode', type=str, default='L', choices=['L', 'LAB', 'RGB'], help='Choose between L, LAB and RGB input')
         if is_train:
             parser.add_argument('--ffhq', type=int, default=70000, help='sample size ffhq')
 
@@ -72,6 +75,7 @@ class lightDPR7Dataset(BaseDataset):
 
         self.img_size = self.opt.img_size
         self.use_segments = self.opt.segment
+        self.input_mode = self.opt.input_mode
         synth_n_per_id = self.opt.n_synth
         n_want = self.opt.n_first
         n_per_id = synth_n_per_id + 1
@@ -145,19 +149,12 @@ class lightDPR7Dataset(BaseDataset):
                      source_path.split('/')[-1].split('_')[0] + '.png')
         return real_img_path, orig_img_path, source_path, target_path, segment_img_path, src_light_path, tgt_light_path
 
-    def _img_to_input(self, img):
-        '''
-        Converts a numpy RGB image array into an L channel input array
-        :param img: RGB image numpy array
-        :return: L channel input array
-        '''
+    def _img_to_input(self, img, input_mode=None):
 
-        img_lab = cv2.cvtColor(img, cv2.COLOR_BGR2LAB)
-        input_L = img_lab[:, :, 0]
-        input_L_norm = input_L.astype(np.float32) / 255.0
-        input_L_norm = input_L_norm.transpose((0,1))
-        input_L_norm = input_L_norm[..., None]
-        input = self.transform_A(input_L_norm)
+        if input_mode is None:
+            input_mode = self.input_mode
+
+        input = img_to_input(img, input_mode, transform=self.transform_A)
 
         return input
 
