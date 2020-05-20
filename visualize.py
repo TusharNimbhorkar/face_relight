@@ -1,4 +1,5 @@
 import argparse
+import copy
 import os.path as osp
 import glob
 import cv2
@@ -145,7 +146,7 @@ class Dataset3DULightGT(Dataset3DULight):
                 yield orig_path, out_fname, [path, sh_path]
 
 class Model:
-    def __init__(self, checkpoint_path, input_mode, resolution, dataset_name, sh_const=1.0, name='', model_1024=False, blend_mode=blend_mode, model_neutral=False):
+    def __init__(self, checkpoint_path, input_mode, resolution, dataset_name, sh_const=1.0, name='', model_1024=False, blend_mode=blend_mode, model_neutral=False, intensity = None):
         self.checkpoint_path = checkpoint_path
         self.input_mode = input_mode
         self.resolution = resolution
@@ -156,6 +157,7 @@ class Model:
         self.model_1024=model_1024
         self.blend_mode = blend_mode
         self.model_neutral = model_neutral
+        self.intensity = intensity
 
         self.transform_src = get_simple_transform(grayscale=False)
 
@@ -206,14 +208,27 @@ class Model:
 
         return output_img, output_sh
 
+    def instance(self,**kwargs):
+        instance = copy.copy(self)
+        for (name, val) in kwargs:
+            instance.name = val
+
 # dataset_test = DatasetDefault('path/to/files')
 dataset_3dulight_v0p8 = Dataset3DULightGT('/home/nedko/face_relight/dbs/3dulight_v0.8_256/train', n_samples=5, n_samples_offset=0) # DatasetDPR('/home/tushar/data2/DPR/train')
-dataset_3dulight_v0p7_randfix = Dataset3DULightGT('/home/tushar/data2/face_relight/dbs/3dulight_v0.7_256_fix/train', n_samples=5, n_samples_offset=0)
-dataset_3dulight_v0p6 = Dataset3DULightGT('/home/nedko/face_relight/dbs/3dulight_v0.6_256/train', n_samples=5, n_samples_offset=5)
+dataset_stylegan_v0p2 = Dataset3DULightGT('/home/nedko/face_relight/dbs/stylegan_v0.2_256/train', n_samples=5, n_samples_offset=0)
 
 outputs_path = '/home/nedko/face_relight/outputs/'
 outputs_remote_path = '/home/nedko/face_relight/outputs/remote/outputs/'
 
+# model_256_lab_stylegan_0.1_10k_debug
+model_lab_stylegan_02_256_10k_intensity_debug_int0 = Model(outputs_path + 'model_256_labfull_stylegan_0.1_10k_debug/14_net_G.pth', input_mode='LAB', resolution=256, dataset_name='3dulight_shfix2', name='L+AB sGAN v0.2 256 \n10k Blender intensity=0', intensity=0)
+model_lab_stylegan_02_256_10k_intensity_debug_int1 = Model(outputs_path + 'model_256_labfull_stylegan_0.1_10k_debug/14_net_G.pth', input_mode='LAB', resolution=256, dataset_name='3dulight_shfix2', name='L+AB sGAN v0.2 256 \n10k Blender intensity=1', intensity=1)
+model_lab_stylegan_02_256_10k_intensity_debug_int2 = Model(outputs_path + 'model_256_labfull_stylegan_0.1_10k_debug/14_net_G.pth', input_mode='LAB', resolution=256, dataset_name='3dulight_shfix2', name='L+AB sGAN v0.2 256 \n10k Blender intensity=2', intensity=2)
+
+# model_256_labfull_stylegan_0.1_10k_neutral
+model_lab_stylegan_01_neutral_256_10k_intensity = Model(outputs_path + 'model_256_labfull_stylegan_0.1_10k_neutral/14_net_G.pth', input_mode='LAB', resolution=256, dataset_name='3dulight_shfix2', name='L+AB sGAN v0.1 256 Neutral \n10k Blender intensity', model_neutral=True)
+model_lab_stylegan_04_256_10k_intensity = Model(outputs_path + 'model_256_labfull_stylegan_0.4_10k/14_net_G.pth', input_mode='LAB', resolution=256, dataset_name='3dulight_shfix2', name='L+AB sGAN v0.4 256 \n10k Blender intensity')
+model_lab_stylegan_02_256_10k_intensity_debug = Model(outputs_path + 'model_256_labfull_stylegan_0.1_10k_debug/14_net_G.pth', input_mode='LAB', resolution=256, dataset_name='3dulight_shfix2', name='L+AB sGAN v0.2 256 \n10k Blender intensity')
 model_lab_stylegan_02_neutral_256_10k_intensity = Model(outputs_path + 'model_256_labfull_stylegan_0.2_10k_intensity/14_net_G.pth', input_mode='LAB', resolution=256, dataset_name='3dulight_shfix2', name='L+AB sGAN v0.2 256 Neutral \n10k Blender intensity', model_neutral=True)
 model_l_stylegan_02_neutral_256_10k_intensity = Model(outputs_path + 'model_256_lab_stylegan_0.2_10k_intensity/14_net_G.pth', input_mode='L', resolution=256, dataset_name='3dulight_shfix2', name='L sGAN v0.2 256 Neutral \n10k Blender intensity', model_neutral=True)
 model_l_stylegan_03_neutral_256_10k = Model(outputs_path + 'model_256_lab_stylegan_0.3_10k/14_net_G.pth', input_mode='L', resolution=256, dataset_name='3dulight_shfix2', name='L sGAN v0.3 256 Neutral 10k', model_neutral=True)
@@ -257,10 +272,17 @@ model_l_pretrained = Model('models/trained/trained_model_03.t7', input_mode='L',
 model_objs = [
     model_l_stylegan_02_neutral_256_10k,
     model_l_stylegan_02_neutral_256_10k_intensity,
-    model_lab_stylegan_02_neutral_256_10k_intensity
+    model_lab_stylegan_02_neutral_256_10k_intensity,
+    model_lab_stylegan_01_neutral_256_10k_intensity,
+    # model_lab_stylegan_01_256_10k,
+    # model_lab_stylegan_02_256_10k_intensity_debug,
+    # model_lab_stylegan_04_256_10k_intensity,
+    # model_lab_stylegan_02_256_10k_intensity_debug_int0,
+    # model_lab_stylegan_02_256_10k_intensity_debug_int1,
+    # model_lab_stylegan_02_256_10k_intensity_debug_int2
 ]
 
-# dataset = dataset_3dulight_v0p8
+# dataset = dataset_stylegan_v0p2
 dataset = DatasetDefault(args["input"])
 
 min_resolution = np.min([min_resolution] + [model_obj.resolution for model_obj in model_objs])
@@ -467,7 +489,11 @@ def handle_output(out_img, col, row, mask, img_p, img_orig, loc, crop_sz, border
 
     mask_path = osp.join(render_data_dir, item_name, masks_fname)
     norms_path = osp.join(render_data_dir, item_name, norms_fname)
-    render_path = osp.join(render_data_dir, item_name, '%04d.jpg' % (sh_id * 2))
+
+    if sh_id is not None:
+        render_path = osp.join(render_data_dir, item_name, '%04d.jpg' % (sh_id * 2))
+    else:
+        render_path = 'empty'
     print(mask_path, norms_path, render_path)
 
     if osp.exists(mask_path) and osp.exists(norms_path) and osp.exists(render_path) and blend_mode in [BlendEnum.POISSON, BlendEnum.RENDER_ONLY]:
@@ -723,7 +749,7 @@ def gen_norm():
     normal = np.reshape(normal, (-1, 3))
     return normal, valid
 
-def test(my_network, input_img, sh_id=0, sh_constant=1.0, res=256, sh_path=lightFolder_3dulight, sh_fname=None, extra_ops={}):
+def test(my_network, input_img, sh_id=0, sh_constant=1.0, res=256, sh_path=lightFolder_3dulight, sh_fname=None, extra_ops={}, intensity=None):
     img = input_img
     row, col, _ = img.shape
     # img = cv2.resize(img, size_re)
@@ -736,6 +762,8 @@ def test(my_network, input_img, sh_id=0, sh_constant=1.0, res=256, sh_path=light
 
     sh = np.loadtxt(osp.join(sh_path, sh_fname))
     sh = sh[0:9]
+    if intensity is not None:
+        sh[0] = intensity
     sh = sh * sh_constant
     # --------------------------------------------------
     # rendering half-sphere
@@ -787,6 +815,8 @@ for orig_path, out_fname, gt_data in dataset.iterate():
     orig_img_proc, mask, loc, crop_sz, border = preprocess(orig_img, device, enable_segment)
     is_face_found = orig_img is not None
 
+    # orig_img_proc = resize_pil(orig_img_proc, height=min_resolution)
+
     if not is_face_found:
         print('No face found: ', orig_path)
         continue
@@ -809,11 +839,12 @@ for orig_path, out_fname, gt_data in dataset.iterate():
     if gt_path is not None:
         gt_img = cv2.imread(gt_path)
 
-        if gt_img.shape[0] > min_resolution:
-            gt_img = resize_pil(gt_img, height=min_resolution)
+        # if gt_img.shape[0] > min_resolution:
+        gt_img = resize_pil(gt_img, height=orig_img_proc.shape[0])
 
+        print(gt_img.shape, min_resolution)
         if not enable_test_mode:
-            gt_img = draw_label(gt_img, 'Original')
+            gt_img = draw_label(gt_img, 'Ground Truth')
         results.append(gt_img)
 
     if sh_path_dataset is None and enable_target_sh:
@@ -849,7 +880,7 @@ for orig_path, out_fname, gt_data in dataset.iterate():
 
             extra_ops={}
 
-            result_img, sh = test(model_obj, orig_img_proc, sh_constant=model_obj.sh_const, res=model_obj.resolution, sh_id=target_sh, sh_path=sh_path, sh_fname=sh_fname, extra_ops=extra_ops)
+            result_img, sh = test(model_obj, orig_img_proc, sh_constant=model_obj.sh_const, res=model_obj.resolution, sh_id=target_sh, sh_path=sh_path, sh_fname=sh_fname, extra_ops=extra_ops, intensity=model_obj.intensity)
 
             result_img = handle_output(result_img, orig_img_proc.shape[1], orig_img_proc.shape[0], mask, orig_img_proc, orig_img, loc, crop_sz, border, enable_face_boxes, orig_path.rsplit('/', 1)[-1].rsplit('.', 1)[0], target_sh, sh, model_obj.blend_mode)
 
@@ -863,7 +894,7 @@ for orig_path, out_fname, gt_data in dataset.iterate():
             results_frame.append(result_img)
 
         # tgt_result = cv2.resize(tgt_result, (256,256))
-
+        print([entry.shape for entry in results+results_frame])
         out_img = np.concatenate(results + results_frame, axis=1)
         print(orig_path, gt_path)
 

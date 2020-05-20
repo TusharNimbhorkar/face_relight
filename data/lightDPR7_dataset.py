@@ -22,7 +22,7 @@ log = Logger("DataLoader", tag_color=BColors.LightBlue)
 class lightDPR7Dataset(BaseDataset):
     @staticmethod
     def modify_commandline_options(parser, is_train=True):
-        # parser.add_argument('--enabele_neutral', action='store_true', help='Enable or disable input target sh')
+        # parser.add_argument('--enable_neutral', action='store_true', help='Enable or disable input target sh')
         parser.add_argument('--n_ids', type=int, default=None, help='Select the amount of identities to take from the dataset. If not used, taking all identities.')
         parser.add_argument('--input_mode', type=str, default='L', choices=['L', 'LAB', 'RGB'], help='Choose between L, LAB and RGB input')
         if is_train:

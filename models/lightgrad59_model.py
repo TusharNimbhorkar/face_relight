@@ -30,31 +30,52 @@ class lightgrad59Model(BaseModel):
 
         return parser
 
-    # def load_networks(self, epoch):
-    #     """Load models from the disk"""
-    #     for name in self.model_names:
-    #         print(name)
-    #         if name=='G' or name=='D':
-    #             if isinstance(name, str):
-    #                 load_filename = '%s_net_%s.pth' % (epoch, name)
-    #                 load_path = osp.join(self.save_dir, load_filename)
-    #                 net = getattr(self, 'net' + name)
-    #                 if isinstance(net, torch.nn.DataParallel):
-    #                     net = net.module
-    #                 print('loading the model from %s' % load_path)
-    #                 # if you are using PyTorch newer than 0.4 (e.g., built from
-    #                 # GitHub source), you can remove str() on self.device
-    #                 state_dict = torch.load(load_path, map_location=str(self.device))
-    #                 if hasattr(state_dict, '_metadata'):
-    #                     del state_dict._metadata
-    #
-    #                 # patch InstanceNorm checkpoints prior to 0.4
-    #                 print(name)
-    #                 print(state_dict.keys())
-    #                 print()
-    #                 for key in list(state_dict.keys()):  # need to copy keys here because we mutate in loop
-    #                     self._patch_instance_norm_state_dict(state_dict, net, key.split('.'))
-    #                 net.load_state_dict(state_dict)
+    def load_networks(self, epoch):
+        """Load models from the disk"""
+        for name in self.model_names:
+            print(name)
+            if name=='G' or name=='D':
+                if isinstance(name, str):
+                    load_filename = '%s_net_%s.pth' % (epoch, name)
+                    load_path = osp.join(self.save_dir, load_filename)
+                    net = getattr(self, 'net' + name)
+                    if isinstance(net, torch.nn.DataParallel):
+                        net = net.module
+                    print('loading the model from %s' % load_path)
+                    # if you are using PyTorch newer than 0.4 (e.g., built from
+                    # GitHub source), you can remove str() on self.device
+                    loaded_state_dict = torch.load(load_path, map_location=str(self.device))
+                    if hasattr(loaded_state_dict, '_metadata'):
+                        del loaded_state_dict._metadata
+
+
+                    if name == 'G':
+                        current_state_dict = self.netG.module.state_dict()
+                        # print('TEST', current_state_dict['pre_conv.weight'].shape)
+                        # print('TEST', current_state_dict['output.weight'].shape)
+                    elif name == 'D':
+                        current_state_dict = self.netD.module.state_dict()
+                        # print('TEST', current_state_dict['model.0.weight'].shape)
+
+
+                    if name == 'G' and current_state_dict['pre_conv.weight'].shape[1] != loaded_state_dict['pre_conv.weight'].shape[1]:
+                        del loaded_state_dict['pre_conv.weight']
+                        del loaded_state_dict['pre_conv.bias']
+
+                    if name == 'G' and current_state_dict['output.weight'].shape[0] != loaded_state_dict['output.weight'].shape[0]:
+                        del loaded_state_dict['output.weight']
+                        del loaded_state_dict['output.bias']
+
+                    if name == 'D' and current_state_dict['model.0.weight'].shape[1] != loaded_state_dict['model.0.weight'].shape[1]:
+                        del loaded_state_dict['model.0.weight']
+                        del loaded_state_dict['model.0.bias']
+
+                    for key in list(loaded_state_dict.keys()):  # need to copy keys here because we mutate in loop
+                        self._patch_instance_norm_state_dict(loaded_state_dict, net, key.split('.'))
+                    net.load_state_dict(loaded_state_dict, strict=False)
+
+                    # sd = net.cpu().state_dict()
+
 
     def __init__(self, opt):
         BaseModel.__init__(self, opt)
