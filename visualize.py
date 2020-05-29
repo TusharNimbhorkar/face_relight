@@ -26,6 +26,9 @@ import dlib
 from demo_segment.model import BiSeNet
 import torchvision.transforms as transforms
 
+from utils.utils_data import InputProcessor, resize_pil
+
+
 class BlendEnum(Enum):
     NONE = "none"
     POISSON = "poisson"
@@ -225,7 +228,11 @@ model_lab_stylegan_02_256_10k_intensity_debug_int0 = Model(outputs_path + 'model
 model_lab_stylegan_02_256_10k_intensity_debug_int1 = Model(outputs_path + 'model_256_labfull_stylegan_0.1_10k_debug/14_net_G.pth', input_mode='LAB', resolution=256, dataset_name='3dulight_shfix2', name='L+AB sGAN v0.2 256 \n10k Blender intensity=1', intensity=1)
 model_lab_stylegan_02_256_10k_intensity_debug_int2 = Model(outputs_path + 'model_256_labfull_stylegan_0.1_10k_debug/14_net_G.pth', input_mode='LAB', resolution=256, dataset_name='3dulight_shfix2', name='L+AB sGAN v0.2 256 \n10k Blender intensity=2', intensity=2)
 
-# model_256_labfull_stylegan_0.1_10k_neutral
+# model_256_lab_3dulight_0.8_10k_intensity_neutral
+model_lab_3dulight_08_256_10k_intensity = Model(outputs_path + 'model_256_lab_3dulight_0.8_10k_intensity/14_net_G.pth', input_mode='LAB', resolution=256, dataset_name='3dulight_shfix2', name='L+AB 3DULight v0.8 256 \n10k Blender intensity')
+model_lab_stylegan_01_256_10k_intensity = Model(outputs_path + 'model_256_lab_stylegan_0.1_10k_intensity/14_net_G.pth', input_mode='LAB', resolution=256, dataset_name='3dulight_shfix2', name='L+AB sGAN v0.1 256 \n10k Blender intensity')
+model_lab_3dul_08_neutral_256_10k_intensity = Model(outputs_path + 'model_256_lab_3dulight_0.8_10k_intensity_neutral/14_net_G.pth', input_mode='LAB', resolution=256, dataset_name='3dulight_shfix2', name='L+AB 3DUL v0.8 256 Neutral \n10k Blender intensity', model_neutral=True)
+model_lab_stylegan_02_neutral_256_10k_intensity_ft = Model(outputs_path + 'model_256_lab_stylegan_0.2_10k_intensity/19_net_G.pth', input_mode='LAB', resolution=256, dataset_name='3dulight_shfix2', name='L+AB FT sGAN v0.2 256 Neutral \n10k Blender intensity', model_neutral=True)
 model_lab_stylegan_01_neutral_256_10k_intensity = Model(outputs_path + 'model_256_labfull_stylegan_0.1_10k_neutral/14_net_G.pth', input_mode='LAB', resolution=256, dataset_name='3dulight_shfix2', name='L+AB sGAN v0.1 256 Neutral \n10k Blender intensity', model_neutral=True)
 model_lab_stylegan_04_256_10k_intensity = Model(outputs_path + 'model_256_labfull_stylegan_0.4_10k/14_net_G.pth', input_mode='LAB', resolution=256, dataset_name='3dulight_shfix2', name='L+AB sGAN v0.4 256 \n10k Blender intensity')
 model_lab_stylegan_02_256_10k_intensity_debug = Model(outputs_path + 'model_256_labfull_stylegan_0.1_10k_debug/14_net_G.pth', input_mode='LAB', resolution=256, dataset_name='3dulight_shfix2', name='L+AB sGAN v0.2 256 \n10k Blender intensity')
@@ -270,10 +277,19 @@ model_l_dpr_512_30k = Model('/home/tushar/data2/checkpoints_debug/model_fulltrai
 model_l_pretrained = Model('models/trained/trained_model_03.t7', input_mode='L', resolution=512, dataset_name='dpr', sh_const = 0.7, name='Pretrained DPR') # '/home/tushar/data2/DPR_test/trained_model/trained_model_03.t7'
 
 model_objs = [
-    model_l_stylegan_02_neutral_256_10k,
-    model_l_stylegan_02_neutral_256_10k_intensity,
-    model_lab_stylegan_02_neutral_256_10k_intensity,
-    model_lab_stylegan_01_neutral_256_10k_intensity,
+    model_lab_3dulight_08_256_10k_intensity,
+    model_lab_stylegan_01_256_10k_intensity,
+    model_lab_stylegan_02_256_10k_intensity_debug_int0
+
+    # model_l_stylegan_03_neutral_256_10k
+
+    # model_l_stylegan_02_neutral_256_10k,
+    # model_l_stylegan_02_neutral_256_10k_intensity,
+    # model_lab_3dul_08_neutral_256_10k_intensity,
+    # model_lab_stylegan_02_neutral_256_10k_intensity_ft,
+    # model_lab_stylegan_02_neutral_256_10k_intensity,
+
+    # model_lab_stylegan_01_neutral_256_10k_intensity,
     # model_lab_stylegan_01_256_10k,
     # model_lab_stylegan_02_256_10k_intensity_debug,
     # model_lab_stylegan_04_256_10k_intensity,
@@ -303,11 +319,6 @@ if enable_segment:
     segment_model.load_state_dict(torch.load(segment_model_path))
     segment_model.eval()
 
-def R(theta):
-    return np.array([[np.cos(theta), -np.sin(theta)],[np.sin(theta), np.cos(theta)]])
-
-R_90 = R(np.deg2rad(90))
-
 
 def Rx(x, sx):
     return np.array([
@@ -332,152 +343,6 @@ def Rz(z, sz):
 
 def R(x, y, z, sx=1, sy=1, sz=1):
     return Rz(z, sz) @ Ry(y, sy) @ Rx(x, sx)
-
-def shape_to_np(shape, dtype="int"):
-    # initialize the list of (x, y)-coordinates
-    coords = np.zeros((68, 2), dtype=dtype)
-
-    # loop over the 68 facial landmarks and convert them
-    # to a 2-tuple of (x, y)-coordinates
-    for i in range(0, 68):
-        coords[i] = (shape.part(i).x, shape.part(i).y)
-
-    # return the list of (x, y)-coordinates
-    return coords
-
-segment_norm = transforms.Compose([
-            transforms.ToTensor(),
-            transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
-        ])
-
-def segment(img_, device):
-    with torch.no_grad():
-        h, w, _ = img_.shape
-        image = cv2.resize(img_, (512, 512), interpolation=cv2.INTER_AREA)
-        img = segment_norm(image)
-        img = torch.unsqueeze(img, 0)
-        img = img.to(device)
-        out = segment_model(img)[0]
-        parsing = out.squeeze(0).cpu().numpy().argmax(0)
-        output_img = vis_parsing_maps(image, parsing, stride=1,h=h,w=w)
-    return output_img
-
-
-def resize_pil(image, width=None, height=None, inter=Image.LANCZOS):
-    # initialize the dimensions of the image to be resized and
-    # grab the image size
-    dim = None
-    (h, w) = image.shape[:2]
-
-    # if both the width and height are None, then return the
-    # original image
-    if width is None and height is None:
-        return image
-
-    # check to see if the width is None
-    if width is None:
-        # calculate the ratio of the height and construct the
-        # dimensions
-        r = height / float(h)
-        dim = (int(w * r), height)
-
-    # otherwise, the height is None
-    else:
-        # calculate the ratio of the width and construct the
-        # dimensions
-        r = width / float(w)
-        dim = (width, int(h * r))
-
-    # resize the image
-    resized = np.array(
-        Image.fromarray(image.astype(np.uint8)).resize(dim, resample=Image.LANCZOS))
-    # return the resized image
-    return resized
-
-def preprocess(img, device, enable_segment):
-    img = np.array(img)
-    orig_size = img.shape
-
-    if np.max(img.shape[:2]) > 1024:
-        if img.shape[0] < img.shape[1]:
-            img_res = resize_pil(img, width=1024)
-        else:
-            img_res = resize_pil(img, height=1024)
-    else:
-        img_res = img
-
-    resize_ratio = orig_size[0] / img_res.shape[0]
-    gray = cv2.cvtColor(img_res, cv2.COLOR_BGR2GRAY)
-    rects, scores, idx = detector.run(gray, 1, -1)
-
-    loc = [0, 0]
-
-    if len(rects) > 0:
-
-        rect_id = np.argmax(scores)
-        rect = rects[rect_id]
-        # rect = rects[0]
-        shape = predictor(gray, rect)
-        shape = shape_to_np(shape)
-        # (x, y, w, h) = rect_to_bb(rect)
-        e0 = np.array(shape[38])
-        e1 = np.array(shape[43])
-        m0 = np.array(shape[48])
-        m1 = np.array(shape[54])
-
-        x_p = e1 - e0
-        y_p = 0.5 * (e0 + e1) - 0.5 * (m0 + m1)
-        c = 0.5 * (e0 + e1) - 0.1 * y_p
-        s = np.max([4.0 * np.linalg.norm(x_p), 3.6 * np.linalg.norm(y_p)])
-        xv = x_p - np.dot(R_90, y_p)
-        xv /= np.linalg.norm(xv)
-        yv = np.dot(R_90, y_p)
-
-        s *= resize_ratio
-        c[0] *= resize_ratio
-        c[1] *= resize_ratio
-
-        c1_ms = np.max([0, int(c[1] - s / 2)])
-        c1_ps = np.min([img.shape[0], int(c[1] + s / 2)])
-        c0_ms = np.max([0, int(c[0] - s / 2)])
-        c0_ps = np.min([img.shape[1], int(c[0] + s / 2)])
-
-        top = -np.min([0, int(c[1] - s / 2)])
-        bottom = -np.min([0, img.shape[0] - int(c[1] + s / 2)])
-        left = -np.min([0, int(c[0] - s / 2)])
-        right = -np.min([0, img.shape[1] - int(c[0] + s / 2)])
-
-        loc[0] = int(c1_ms)
-        loc[1] = int(c0_ms)
-
-        img = img[int(c1_ms):int(c1_ps), int(c0_ms):int(c0_ps)]
-
-        if enable_segment:
-            mask = segment(img, device)
-        else:
-            mask = None
-        # mask = mask[int(c1_ms):int(c1_ps), int(c0_ms):int(c0_ps)]
-
-        img = cv2.copyMakeBorder(img, top, bottom, left, right, cv2.BORDER_CONSTANT, value=[0, 0, 0])
-
-        if enable_segment:
-            mask = cv2.copyMakeBorder(mask, top, bottom, left, right, cv2.BORDER_CONSTANT, 0)
-
-        border = [top, bottom, left, right]
-
-        crop_sz = img.shape
-        if np.max(img.shape[:2]) > 1024:
-            img = cv2.resize(img, (1024, 1024))
-
-            if enable_segment:
-                mask = cv2.resize(mask, (1024, 1024))
-    else:
-        img = None
-        mask = None
-        crop_sz = None
-        border = None
-
-    return img, mask, loc, crop_sz, border
 
 
 def handle_output(out_img, col, row, mask, img_p, img_orig, loc, crop_sz, border, enable_face_boxes, item_name, sh_id, sh, blend_mode):
@@ -675,46 +540,6 @@ def handle_output(out_img, col, row, mask, img_p, img_orig, loc, crop_sz, border
     return img_overlayed
 
 
-def vis_parsing_maps(im, parsing_anno, stride, h=None, w=None):
-    im = np.array(im)
-    alpha_2 = np.zeros((h, w, 3))
-    vis_im = im.copy().astype(np.uint8)
-    vis_parsing_anno = parsing_anno.copy().astype(np.uint8)
-    vis_parsing_anno = cv2.resize(vis_parsing_anno, None, fx=stride, fy=stride, interpolation=cv2.INTER_NEAREST)
-    vis_parsing_anno_color = np.zeros((vis_parsing_anno.shape[0], vis_parsing_anno.shape[1], 3)) + 255
-    num_of_class = np.max(vis_parsing_anno)
-    vis_parsing_anno_color = vis_parsing_anno_color.astype(np.uint8)
-    vis_im = cv2.addWeighted(cv2.cvtColor(vis_im, cv2.COLOR_RGB2BGR), 0.4, vis_parsing_anno_color, 0.6, 0)
-    # MASK
-    vis_parsing_anno = cv2.resize(vis_parsing_anno, (w, h))
-    vis_parsing_anno[vis_parsing_anno == 16] = 0
-    # vis_parsing_anno[vis_parsing_anno==17]=0
-    vis_parsing_anno[vis_parsing_anno == 14] = 0
-    vis_parsing_anno[vis_parsing_anno > 0] = 255
-
-    kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (7, 7))
-    closing = cv2.morphologyEx(vis_parsing_anno, cv2.MORPH_CLOSE, kernel)
-    closing = cv2.morphologyEx(closing, cv2.MORPH_OPEN, kernel)
-
-    new_img = np.zeros_like(closing)  # step 1
-    for val in np.unique(closing)[1:]:  # step 2
-        mask = np.uint8(closing == val)  # step 3
-        labels, stats = cv2.connectedComponentsWithStats(mask, 4)[1:3]  # step 4
-        largest_label = 1 + np.argmax(stats[1:, cv2.CC_STAT_AREA])  # step 5
-        new_img[labels == largest_label] = val
-
-    vis_parsing_anno = new_img.copy()
-
-    # alpha_2 = cv2.imread(segment_path_ear)
-    alpha_2[:, :, 0] = np.copy(vis_parsing_anno)
-    alpha_2[:, :, 1] = np.copy(vis_parsing_anno)
-    alpha_2[:, :, 2] = np.copy(vis_parsing_anno)
-    kernel = np.ones((10, 10), np.uint8)
-    alpha_2 = cv2.erode(alpha_2, kernel, iterations=1)
-    alpha_2 = cv2.GaussianBlur(alpha_2, (29, 29), 15, 15)
-    # Normalize the alpha mask to keep intensity between 0 and 1
-    alpha_2 = alpha_2.astype(float) / 255
-    return alpha_2
 
 def load_model(checkpoint_dir_cmd, device, input_mode='L', model_1024=False, model_neutral=False):
     if input_mode in ['L', 'LAB']:
@@ -801,6 +626,8 @@ for model_obj in model_objs:
         enable_target_sh = True
     model_obj.model = load_model(model_obj.checkpoint_path, model_obj.device, input_mode=model_obj.input_mode, model_1024=model_obj.model_1024, model_neutral=model_obj.model_neutral)
 
+input_processor = InputProcessor(model_dir, enable_segment, device)
+
 for orig_path, out_fname, gt_data in dataset.iterate():
 
     sh_path_dataset = None
@@ -812,7 +639,7 @@ for orig_path, out_fname, gt_data in dataset.iterate():
 
     orig_img = cv2.imread(orig_path)
 
-    orig_img_proc, mask, loc, crop_sz, border = preprocess(orig_img, device, enable_segment)
+    orig_img_proc, mask, loc, crop_sz, border = input_processor.process(orig_img)
     is_face_found = orig_img is not None
 
     # orig_img_proc = resize_pil(orig_img_proc, height=min_resolution)
@@ -894,7 +721,6 @@ for orig_path, out_fname, gt_data in dataset.iterate():
             results_frame.append(result_img)
 
         # tgt_result = cv2.resize(tgt_result, (256,256))
-        print([entry.shape for entry in results+results_frame])
         out_img = np.concatenate(results + results_frame, axis=1)
         print(orig_path, gt_path)
 

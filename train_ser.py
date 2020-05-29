@@ -43,7 +43,7 @@ if __name__ == '__main__':
     if opt.ft:
         end_epoch_count = 5
     else:
-        end_epoch_count=15
+        end_epoch_count = opt.end_epoch
 
     if opt.continue_train:
         start_epoch_count = int(opt.epoch) + 1

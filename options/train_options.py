@@ -35,6 +35,7 @@ class TrainOptions(BaseOptions):
         parser.add_argument('--n_synth', type=int, default=5,
                             help='Sample of synthetic images per indentity in dataset ffhq')
         parser.add_argument('--n_first', type=int, default=5, help='number of first synthetic images per indentity')
+        parser.add_argument('--end_epoch', type=int, default=15, help='number of first synthetic images per indentity')
 
 
 
