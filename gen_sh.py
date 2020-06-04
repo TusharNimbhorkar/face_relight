@@ -19,10 +19,15 @@ ap.add_argument("-s", "--size", required=False, default=-1, type=int,
 	help="Original image size")
 ap.add_argument("-p", "--prev_dir", required=True,
 	help="Older Data Directory")
+ap.add_argument("--no_orig", required=False, action='store_true',
+	help="Disables copying of original images")
+ap.add_argument("--index_data_dir", required=False, default=None, type=str,
+	help="Disables copying of original images")
 args = vars(ap.parse_args())
 
 data_dir = args['input_dir'] #'/home/nedko/face_relight/dbs/example_data'
 older_date_dir = args['prev_dir'] #/home/tushar/data2/DPR/train
+index_data_dir = args['index_data_dir']
 light_info_fname = 'index.txt'
 out_sh_fname = 'light_%s_sh.txt'
 out_orig_img_fname = 'orig.png'
@@ -39,7 +44,13 @@ entry_dirs = glob.glob(osp.join(data_dir, '*'))
 sort_numerically(entry_dirs)
 for entry_dir in entry_dirs:
     print(entry_dir)
-    light_info_path = osp.join(entry_dir, light_info_fname)
+    entry_subname = entry_dir.rsplit('/', 1)[-1]
+
+    if index_data_dir is not None:
+        index_entry_dir = osp.join(index_data_dir, entry_subname)
+    else:
+        index_entry_dir = entry_dir
+    light_info_path = osp.join(index_entry_dir, light_info_fname)
     with open(light_info_path, 'r') as light_info_file:
         csv_reader = csv.reader(light_info_file, delimiter=',')
         next(csv_reader)
@@ -57,18 +68,19 @@ for entry_dir in entry_dirs:
             out_sh_path = osp.join(entry_dir, out_sh_fname % img_subname)
             np.savetxt(out_sh_path, sh_coeffs.T, delimiter=',')
 
-        entry_subname = entry_dir.rsplit('/',1)[-1]
+
         orig_img_path = osp.join(older_date_dir, entry_subname, orig_img_fname % entry_subname)
         orig_sh_path = osp.join(older_date_dir, entry_subname, orig_sh_fname) #% entry_subname)
         out_orig_img_path = osp.join(entry_dir, out_orig_img_fname)
         out_orig_sh_path = osp.join(entry_dir, out_sh_fname % 'orig')
 
-        if orig_size > 0:
-            orig_img = cv2.imread(orig_img_path)
-            orig_img = cv2.resize(orig_img, (orig_size, orig_size))
-            cv2.imwrite(out_orig_img_path, orig_img)
-        else:
-            shutil.copyfile(orig_img_path, out_orig_img_path)
+        if not args['no_orig']:
+            if orig_size > 0:
+                orig_img = cv2.imread(orig_img_path)
+                orig_img = cv2.resize(orig_img, (orig_size, orig_size))
+                cv2.imwrite(out_orig_img_path, orig_img)
+            else:
+                shutil.copyfile(orig_img_path, out_orig_img_path)
 
         sh = np.loadtxt(orig_sh_path)
         # plt.imshow(gen_half_sphere(sh))

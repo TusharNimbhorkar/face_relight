@@ -41,7 +41,7 @@ ap.add_argument("-o", "--output", default='outputs/test', required=False,
 	help="Output Directory")
 ap.add_argument("-d", "--device", default='cuda', required=False, choices=['cuda:0', 'cuda:1', 'cuda','cpu'],
 	help="Device")
-ap.add_argument("-b", "--blend_mode", default=BlendEnum.NONE, required=False, choices=[blend for blend in BlendEnum],
+ap.add_argument("-b", "--blend_mode", default=BlendEnum.NONE.value, required=False, choices=[blend.value for blend in BlendEnum],
 	help="Blending mode")
 ap.add_argument("-f", "--force_images", required=False, action="store_true",
 	help="Force generating images")
