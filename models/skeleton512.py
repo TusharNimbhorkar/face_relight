@@ -147,10 +147,10 @@ class HourglassNet(nn.Module):
 
             return innerFeat, innerFeat[:, self.ncInput:, :, :], light
 
-    def __init__(self, baseFilter=16, gray=True, enable_target=True, ncImg=1):
+    def __init__(self, baseFilter=16, gray=True, enable_target=True, ncImg=1, ncLightExtra=0, ncLight=9):
         super(HourglassNet, self).__init__()
 
-        self.ncLight = 27  # number of channels for input to lighting network
+        self.ncLight = ncLight  # number of channels for input to lighting network
         self.baseFilter = baseFilter
 
         # number of channles for output of lighting network
@@ -159,6 +159,8 @@ class HourglassNet(nn.Module):
         else:
             self.ncOutLight = 27  # color: channel is 3
 
+        self.ncLight += ncLightExtra
+        self.ncOutLight += ncLightExtra
         self.ncImg = ncImg
         self.ncPre = self.baseFilter  # number of channels for pre-convolution
 

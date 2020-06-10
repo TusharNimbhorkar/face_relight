@@ -58,9 +58,11 @@ for entry_dir in entry_dirs:
             light_euler = np.asarray([float(val) for val in row[1:3]])[...].astype(np.float32)
             light_dir = -euler_to_dir(0, light_euler[0], light_euler[1])[np.newaxis, ...]
             light_intensity_blender = float(row[3])
+            ambient_intensity_blender = float(row[4])
             # light_dir = light_dir / np.linalg.norm(light_dir)
             sh_coeffs = SH_basis(light_dir)
             sh_coeffs[0,0] = light_intensity_blender - 4.0
+            sh_coeffs = np.append(sh_coeffs, [[ambient_intensity_blender]], axis=1)
 
             # shading = gen_half_sphere(sh_coeffs.T)
 
@@ -89,5 +91,7 @@ for entry_dir in entry_dirs:
         sh_rot = convert_sh_to_3dul(sh)
 
         sh_rot[0]=8.862269254527579410e-01
+        ambient_intensity_blender_orig = 0
+        sh_rot = np.append(sh_rot, [ambient_intensity_blender_orig], axis=0)
         np.savetxt(out_orig_sh_path, sh_rot)
         # shutil.copyfile(orig_sh_path, out_orig_sh_path)

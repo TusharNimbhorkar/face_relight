@@ -159,17 +159,17 @@ class lightDPR7Dataset(BaseDataset):
         return input
 
     def _get_sh(self, sh):
-        sh = sh[0:9]
+        # sh = sh[0:9]
         sh = sh * 1.0
         sh = np.squeeze(sh)
-        sh = np.reshape(sh, (9, 1, 1)).astype(np.float32)
+        sh = np.reshape(sh, (len(sh), 1, 1)).astype(np.float32)
         return sh
 
     def _read_img(self, img_path, size):
         img = cv2.imread(img_path)
         try:
-            if size < img.shape[0]:
-                img = cv2.resize(img, (self.img_size, self.img_size))
+            if size != img.shape[0] or size != img.shape[1]:
+                img = cv2.resize(img, (size, size))
         except Exception as e:
             print(img_path)
             raise e
@@ -233,8 +233,6 @@ class lightDPR7Dataset(BaseDataset):
         #Target light
         sh = np.loadtxt(tgt_light_path)
         sh_tgt = self._get_sh(sh)
-
-        # todo: check for just VARIABLE thingy
 
         return {'A': input_src, 'B': input_tgt,'C':input_real,'D':input_orig, 'AL':torch.from_numpy(sh_src),'BL':torch.from_numpy(sh_tgt), 'A_paths': AB_path, 'B_paths': AB_path}
 

@@ -149,7 +149,8 @@ class Dataset3DULightGT(Dataset3DULight):
                 yield orig_path, out_fname, [path, sh_path]
 
 class Model:
-    def __init__(self, checkpoint_path, input_mode, resolution, dataset_name, sh_const=1.0, name='', model_1024=False, blend_mode=blend_mode, model_neutral=False, intensity = None):
+    def __init__(self, checkpoint_path, input_mode, resolution, dataset_name, sh_const=1.0, name='', model_1024=False,
+                 blend_mode=blend_mode, model_neutral=False, intensity=None, ambience=None, nc_sh=3):
         self.checkpoint_path = checkpoint_path
         self.input_mode = input_mode
         self.resolution = resolution
@@ -161,6 +162,8 @@ class Model:
         self.blend_mode = blend_mode
         self.model_neutral = model_neutral
         self.intensity = intensity
+        self.ambience = ambience
+        self.nc_sh = nc_sh
 
         self.transform_src = get_simple_transform(grayscale=False)
 
@@ -184,6 +187,11 @@ class Model:
             self.target_sh = target_sh_id_3dulight
 
     def __call__(self, input_img, target_sh, *args, **kwargs):
+        if self.ambience is not None:
+            ambience_arr = np.array([self.ambience]).reshape((1,1,1,1))
+            target_sh = np.append(target_sh, ambience_arr, axis=1)
+
+        target_sh = target_sh.astype(np.float32)
         target_sh = torch.autograd.Variable(torch.from_numpy(target_sh).to(self.device))
 
         input_img_tensor = img_to_input(input_img, self.input_mode, transform=self.transform_src)
@@ -213,8 +221,11 @@ class Model:
 
     def instance(self,**kwargs):
         instance = copy.copy(self)
-        for (name, val) in kwargs:
+        for (name, val) in kwargs.items():
             instance.name = val
+
+        print(instance.name, self.name)
+        return instance
 
 # dataset_test = DatasetDefault('path/to/files')
 dataset_3dulight_v0p8 = Dataset3DULightGT('/home/nedko/face_relight/dbs/3dulight_v0.8_256/train', n_samples=5, n_samples_offset=0) # DatasetDPR('/home/tushar/data2/DPR/train')
@@ -228,7 +239,15 @@ model_lab_stylegan_02_256_10k_intensity_debug_int0 = Model(outputs_path + 'model
 model_lab_stylegan_02_256_10k_intensity_debug_int1 = Model(outputs_path + 'model_256_labfull_stylegan_0.1_10k_debug/14_net_G.pth', input_mode='LAB', resolution=256, dataset_name='3dulight_shfix2', name='L+AB sGAN v0.2 256 \n10k Blender intensity=1', intensity=1)
 model_lab_stylegan_02_256_10k_intensity_debug_int2 = Model(outputs_path + 'model_256_labfull_stylegan_0.1_10k_debug/14_net_G.pth', input_mode='LAB', resolution=256, dataset_name='3dulight_shfix2', name='L+AB sGAN v0.2 256 \n10k Blender intensity=2', intensity=2)
 
-# model_256_lab_3dulight_0.8_10k_intensity_neutral
+#model_256_lab_stylegan_0.2.1_10k_intensity
+model_lab_stylegan_021_256_10k_nocrop_intensity_ambient_shfix3 = Model(outputs_path + 'model_256_lab_stylegan_0.2.1_10k_nocrop_intensity_ambient_shfix3/14_net_G.pth', input_mode='LAB', resolution=256, ambience=0.280, nc_sh=1, dataset_name='3dulight_shfix2', name='L+AB sGAN v0.2.1 256 \n10k int=0, amb=c, SHFIX3', intensity=0)
+model_lab_stylegan_03_256_10k_nocrop_intensity_ambient_0 = Model(outputs_path + 'model_256_lab_stylegan_0.3_10k_nocrop_intensity_ambient/14_net_G.pth', input_mode='LAB', resolution=256, ambience=0.080, dataset_name='3dulight_shfix2', name='L+AB sGAN v0.3 256 \n10k int=0, amb=0.08', intensity=0)
+model_lab_stylegan_03_256_10k_nocrop_intensity_ambient_1 = Model(outputs_path + 'model_256_lab_stylegan_0.3_10k_nocrop_intensity_ambient/14_net_G.pth', input_mode='LAB', resolution=256, ambience=0.180, dataset_name='3dulight_shfix2', name='L+AB sGAN v0.3 256 \n10k int=0, amb=0.18', intensity=0)
+model_lab_stylegan_03_256_10k_nocrop_intensity_ambient_2 = Model(outputs_path + 'model_256_lab_stylegan_0.3_10k_nocrop_intensity_ambient/14_net_G.pth', input_mode='LAB', resolution=256, ambience=0.280, dataset_name='3dulight_shfix2', name='L+AB sGAN v0.3 256 \n10k int=0, amb=0.28', intensity=0)
+model_lab_stylegan_021_256_10k_nocrop_intensity_ambient = Model(outputs_path + 'model_256_lab_stylegan_0.2.1_10k_nocrop_intensity_ambient/10_net_G.pth', input_mode='LAB', resolution=256, ambience=0.280, dataset_name='3dulight_shfix2', name='L+AB sGAN v0.2.1 256 \n10k int=0, amb=c, 10ep', intensity=0)
+
+model_lab_stylegan_021_256_10k_nocrop_intensity = Model(outputs_path + 'model_256_lab_stylegan_0.2.1_10k_nocrop_intensity/14_net_G.pth', input_mode='LAB', resolution=256, dataset_name='3dulight_shfix2', name='L+AB sGAN v0.2.1 256 \n10k intensity=0, not cropped', intensity=0)
+model_lab_stylegan_021_256_10k_intensity = Model(outputs_path + 'model_256_lab_stylegan_0.2.1_10k_intensity/14_net_G.pth', input_mode='LAB', resolution=256, dataset_name='3dulight_shfix2', name='L+AB sGAN v0.2.1 256 \n10k intensity=0, cropped', intensity=0)
 model_lab_3dulight_08_256_10k_intensity = Model(outputs_path + 'model_256_lab_3dulight_0.8_10k_intensity/14_net_G.pth', input_mode='LAB', resolution=256, dataset_name='3dulight_shfix2', name='L+AB 3DULight v0.8 256 \n10k Blender intensity')
 model_lab_stylegan_01_256_10k_intensity = Model(outputs_path + 'model_256_lab_stylegan_0.1_10k_intensity/14_net_G.pth', input_mode='LAB', resolution=256, dataset_name='3dulight_shfix2', name='L+AB sGAN v0.1 256 \n10k Blender intensity')
 model_lab_3dul_08_neutral_256_10k_intensity = Model(outputs_path + 'model_256_lab_3dulight_0.8_10k_intensity_neutral/14_net_G.pth', input_mode='LAB', resolution=256, dataset_name='3dulight_shfix2', name='L+AB 3DUL v0.8 256 Neutral \n10k Blender intensity', model_neutral=True)
@@ -277,25 +296,11 @@ model_l_dpr_512_30k = Model('/home/tushar/data2/checkpoints_debug/model_fulltrai
 model_l_pretrained = Model('models/trained/trained_model_03.t7', input_mode='L', resolution=512, dataset_name='dpr', sh_const = 0.7, name='Pretrained DPR') # '/home/tushar/data2/DPR_test/trained_model/trained_model_03.t7'
 
 model_objs = [
-    model_lab_3dulight_08_256_10k_intensity,
-    model_lab_stylegan_01_256_10k_intensity,
-    model_lab_stylegan_02_256_10k_intensity_debug_int0
-
-    # model_l_stylegan_03_neutral_256_10k
-
-    # model_l_stylegan_02_neutral_256_10k,
-    # model_l_stylegan_02_neutral_256_10k_intensity,
-    # model_lab_3dul_08_neutral_256_10k_intensity,
-    # model_lab_stylegan_02_neutral_256_10k_intensity_ft,
-    # model_lab_stylegan_02_neutral_256_10k_intensity,
-
-    # model_lab_stylegan_01_neutral_256_10k_intensity,
-    # model_lab_stylegan_01_256_10k,
-    # model_lab_stylegan_02_256_10k_intensity_debug,
-    # model_lab_stylegan_04_256_10k_intensity,
-    # model_lab_stylegan_02_256_10k_intensity_debug_int0,
-    # model_lab_stylegan_02_256_10k_intensity_debug_int1,
-    # model_lab_stylegan_02_256_10k_intensity_debug_int2
+    model_lab_stylegan_021_256_10k_nocrop_intensity,
+    # model_lab_stylegan_03_256_10k_nocrop_intensity_ambient_0,
+    # model_lab_stylegan_03_256_10k_nocrop_intensity_ambient_1,
+    # model_lab_stylegan_03_256_10k_nocrop_intensity_ambient_2,
+    model_lab_stylegan_021_256_10k_nocrop_intensity_ambient_shfix3
 ]
 
 # dataset = dataset_stylegan_v0p2
@@ -541,14 +546,20 @@ def handle_output(out_img, col, row, mask, img_p, img_orig, loc, crop_sz, border
 
 
 
-def load_model(checkpoint_dir_cmd, device, input_mode='L', model_1024=False, model_neutral=False):
+def load_model(checkpoint_dir_cmd, device, input_mode='L', model_1024=False, model_neutral=False, model_ambient=False, nc_sh=1):
     if input_mode in ['L', 'LAB']:
         nc_img = 3 if input_mode == 'LAB' else 1
         if model_1024:
             my_network_512 = HourglassNet_512_1024(16)
             my_network = HourglassNet_1024(my_network_512, 16)
         else:
-            my_network = HourglassNet(enable_target=not model_neutral, ncImg=nc_img)
+            if model_ambient:
+                nc_light_extra = 1
+            else:
+                nc_light_extra = 0
+
+            print('TEST', nc_light_extra)
+            my_network = HourglassNet(enable_target=not model_neutral, ncImg=nc_img, ncLightExtra=nc_light_extra, ncLight=9*nc_sh)
     else:
         my_network = HourglassNet_RGB()
 
@@ -586,7 +597,7 @@ def test(my_network, input_img, sh_id=0, sh_constant=1.0, res=256, sh_path=light
         sh_fname = 'rotate_light_{:02d}.txt'.format(sh_id)
 
     sh = np.loadtxt(osp.join(sh_path, sh_fname))
-    sh = sh[0:9]
+    # sh = sh[0:9]
     if intensity is not None:
         sh[0] = intensity
     sh = sh * sh_constant
@@ -624,7 +635,9 @@ enable_target_sh = False
 for model_obj in model_objs:
     if not model_obj.model_neutral:
         enable_target_sh = True
-    model_obj.model = load_model(model_obj.checkpoint_path, model_obj.device, input_mode=model_obj.input_mode, model_1024=model_obj.model_1024, model_neutral=model_obj.model_neutral)
+    model_obj.model = load_model(model_obj.checkpoint_path, model_obj.device, input_mode=model_obj.input_mode,
+                                 model_1024=model_obj.model_1024, model_neutral=model_obj.model_neutral,
+                                 model_ambient=model_obj.ambience is not None, nc_sh=model_obj.nc_sh)
 
 input_processor = InputProcessor(model_dir, enable_segment, device)
 

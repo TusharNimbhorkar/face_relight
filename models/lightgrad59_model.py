@@ -92,12 +92,14 @@ class lightgrad59Model(BaseModel):
         self.enable_target = not opt.enable_neutral
         self.input_mode = opt.input_mode
 
+        self.nc_light_extra = 0
         if self.input_mode in ['RGB', 'LAB']:
             self.nc_img = 3
         elif self.input_mode in ['L']:
             self.nc_img = 1
 
-        self.netG = HourglassNet(enable_target=self.enable_target, ncImg=self.nc_img).to(self.device)
+        self._set_model_parameters()
+        self.netG = HourglassNet(enable_target=self.enable_target, ncImg=self.nc_img, ncLightExtra=self.nc_light_extra).to(self.device)
         if 'cpu' not in str(self.device):
             self.netG = torch.nn.DataParallel(self.netG, self.opt.gpu_ids)
         self.netG.train(True)
@@ -122,6 +124,9 @@ class lightgrad59Model(BaseModel):
 
             self.optimizers.append(self.optimizer_G)
             self.optimizers.append(self.optimizer_D)
+
+    def _set_model_parameters(self):
+        pass
 
     def set_input(self, input):
         AtoB = self.opt.direction == 'AtoB'
