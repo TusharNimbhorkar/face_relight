@@ -12,9 +12,12 @@ from commons.common_tools import sort_numerically
 
 orig_img_dir = '/home/tushar/data2/rendering_pipeline/stylegan_final_30k'
 input_data_path = "/home/nedko/face_relight/dbs/data/stylegan_v0/v0.3.1_1024_ambient_0p04to0p4"
-output_data_dir = "/home/nedko/face_relight/dbs/data/stylegan_v0/v0.3.1_1024_int_ambient_crop"
+output_data_dir = "dbs/data/stylegan_v0/v0.4.1_1024_int_ambient_side_offset_crop"
 face_data_dir = "/home/nedko/face_relight/dbs/data/stylegan_v0/face_data"
-first_n = 10000
+
+side_offset = True
+
+first_n = 10
 n_threads = 6
 n_files_in_folder = 6
 
@@ -63,6 +66,8 @@ def crop(data_id_path):
         np.savez(face_data_id_path, rects=rects, scores=scores, idx=idx, shape=shape)
 
     img_orig_proc = input_processor.process(img_orig, face_data)[0]
+    if side_offset:
+        img_orig_proc = input_processor.process_side_offset(img_orig, face_data)[0]
     cv2.imwrite(output_img_path, img_orig_proc)
 
     for img_path in img_paths:
@@ -73,6 +78,8 @@ def crop(data_id_path):
         output_img_path = osp.join(output_data_dir, id_dirname, img_fname)
         img = cv2.imread(img_path)
         img_proc = input_processor.process(img, face_data=face_data)[0]
+        if side_offset:
+            img_proc = input_processor.process_side_offset(img, face_data=face_data)[0]
         cv2.imwrite(output_img_path, img_proc)
 
 
