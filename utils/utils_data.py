@@ -7,7 +7,7 @@ from PIL import Image
 from torchvision.transforms import transforms
 
 from demo_segment.model import BiSeNet
-
+from matplotlib import pyplot as plt
 
 def R(theta):
     return np.array([[np.cos(theta), -np.sin(theta)],[np.sin(theta), np.cos(theta)]])
@@ -192,6 +192,8 @@ class InputProcessor:
                 # rect = rects[0]
                 shape = self.predictor(gray, rect)
                 shape = shape_to_np(shape)
+                # from here
+                print()
 
         else:
             rects, scores, idx, shape = face_data
@@ -208,6 +210,8 @@ class InputProcessor:
             # (x, y, w, h) = rect_to_bb(rect)
             e0 = np.array(shape[38])
             e1 = np.array(shape[43])
+            # e0 = np.array(shape[0])
+            # e1 = np.array(shape[16])
             m0 = np.array(shape[48])
             m1 = np.array(shape[54])
 
@@ -236,7 +240,7 @@ class InputProcessor:
             loc[0] = int(c1_ms)
             loc[1] = int(c0_ms)
 
-            img = img[int(c1_ms):int(c1_ps), int(c0_ms):int(c0_ps)]
+            img = img[int(c1_ms):int(c1_ps), int(c0_ms):int(c0_ps)]#here do something?
 
             if self.enable_segment:
                 mask = self.seg_gen.segment(img)
@@ -244,7 +248,7 @@ class InputProcessor:
                 mask = None
             # mask = mask[int(c1_ms):int(c1_ps), int(c0_ms):int(c0_ps)]
 
-            img = cv2.copyMakeBorder(img, top, bottom, left, right, cv2.BORDER_CONSTANT, value=[0, 0, 0])
+            # img = cv2.copyMakeBorder(img, top, bottom, left, right, cv2.BORDER_CONSTANT, value=[0, 0, 0])
 
             if self.enable_segment:
                 mask = cv2.copyMakeBorder(mask, top, bottom, left, right, cv2.BORDER_CONSTANT, 0)
@@ -264,3 +268,118 @@ class InputProcessor:
             border = None
 
         return img, mask, loc, crop_sz, border
+
+
+
+    def process_side_offset(self, img, face_data=None):
+        img = np.array(img)
+        orig_size = img.shape
+
+        if np.max(img.shape[:2]) > 1024:
+            if img.shape[0] < img.shape[1]:
+                img_res = resize_pil(img, width=1024)
+            else:
+                img_res = resize_pil(img, height=1024)
+        else:
+            img_res = img
+
+        resize_ratio = orig_size[0] / img_res.shape[0]
+        gray = cv2.cvtColor(img_res, cv2.COLOR_BGR2GRAY)
+        if face_data is None:
+            rects, scores, idx = self.detector.run(gray, 1, -1)
+
+            if len(rects) > 0:
+                rect_id = np.argmax(scores)
+                rect = rects[rect_id]
+                # rect = rects[0]
+                shape = self.predictor(gray, rect)
+                shape = shape_to_np(shape)
+                # from here
+                print()
+
+
+        else:
+            rects, scores, idx, shape = face_data
+
+        loc = [0, 0]
+
+        if len(rects) > 0:
+
+            box = compute_face_box(gray,shape)
+            x_min = max(0,box.left())
+            y_min = max(0,box.top())
+            x_max = box.right()
+            y_max = box.bottom()
+
+            img = img[int(y_min*resize_ratio):int(y_max*resize_ratio), int(x_min*resize_ratio):int(x_max*resize_ratio)]#here do something?
+
+            if self.enable_segment:
+                mask = self.seg_gen.segment(img)
+            else:
+                mask = None
+            # mask = mask[int(c1_ms):int(c1_ps), int(c0_ms):int(c0_ps)]
+
+            # img = cv2.copyMakeBorder(img, top, bottom, left, right, cv2.BORDER_CONSTANT, value=[0, 0, 0])
+
+            # if self.enable_segment:
+            #     mask = cv2.copyMakeBorder(mask, top, bottom, left, right, cv2.BORDER_CONSTANT, 0)
+            #
+            # border = [top, bottom, left, right]
+            border = [0, 0, 0, 0]
+
+            crop_sz = img.shape
+            if np.max(img.shape[:2]) > 1024:
+                img = cv2.resize(img, (1024, 1024))
+
+                if self.enable_segment:
+                    mask = cv2.resize(mask, (1024, 1024))
+        else:
+            img = None
+            mask = None
+            crop_sz = None
+            border = None
+
+        return img, mask, loc, crop_sz, border
+
+
+def compute_face_box(frame, lm, border_fraction=0.1):
+    x_min, y_min = np.min(lm, axis=0)
+    x_max, y_max = np.max(lm, axis=0)
+
+    width = x_max - x_min
+    height = y_max - y_min
+
+    x_min -= width *  border_fraction*1
+    x_max += width *  border_fraction*1
+    y_min -= height * border_fraction*6
+    y_max += height * border_fraction
+
+    x_center = (x_min + x_max) / 2
+    y_center = (y_min + y_max) / 2
+
+    max_width = max(x_max - x_min, y_max - y_min)
+    x_min = max(int(x_center - max_width / 2), 0)
+    y_min = max(int(y_center - max_width / 2), 0)
+
+    x_max = min(int(x_min + max_width), frame.shape[1])
+    y_max = min(int(y_min + max_width), frame.shape[0])
+    x_min = x_max - max_width
+    y_min = y_max - max_width
+
+    return dlib.rectangle(int(x_min), int(y_min), int(x_max), int(y_max))
+
+# img_path_orig = '/home/tushar/FR/demo_FR/face_relight/1.png'
+# import os
+# test_path = '/home/tushar/FR/demo_FR/face_relight/test_data/fail'
+#
+# for im in os.listdir(test_path):
+#     img_path_orig = os.path.join(test_path,im)
+#
+#     img_orig = cv2.imread(img_path_orig)
+#     model_dir = osp.abspath('/home/tushar/FR/demo_FR/face_relight/demo/data/model/')
+#     input_processor = InputProcessor(model_dir)
+#     face_data = input_processor.get_face_data(img_orig)
+#     rects, scores, idx, shape = face_data
+#     # np.savez(face_data_id_path, rects=rects, scores=scores, idx=idx, shape=shape)
+#     img_orig_proc = input_processor.process_2(img_orig, face_data)[0]
+#     cv2.imwrite(im,img_orig_proc)
