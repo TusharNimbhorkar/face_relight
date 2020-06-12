@@ -239,7 +239,18 @@ model_lab_stylegan_02_256_10k_intensity_debug_int0 = Model(outputs_path + 'model
 model_lab_stylegan_02_256_10k_intensity_debug_int1 = Model(outputs_path + 'model_256_labfull_stylegan_0.1_10k_debug/14_net_G.pth', input_mode='LAB', resolution=256, dataset_name='3dulight_shfix2', name='L+AB sGAN v0.2 256 \n10k Blender intensity=1', intensity=1)
 model_lab_stylegan_02_256_10k_intensity_debug_int2 = Model(outputs_path + 'model_256_labfull_stylegan_0.1_10k_debug/14_net_G.pth', input_mode='LAB', resolution=256, dataset_name='3dulight_shfix2', name='L+AB sGAN v0.2 256 \n10k Blender intensity=2', intensity=2)
 
-#model_256_lab_stylegan_0.2.1_10k_intensity
+#model_256_lab_stylegan_0.2_10k_neutral_int_amb_shfix3
+#outputs/model_256_lab_stylegan_0.2.1_20k_nocrop_neutral_int_amb_crop_shafeatdec
+
+model_lab_stylegan_021_256_20k_neutral_shafeatdec = Model(outputs_path + 'model_256_lab_stylegan_0.2.1_20k_nocrop_neutral_int_amb_crop_shafeatdec/14_net_G.pth', input_mode='LAB', resolution=256, ambience=0.280, nc_sh=1, dataset_name='3dulight_shfix2', name='L+AB sGAN v0.2.1 256\n10k int=0, Neutral, sh+a to dec', intensity=0, model_neutral=True)
+
+#All models above have intensity and ambience input if not otherwise noted, their variation depends on the dataset version
+#All above models have SHFIX3
+
+model_lab_stylegan_021_256_20k_neutral_intensity_shfix3 = Model(outputs_path + 'model_256_lab_stylegan_0.2.1_20k_nocrop_neutral_int_amb_crop/14_net_G.pth', input_mode='LAB', resolution=256, ambience=0.280, nc_sh=1, dataset_name='3dulight_shfix2', name='L+AB sGAN v0.2 256 \n20k int=0, Neutral, SHFIX3', intensity=0, model_neutral=True)
+model_lab_stylegan_031_256_10k_neutral_crop_intensity_ambient_shfix3 = Model(outputs_path + 'model_256_lab_stylegan_0.3.1_10k_neutral_int_amb_crop/14_net_G.pth', input_mode='LAB', resolution=256, ambience=0.280, intensity=0, nc_sh=1, dataset_name='3dulight_shfix2', name='L+AB sGAN v0.3.1 256 \n10k int=0, Neutral, SHFIX3', model_neutral=True)
+model_lab_stylegan_031_256_10k_crop_intensity_ambient_shfix3 = Model(outputs_path + 'model_256_lab_stylegan_0.3.1_10k_intensity_ambient_crop_shfix3/14_net_G.pth', input_mode='LAB', resolution=256, ambience=0.280, nc_sh=1, dataset_name='3dulight_shfix2', name='L+AB sGAN v0.3.1 256 \n10k int=0, Neutral, crop, SHFIX3', intensity=0)
+model_lab_stylegan_02_256_10k_neutral_intensity_shfix3 = Model(outputs_path + 'model_256_lab_stylegan_0.2_10k_neutral_int_amb_shfix3/14_net_G.pth', input_mode='LAB', resolution=256, ambience=None, nc_sh=1, dataset_name='3dulight_shfix2', name='L+AB sGAN v0.2 256 \n10k int=0, Neutral, SHFIX3', intensity=0, model_neutral=True)
 model_lab_stylegan_021_256_10k_nocrop_intensity_ambient_shfix3 = Model(outputs_path + 'model_256_lab_stylegan_0.2.1_10k_nocrop_intensity_ambient_shfix3/14_net_G.pth', input_mode='LAB', resolution=256, ambience=0.280, nc_sh=1, dataset_name='3dulight_shfix2', name='L+AB sGAN v0.2.1 256 \n10k int=0, amb=c, SHFIX3', intensity=0)
 model_lab_stylegan_03_256_10k_nocrop_intensity_ambient_0 = Model(outputs_path + 'model_256_lab_stylegan_0.3_10k_nocrop_intensity_ambient/14_net_G.pth', input_mode='LAB', resolution=256, ambience=0.080, dataset_name='3dulight_shfix2', name='L+AB sGAN v0.3 256 \n10k int=0, amb=0.08', intensity=0)
 model_lab_stylegan_03_256_10k_nocrop_intensity_ambient_1 = Model(outputs_path + 'model_256_lab_stylegan_0.3_10k_nocrop_intensity_ambient/14_net_G.pth', input_mode='LAB', resolution=256, ambience=0.180, dataset_name='3dulight_shfix2', name='L+AB sGAN v0.3 256 \n10k int=0, amb=0.18', intensity=0)
@@ -296,11 +307,10 @@ model_l_dpr_512_30k = Model('/home/tushar/data2/checkpoints_debug/model_fulltrai
 model_l_pretrained = Model('models/trained/trained_model_03.t7', input_mode='L', resolution=512, dataset_name='dpr', sh_const = 0.7, name='Pretrained DPR') # '/home/tushar/data2/DPR_test/trained_model/trained_model_03.t7'
 
 model_objs = [
-    model_lab_stylegan_021_256_10k_nocrop_intensity,
-    # model_lab_stylegan_03_256_10k_nocrop_intensity_ambient_0,
-    # model_lab_stylegan_03_256_10k_nocrop_intensity_ambient_1,
-    # model_lab_stylegan_03_256_10k_nocrop_intensity_ambient_2,
-    model_lab_stylegan_021_256_10k_nocrop_intensity_ambient_shfix3
+    model_lab_stylegan_021_256_20k_neutral_shafeatdec,
+    # model_lab_stylegan_02_256_10k_neutral_intensity_shfix3,
+    # model_lab_stylegan_021_256_20k_neutral_intensity_shfix3,
+    # model_lab_stylegan_031_256_10k_neutral_crop_intensity_ambient_shfix3,
 ]
 
 # dataset = dataset_stylegan_v0p2
@@ -558,13 +568,13 @@ def load_model(checkpoint_dir_cmd, device, input_mode='L', model_1024=False, mod
             else:
                 nc_light_extra = 0
 
-            print('TEST', nc_light_extra)
             my_network = HourglassNet(enable_target=not model_neutral, ncImg=nc_img, ncLightExtra=nc_light_extra, ncLight=9*nc_sh)
     else:
         my_network = HourglassNet_RGB()
 
-    print(checkpoint_dir_cmd)
-    my_network.load_state_dict(torch.load(checkpoint_dir_cmd))
+    current_state_dict = [module.state_dict().keys() for module in my_network.modules()]
+    loaded_params = torch.load(checkpoint_dir_cmd)
+    my_network.load_state_dict(loaded_params)
     my_network.to(device)
     my_network.train(False)
     return my_network
