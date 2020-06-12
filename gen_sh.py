@@ -10,6 +10,8 @@ import shutil
 import cv2
 from commons.common_tools import sort_numerically
 import matplotlib.pyplot as plt
+from utils.utils_data import resize_pil
+
 
 
 ap = argparse.ArgumentParser()
@@ -78,8 +80,11 @@ for entry_dir in entry_dirs:
 
         if not args['no_orig']:
             if orig_size > 0:
+                print(orig_img_path)
                 orig_img = cv2.imread(orig_img_path)
-                orig_img = cv2.resize(orig_img, (orig_size, orig_size))
+                # orig_img = cv2.resize(orig_img, (orig_size, orig_size))
+                orig_img = resize_pil(orig_img, width=orig_size,height=orig_size)
+
                 cv2.imwrite(out_orig_img_path, orig_img)
             else:
                 shutil.copyfile(orig_img_path, out_orig_img_path)
