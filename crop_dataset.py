@@ -15,9 +15,9 @@ input_data_path = "/home/nedko/face_relight/dbs/data/stylegan_v0/v0.3.1_1024_amb
 output_data_dir = "dbs/data/stylegan_v0/v0.4.1_1024_int_ambient_side_offset_crop"
 face_data_dir = "/home/nedko/face_relight/dbs/data/stylegan_v0/face_data"
 
-side_offset = True
+side_offset = False
 
-first_n = 10
+first_n = 10000
 n_threads = 6
 n_files_in_folder = 6
 
