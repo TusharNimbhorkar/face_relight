@@ -31,11 +31,13 @@ def resize_pil(image, width=None, height=None, inter=Image.LANCZOS):
         dim = (int(w * r), height)
 
     # otherwise, the height is None
-    else:
+    elif height is None:
         # calculate the ratio of the width and construct the
         # dimensions
         r = width / float(w)
         dim = (width, int(h * r))
+    else:
+        dim=(width,height)
 
     # resize the image
     resized = np.array(
