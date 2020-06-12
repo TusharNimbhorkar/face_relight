@@ -248,7 +248,7 @@ class InputProcessor:
                 mask = None
             # mask = mask[int(c1_ms):int(c1_ps), int(c0_ms):int(c0_ps)]
 
-            # img = cv2.copyMakeBorder(img, top, bottom, left, right, cv2.BORDER_CONSTANT, value=[0, 0, 0])
+            img = cv2.copyMakeBorder(img, top, bottom, left, right, cv2.BORDER_CONSTANT, value=[0, 0, 0])
 
             if self.enable_segment:
                 mask = cv2.copyMakeBorder(mask, top, bottom, left, right, cv2.BORDER_CONSTANT, 0)
