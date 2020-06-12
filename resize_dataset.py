@@ -77,8 +77,8 @@ def resize(obj):
         rel_files = sorted(os.listdir(path_rel_obj))
 
         for file in rel_files:
-            if file != 'orig.png':
-                continue
+            # if file != 'orig.png':
+            #     continue
 
             if file[-3:]=='txt':
                 # print(file)
