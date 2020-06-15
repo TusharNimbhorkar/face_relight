@@ -97,7 +97,7 @@ pool = multiprocessing.Pool(n_threads)
 
 i=1
 for x in pool.imap_unordered(resize, objs, chunksize=chunk_size):
-    if i%100:
+    if i%100 == 0:
         print("Completed: ", i)
     i+=1
 

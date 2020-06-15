@@ -1,3 +1,4 @@
+import argparse
 import multiprocessing
 import shutil
 
@@ -10,11 +11,24 @@ import cv2
 import numpy as np
 from commons.common_tools import sort_numerically
 
-orig_img_dir = '/home/tushar/data2/rendering_pipeline/stylegan_final_30k'
-input_data_path = "/home/nedko/face_relight/dbs/data/stylegan_v0/v0.3.1_1024_ambient_0p04to0p4"
-output_data_dir = "dbs/data/stylegan_v0/v0.4.1_1024_int_ambient_side_offset_crop"
-face_data_dir = "/home/nedko/face_relight/dbs/data/stylegan_v0/face_data"
+# # orig_img_dir = '/home/tushar/data2/rendering_pipeline/stylegan_final_30k'
+# input_data_path = "/home/nedko/face_relight/dbs/data/stylegan_v0/v0.3.1_1024_ambient_0p04to0p4"
+# output_data_dir = "dbs/data/stylegan_v0/v0.4.1_1024_int_ambient_side_offset_crop"
+# face_data_dir = "/home/nedko/face_relight/dbs/data/stylegan_v0/face_data"
 
+
+ap = argparse.ArgumentParser()
+ap.add_argument("-i", "--input_dir", required=True,
+	help="Input Data Directory")
+ap.add_argument("-o", "--output_dir", required=True,
+	help="Older Data Directory")
+ap.add_argument("-f", "--face_data_dir", required=True,
+	help="Disables copying of original images")
+args = vars(ap.parse_args())
+
+input_data_path = args['input_dir']
+output_data_dir = args['output_dir']
+face_data_dir = args['face_data_dir']
 side_offset = False
 
 first_n = 10000
@@ -32,8 +46,8 @@ os.makedirs(face_data_dir, exist_ok=True)
 def crop(data_id_path):
     id_dirname = data_id_path.rsplit('/', 1)[-1]
 
-    img_orig_fname = "%s.png" % id_dirname
-    img_path_orig = osp.join(orig_img_dir, id_dirname, img_orig_fname)
+    img_orig_fname = "%s.png" % "orig" #id_dirname
+    img_path_orig = osp.join(input_data_path, id_dirname, img_orig_fname)
     # img_orig_fname = "orig.png"
     # img_path_orig = osp.join(data_id_path, img_orig_fname)
 
@@ -55,6 +69,7 @@ def crop(data_id_path):
             fname = file_path.rsplit('/', 1)[-1]
             shutil.copy(file_path, osp.join(output_id_path, fname))
 
+    print('TEST ORIG', img_path_orig)
     img_orig = cv2.imread(img_path_orig)
 
     if osp.exists(face_data_id_path):
@@ -65,9 +80,11 @@ def crop(data_id_path):
         rects, scores, idx, shape = face_data
         np.savez(face_data_id_path, rects=rects, scores=scores, idx=idx, shape=shape)
 
-    img_orig_proc = input_processor.process(img_orig, face_data)[0]
     if side_offset:
         img_orig_proc = input_processor.process_side_offset(img_orig, face_data)[0]
+    else:
+        img_orig_proc = input_processor.process(img_orig, face_data)[0]
+
     cv2.imwrite(output_img_path, img_orig_proc)
 
     for img_path in img_paths:
@@ -77,9 +94,11 @@ def crop(data_id_path):
         img_fname = img_path.rsplit('/', 1)[-1]
         output_img_path = osp.join(output_data_dir, id_dirname, img_fname)
         img = cv2.imread(img_path)
-        img_proc = input_processor.process(img, face_data=face_data)[0]
         if side_offset:
             img_proc = input_processor.process_side_offset(img, face_data=face_data)[0]
+        else:
+            img_proc = input_processor.process(img, face_data=face_data)[0]
+
         cv2.imwrite(output_img_path, img_proc)
 
 
