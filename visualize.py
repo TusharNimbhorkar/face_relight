@@ -232,6 +232,7 @@ dataset_3dulight_v0p8 = Dataset3DULightGT('/home/nedko/face_relight/dbs/3dulight
 dataset_stylegan_v0p2 = Dataset3DULightGT('/home/nedko/face_relight/dbs/stylegan_v0.2_256/train', n_samples=5, n_samples_offset=0)
 
 outputs_path = '/home/nedko/face_relight/outputs/'
+outputs_path_tushar = '/home/tushar/data2/face_relight/outputs/'
 outputs_remote_path = '/home/nedko/face_relight/outputs/remote/outputs/'
 
 # model_256_lab_stylegan_0.1_10k_debug
@@ -246,6 +247,9 @@ model_lab_stylegan_021_256_20k_neutral_shafeatdec = Model(outputs_path + 'model_
 
 #All models above have intensity and ambience input if not otherwise noted, their variation depends on the dataset version
 #All above models have SHFIX3
+model_lab_stylegan_021_256_10k_neutral_sgandec = Model(outputs_path_tushar + 'model_256_lab_stylegan_0.2.1_10k_nocrop_desc_last10k_Stylegan/14_net_G.pth', input_mode='LAB', resolution=256, ambience=0.280, nc_sh=1, dataset_name='3dulight_shfix2', name='L+AB sGAN v0.2.1 256\n10k int=0, Neutral, sgan to dec', intensity=0, model_neutral=True)
+model_lab_stylegan_021_256_10k_neutral_sgan_ffhq_dec = Model(outputs_path + 'model_256_lab_0.2.1_nocrop_sgan_ffhq/14_net_G.pth', input_mode='LAB', resolution=256, ambience=0.280, nc_sh=1, dataset_name='3dulight_shfix2', name='L+AB sGAN v0.2.1 256\n10k int=0, Neutral, sgan+ffhq to dec', intensity=0, model_neutral=True)
+# # '/home/nedko/face_relight/outputs/model_256_lab_0.2.1_nocrop_sgan_ffhq'
 
 model_lab_stylegan_021_256_20k_neutral_intensity_shfix3 = Model(outputs_path + 'model_256_lab_stylegan_0.2.1_20k_nocrop_neutral_int_amb_crop/14_net_G.pth', input_mode='LAB', resolution=256, ambience=0.280, nc_sh=1, dataset_name='3dulight_shfix2', name='L+AB sGAN v0.2 256 \n20k int=0, Neutral, SHFIX3', intensity=0, model_neutral=True)
 model_lab_stylegan_031_256_10k_neutral_crop_intensity_ambient_shfix3 = Model(outputs_path + 'model_256_lab_stylegan_0.3.1_10k_neutral_int_amb_crop/14_net_G.pth', input_mode='LAB', resolution=256, ambience=0.280, intensity=0, nc_sh=1, dataset_name='3dulight_shfix2', name='L+AB sGAN v0.3.1 256 \n10k int=0, Neutral, SHFIX3', model_neutral=True)
@@ -305,12 +309,15 @@ model_l_3dulight_05_shfix = Model(outputs_path + 'model_256_lab_3dulight_v0.5_sh
 model_l_dpr_10k = Model('/home/tushar/data2/checkpoints/model_256_dprdata10k_lab/14_net_G.pth', input_mode='L', resolution=256, dataset_name='dpr', sh_const = 0.7, name='L DPR 10K')
 model_l_dpr_512_30k = Model('/home/tushar/data2/checkpoints_debug/model_fulltrain_dpr7_mse_sumBS20/14_net_G.pth', input_mode='L', resolution=512, dataset_name='dpr', sh_const = 0.7, name='L DPR 512 30K')
 model_l_pretrained = Model('models/trained/trained_model_03.t7', input_mode='L', resolution=512, dataset_name='dpr', sh_const = 0.7, name='Pretrained DPR') # '/home/tushar/data2/DPR_test/trained_model/trained_model_03.t7'
-
+# '/home/nedko/face_relight/outputs/model_256_lab_0.2.1_nocrop_sgan_ffhq'
 model_objs = [
-    model_lab_stylegan_021_256_20k_neutral_shafeatdec,
+    # model_lab_stylegan_021_256_20k_neutral_shafeatdec,
     # model_lab_stylegan_02_256_10k_neutral_intensity_shfix3,
     # model_lab_stylegan_021_256_20k_neutral_intensity_shfix3,
     # model_lab_stylegan_031_256_10k_neutral_crop_intensity_ambient_shfix3,
+model_lab_stylegan_02_256_10k_neutral_intensity_shfix3,
+model_lab_stylegan_021_256_10k_neutral_sgandec,
+model_lab_stylegan_021_256_10k_neutral_sgan_ffhq_dec
 ]
 
 # dataset = dataset_stylegan_v0p2
@@ -400,7 +407,8 @@ def handle_output(out_img, col, row, mask, img_p, img_orig, loc, crop_sz, border
         norms = None
 
     # mask = (mask/255.0)[:,:, np.newaxis]
-    result = cv2.resize(out_img, (col, row))
+    # result = cv2.resize(out_img, (col, row))
+    result = resize_pil(out_img, col, row)
 
     # do something here
     # make a gauss blur
@@ -424,7 +432,8 @@ def handle_output(out_img, col, row, mask, img_p, img_orig, loc, crop_sz, border
     else:
         out_img = np.copy(result)
 
-    out_img = cv2.resize(out_img, (crop_sz[1], crop_sz[0]))
+    # out_img = cv2.resize(out_img, (crop_sz[1], crop_sz[0]))
+    out_img = resize_pil(out_img, crop_sz[1], crop_sz[0])
 
 
 
