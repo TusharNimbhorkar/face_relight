@@ -407,7 +407,8 @@ def handle_output(out_img, col, row, mask, img_p, img_orig, loc, crop_sz, border
         norms = None
 
     # mask = (mask/255.0)[:,:, np.newaxis]
-    result = cv2.resize(out_img, (col, row))
+    # result = cv2.resize(out_img, (col, row))
+    result = resize_pil(out_img, col, row)
 
     # do something here
     # make a gauss blur
@@ -431,7 +432,8 @@ def handle_output(out_img, col, row, mask, img_p, img_orig, loc, crop_sz, border
     else:
         out_img = np.copy(result)
 
-    out_img = cv2.resize(out_img, (crop_sz[1], crop_sz[0]))
+    # out_img = cv2.resize(out_img, (crop_sz[1], crop_sz[0]))
+    out_img = resize_pil(out_img, crop_sz[1], crop_sz[0])
 
 
 
