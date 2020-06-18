@@ -64,15 +64,17 @@ modelFolder = 'trained_model/'
 # load model
 from skeleton512 import *
 
-my_network = HourglassNet()
+my_network = HourglassNet(enable_target=True, ncImg=1, ncLightExtra=0, ncLight=27)
 
-print(checkpoint_dir_cmd)
-my_network.load_state_dict(torch.load(checkpoint_dir_cmd))
+current_state_dict = [module.state_dict().keys() for module in my_network.modules()]
+loaded_params = torch.load(checkpoint_dir_cmd)
+my_network.load_state_dict(loaded_params)
 my_network.cuda()
 my_network.train(False)
 
+
 lightFolder = 'test_data/01/'
-test_dir = '/home/tushar/data2/data/mpie'
+test_dir = '/home/tushar/data2/folders_not_in_use/data/mpie'
 persons = os.listdir(test_dir)
 sh_poly_path_temp = 'models/poly_%s_7.joblib'
 sh_linear_path_temp = 'models/linear_%s_7.joblib'
