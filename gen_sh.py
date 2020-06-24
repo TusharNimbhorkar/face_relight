@@ -29,6 +29,15 @@ ap.add_argument("--del_orig", required=False, action='store_true',
 	help="Deletes original images")
 ap.add_argument("--index_data_dir", required=False, default=None, type=str,
 	help="Disables copying of original images")
+
+ap.add_argument("--disable_sun_diameter", required=False, action='store_false',
+	help="Deletes original images")
+ap.add_argument("--disable_sun_color", required=False, action='store_false',
+	help="Deletes original images")
+ap.add_argument("--disable_amb_color", required=False, action='store_false',
+	help="Deletes original images")
+ap.add_argument("--disable_amb_intensity", required=False, action='store_false',
+	help="Deletes original images")
 args = vars(ap.parse_args())
 
 data_dir = args['input_dir'] #'/home/nedko/face_relight/dbs/example_data'
@@ -47,6 +56,17 @@ orig_sh_fname = 'ori_sh.txt'
 orig_size = args['size']
 delete_orig_img = args['del_orig']
 
+enable_sun_diameter = args['disable_sun_diameter']
+enable_ambient_intensity = args['disable_amb_intensity']
+enable_ambient_color = args['disable_amb_color']
+enable_sun_color = args['disable_sun_color']
+
+# enable_sun_diameter = True
+# enable_ambient_intensity = True
+# enable_ambient_color = True
+# enable_sun_color = False
+props=None
+
 entry_dirs = glob.glob(osp.join(data_dir, '*'))
 sort_numerically(entry_dirs)
 for entry_dir in entry_dirs:
@@ -61,45 +81,58 @@ for entry_dir in entry_dirs:
     with open(light_info_path, 'r') as light_info_file:
         csv_reader = csv.reader(light_info_file, delimiter=',')
         title = next(csv_reader)
-        enable_sun_diameter = True
-        enable_ambient_intensity = True
-        enable_ambient_color = True
-        enable_sun_color = False
 
-        # if len(title)>5:
-        #     enable_sun_diameter = True
+        if props is None:
+            title[0]=title[0][1:]
+            props = {str.strip():i for i, str in enumerate(title)}
+            has_sun_diameter = ('sun_angle' in props.keys())
+            has_ambient_intensity = ('world_intensity' in props.keys())
+            has_ambient_color = ('ambient_r' in props.keys()) & ('ambient_g' in props.keys()) & ('ambient_b' in props.keys())
+            has_sun_color = ('sun_r' in props.keys()) & ('sun_g' in props.keys()) & ('sun_b' in props.keys())
+
+            if enable_sun_diameter != has_sun_color or enable_ambient_intensity != has_ambient_intensity or \
+                enable_ambient_color != has_ambient_color or enable_sun_color != has_sun_color:
+
+                print("Some of the requested parameters are not available!")
+
+            enable_sun_diameter = enable_sun_diameter & has_sun_diameter
+            enable_ambient_intensity = enable_ambient_intensity & has_ambient_intensity
+            enable_ambient_color = enable_ambient_color & has_ambient_color
+            enable_sun_color = enable_sun_color & has_sun_color
+
+            # print('TEST', props, enable_sun_diameter, enable_ambient_intensity, enable_ambient_color, enable_sun_color)
+            # exit(0)
 
         # print(light_info_file)
         for row in csv_reader:
-            light_euler = np.asarray([float(val) for val in row[1:3]])[...].astype(np.float32)
+            light_euler = np.asarray([float(props['light_Y']), float(props['light_Z'])])[...].astype(np.float32)
             light_dir = -euler_to_dir(0, light_euler[0], light_euler[1])[np.newaxis, ...]
-            light_intensity_blender = float(row[3])
-            ambient_intensity_blender_r = float(row[4])
-            ambient_intensity_blender_g = float(row[5])
-            ambient_intensity_blender_b = float(row[6])
-            sun_diameter = float(row[7])
-            # sun_r = float(row[8])
-            # sun_g = float(row[9])
-            # sun_b = float(row[10])
-
-            # print(row)
 
             # light_dir = light_dir / np.linalg.norm(light_dir)
             sh_coeffs = SH_basis(light_dir)
-            sh_coeffs[0,0] = light_intensity_blender - 4.0
+            light_intensity_blender = float(props['light_intensity'])
+            sh_coeffs[0, 0] = light_intensity_blender - 4.0
 
             if enable_ambient_intensity:
-                if not enable_ambient_color:
-                    sh_coeffs = np.append(sh_coeffs, [[ambient_intensity_blender_r]], axis=1)
-                else:
-                    sh_coeffs = np.append(sh_coeffs, [[ambient_intensity_blender_r]], axis=1)
-                    sh_coeffs = np.append(sh_coeffs, [[ambient_intensity_blender_g]], axis=1)
-                    sh_coeffs = np.append(sh_coeffs, [[ambient_intensity_blender_b]], axis=1)
+                ambient_intensity = float(props['world_intensity'])
+                sh_coeffs = np.append(sh_coeffs, [[ambient_intensity]], axis=1)
+
+            if enable_ambient_color:
+                ambient_intensity_r = float(props['ambient_r'])
+                ambient_intensity_g = float(props['ambient_g'])
+                ambient_intensity_b = float(props['ambient_b'])
+                sh_coeffs = np.append(sh_coeffs, [[ambient_intensity_r]], axis=1)
+                sh_coeffs = np.append(sh_coeffs, [[ambient_intensity_g]], axis=1)
+                sh_coeffs = np.append(sh_coeffs, [[ambient_intensity_b]], axis=1)
 
             if enable_sun_diameter:
+                sun_diameter = float(props['sun_angle'])
                 sh_coeffs = np.append(sh_coeffs, [[sun_diameter]], axis=1)
 
             if enable_sun_color:
+                sun_r = float(props['sun_r'])
+                sun_g = float(props['sun_g'])
+                sun_b = float(props['sun_b'])
                 sh_coeffs = np.append(sh_coeffs, [[sun_r]], axis=1)
                 sh_coeffs = np.append(sh_coeffs, [[sun_g]], axis=1)
                 sh_coeffs = np.append(sh_coeffs, [[sun_b]], axis=1)
@@ -145,12 +178,12 @@ for entry_dir in entry_dirs:
         sun_color = [1,1,1]
 
         if enable_ambient_intensity:
-            if enable_ambient_color:
-                sh_rot = np.append(sh_rot, [ambient_intensity_blender_orig_color[0]], axis=0)
-                sh_rot = np.append(sh_rot, [ambient_intensity_blender_orig_color[1]], axis=0)
-                sh_rot = np.append(sh_rot, [ambient_intensity_blender_orig_color[2]], axis=0)
-            else:
-                sh_rot = np.append(sh_rot, [ambient_intensity_blender_orig], axis=0)
+            sh_rot = np.append(sh_rot, [ambient_intensity_blender_orig], axis=0)
+
+        if enable_ambient_color:
+            sh_rot = np.append(sh_rot, [ambient_intensity_blender_orig_color[0]], axis=0)
+            sh_rot = np.append(sh_rot, [ambient_intensity_blender_orig_color[1]], axis=0)
+            sh_rot = np.append(sh_rot, [ambient_intensity_blender_orig_color[2]], axis=0)
 
         if enable_sun_diameter:
             sh_rot = np.append(sh_rot, [sun_diameter], axis=0)
