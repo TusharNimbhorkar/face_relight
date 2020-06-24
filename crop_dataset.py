@@ -26,6 +26,8 @@ ap.add_argument("-o", "--output_dir", required=True,
 	help="Output Directory")
 ap.add_argument("-f", "--face_data_dir", required=True,
 	help="Disables copying of original images")
+ap.add_argument("--enable_overwrite", required=False, action="store_true",
+	help="If a cropped image already exists, overwrite it")
 args = vars(ap.parse_args())
 
 input_data_path = args['input_dir']
@@ -37,6 +39,7 @@ side_offset = True
 first_n = 10000
 n_threads = 6
 n_files_in_folder = 6
+enable_overwrite = args['enable_overwrite']
 
 model_dir = osp.abspath('./demo/data/model')
 input_processor = InputProcessor(model_dir)
@@ -48,6 +51,7 @@ os.makedirs(face_data_dir, exist_ok=True)
 
 def crop(data_id_path):
     id_dirname = data_id_path.rsplit('/', 1)[-1]
+    # print(id_dirname)
 
     img_orig_fname = "%s.png" % id_dirname #"orig" #id_dirname
     img_path_orig = osp.join(orig_dir, id_dirname, img_orig_fname)
@@ -58,7 +62,7 @@ def crop(data_id_path):
     os.makedirs(output_id_path, exist_ok=True)
     face_data_id_path = osp.join(face_data_dir, id_dirname + '.npz')
     output_img_path = osp.join(output_data_dir, id_dirname, "orig.png")
-    print(img_path_orig)
+    # print(img_path_orig)
 
     if osp.exists(output_img_path) and len(os.listdir(output_data_dir)) >= n_files_in_folder:
         return
@@ -83,12 +87,14 @@ def crop(data_id_path):
         rects, scores, idx, shape = face_data
         np.savez(face_data_id_path, rects=rects, scores=scores, idx=idx, shape=shape)
 
-    if side_offset:
-        img_orig_proc = input_processor.process_side_offset(img_orig, face_data)[0]
-    else:
-        img_orig_proc = input_processor.process(img_orig, face_data)[0]
+    if not osp.exists(output_img_path) or enable_overwrite:
+        print('Cropping: ', img_orig)
+        if side_offset:
+            img_orig_proc = input_processor.process_side_offset(img_orig, face_data)[0]
+        else:
+            img_orig_proc = input_processor.process(img_orig, face_data)[0]
 
-    cv2.imwrite(output_img_path, img_orig_proc)
+        cv2.imwrite(output_img_path, img_orig_proc)
 
     for img_path in img_paths:
         if img_path == img_path_orig:
@@ -96,6 +102,10 @@ def crop(data_id_path):
 
         img_fname = img_path.rsplit('/', 1)[-1]
         output_img_path = osp.join(output_data_dir, id_dirname, img_fname)
+
+        if osp.exists(output_img_path) and not enable_overwrite:
+            continue
+
         img = cv2.imread(img_path)
         if side_offset:
             img_proc = input_processor.process_side_offset(img, face_data=face_data)[0]

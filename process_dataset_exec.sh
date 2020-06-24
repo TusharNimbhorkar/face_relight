@@ -10,14 +10,20 @@ REAL_PATH=$6
 OPTIONS=$7
 
 USE_GEN_SH=false
-USE_OVERWRITE=false
+DISABLE_EXISTENCE_CHECK=false
 
-if [[ $OPTIONS == *"use_gen_sh"* ]]; then
+if [[ $OPTIONS == *"enable_gen_sh"* ]]; then
     USE_GEN_SH=true
 fi
 
-if [[ $OPTIONS == *"use_overwrite"* ]]; then
-    USE_OVERWRITE=true
+CROP_RESIZE_EXTRA_PARAMS=""
+if [[ $OPTIONS == *"enable_overwrite"* ]]; then
+    DISABLE_EXISTENCE_CHECK=true
+    CROP_RESIZE_EXTRA_PARAMS="--enable_overwrite"
+fi
+
+if [[ $OPTIONS == *"disable_existence_check"* ]]; then
+    DISABLE_EXISTENCE_CHECK=true
 fi
 
 
@@ -47,19 +53,19 @@ else
     printf "\nSkipping sh generation and original image copy."
 fi
 
-if [[ $USE_OVERWRITE == false && -e $CROP_PATH && "$(ls -A ${CROP_PATH})" ]]; then
+if [[ $DISABLE_EXISTENCE_CHECK == false && -e $CROP_PATH && "$(ls -A ${CROP_PATH})" ]]; then
     printf "\nCrop folder exists."
 else
     printf "\nCropping the dataset..."
-    python crop_dataset.py -i $SRC_PATH -o $CROP_PATH -f $FACE_DATA_PATH -p $ORIG_PATH
+    python crop_dataset.py -i $SRC_PATH -o $CROP_PATH -f $FACE_DATA_PATH -p $ORIG_PATH $CROP_RESIZE_EXTRA_PARAMS
     try
 fi
 
-if [[ $USE_OVERWRITE == false && -e $RESIZE_PATH && "$(ls -A ${RESIZE_PATH})" ]]; then
+if [[ $DISABLE_EXISTENCE_CHECK == false && -e $RESIZE_PATH && "$(ls -A ${RESIZE_PATH})" ]]; then
     printf "\nResize folder exists."
 else
     printf "\nResizing the dataset..."
-    python resize_dataset.py -i $CROP_PATH -o $RESIZE_PATH -s $TGT_SZ --no_real --no_segments
+    python resize_dataset.py -i $CROP_PATH -o $RESIZE_PATH -s $TGT_SZ --no_real --no_segments $CROP_RESIZE_EXTRA_PARAMS
     try
 fi
 

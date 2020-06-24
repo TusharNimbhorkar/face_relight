@@ -13,6 +13,7 @@ import random
 from commons.common_tools import sort_numerically
 import matplotlib.pyplot as plt
 from utils.utils_data import resize_pil
+import json
 
 
 
@@ -61,42 +62,32 @@ enable_ambient_intensity = args['disable_amb_intensity']
 enable_ambient_color = args['disable_amb_color']
 enable_sun_color = args['disable_sun_color']
 
-# enable_sun_diameter = True
-# enable_ambient_intensity = True
-# enable_ambient_color = True
-# enable_sun_color = False
 props_ids=None
 
 def gen_orig_sh(orig_sh_path):
+    output_props = {}
     sh = np.loadtxt(orig_sh_path)
     # plt.imshow(gen_half_sphere(sh))
     # plt.show()
 
     sh_rot = convert_sh_to_3dul(sh)
 
-    sh_rot[0] = 0  # 8.862269254527579410e-01
-    ambient_intensity_blender_orig = 0
-    ambient_intensity_blender_orig_color = [1, 1, 1]
-    sun_diameter = 3.2 + random.uniform(-0.5, 0)
-    sun_color = [1, 1, 1]
+    output_props['sh'] = (sh_rot.reshape((-1))).tolist()
+    output_props['sun_intensity'] = 0
 
     if enable_ambient_intensity:
-        sh_rot = np.append(sh_rot, [ambient_intensity_blender_orig], axis=0)
+        output_props['ambient_intensity'] = 0
 
     if enable_ambient_color:
-        sh_rot = np.append(sh_rot, [ambient_intensity_blender_orig_color[0]], axis=0)
-        sh_rot = np.append(sh_rot, [ambient_intensity_blender_orig_color[1]], axis=0)
-        sh_rot = np.append(sh_rot, [ambient_intensity_blender_orig_color[2]], axis=0)
+        output_props['ambient_color'] = [1,1,1]
 
     if enable_sun_diameter:
-        sh_rot = np.append(sh_rot, [sun_diameter], axis=0)
+        output_props['sun_diameter'] = 3.2 + random.uniform(-0.5, 0)
 
     if enable_sun_color:
-        sh_rot = np.append(sh_rot, [sun_color[0]], axis=0)
-        sh_rot = np.append(sh_rot, [sun_color[1]], axis=0)
-        sh_rot = np.append(sh_rot, [sun_color[2]], axis=0)
+        output_props['sun_color'] = [1,1,1]
 
-    return sh_rot
+    return output_props
 
 
 
@@ -138,69 +129,64 @@ for entry_dir in entry_dirs:
             enable_ambient_color = enable_ambient_color & has_ambient_color
             enable_sun_color = enable_sun_color & has_sun_color
 
-            # print('TEST', props, enable_sun_diameter, enable_ambient_intensity, enable_ambient_color, enable_sun_color)
-            # exit(0)
-
-        # print(light_info_file)
         for row in csv_reader:
-            props = {}
+            output_props = {}
+            input_props = {}
             for (key, value) in props_ids.items():
-                props[key] = row[value]
+                input_props[key] = row[value]
 
-            # print(props['name'])
-            img_subname = props['name'].split('.')[0]
+            img_subname = input_props['name'].split('.')[0]
 
             if 'orig' in img_subname:
-                sh_coeffs = gen_orig_sh(orig_sh_path).reshape((-1,1))
-
-            else:
-                light_euler = np.asarray([float(props['light_Y']), float(props['light_Z'])])[...].astype(np.float32)
-                light_dir = -euler_to_dir(0, light_euler[0], light_euler[1])[np.newaxis, ...]
-
-                # light_dir = light_dir / np.linalg.norm(light_dir)
-                sh_coeffs = SH_basis(light_dir)
-                light_intensity_blender = float(props['light_intensity'])
-                sh_coeffs[0, 0] = light_intensity_blender - 4.0
-
-                if enable_ambient_intensity:
-                    ambient_intensity = float(props['world_intensity'])
-                    sh_coeffs = np.append(sh_coeffs, [[ambient_intensity]], axis=1)
+                output_props = gen_orig_sh(orig_sh_path)
 
                 if enable_ambient_color:
-                    ambient_intensity_r = float(props['ambient_r'])
-                    ambient_intensity_g = float(props['ambient_g'])
-                    ambient_intensity_b = float(props['ambient_b'])
-                    sh_coeffs = np.append(sh_coeffs, [[ambient_intensity_r]], axis=1)
-                    sh_coeffs = np.append(sh_coeffs, [[ambient_intensity_g]], axis=1)
-                    sh_coeffs = np.append(sh_coeffs, [[ambient_intensity_b]], axis=1)
+                    ambient_intensity_r = float(input_props['ambient_r'])
+                    ambient_intensity_g = float(input_props['ambient_g'])
+                    ambient_intensity_b = float(input_props['ambient_b'])
+                    output_props['ambient_color'] = [ambient_intensity_r, ambient_intensity_g, ambient_intensity_b]
+
+            else:
+                light_euler = np.asarray([float(input_props['light_Y']), float(input_props['light_Z'])])[...].astype(np.float32)
+                light_dir = -euler_to_dir(0, light_euler[0], light_euler[1])[np.newaxis, ...]
+
+                sh_coeffs = SH_basis(light_dir)
+                output_props['sh'] = (sh_coeffs.T).reshape((-1)).tolist()
+
+                light_intensity_blender = float(input_props['light_intensity'])
+                output_props['sun_intensity'] = light_intensity_blender - 4.0
+
+                if enable_ambient_intensity:
+                    ambient_intensity = float(input_props['world_intensity'])
+                    output_props['ambient_intensity'] = ambient_intensity
+
+                if enable_ambient_color:
+                    ambient_intensity_r = float(input_props['ambient_r'])
+                    ambient_intensity_g = float(input_props['ambient_g'])
+                    ambient_intensity_b = float(input_props['ambient_b'])
+                    output_props['ambient_color'] = [ambient_intensity_r, ambient_intensity_g, ambient_intensity_b]
 
                 if enable_sun_diameter:
-                    sun_diameter = float(props['sun_angle'])
-                    sh_coeffs = np.append(sh_coeffs, [[sun_diameter]], axis=1)
+                    sun_diameter = float(input_props['sun_angle'])
+                    output_props['sun_diameter'] = sun_diameter
 
                 if enable_sun_color:
-                    sun_r = float(props['sun_r'])
-                    sun_g = float(props['sun_g'])
-                    sun_b = float(props['sun_b'])
-                    sh_coeffs = np.append(sh_coeffs, [[sun_r]], axis=1)
-                    sh_coeffs = np.append(sh_coeffs, [[sun_g]], axis=1)
-                    sh_coeffs = np.append(sh_coeffs, [[sun_b]], axis=1)
+                    sun_r = float(input_props['sun_r'])
+                    sun_g = float(input_props['sun_g'])
+                    sun_b = float(input_props['sun_b'])
+                    output_props['sun_color'] = [sun_r, sun_g, sun_b]
 
-                sh_coeffs = sh_coeffs.T
-
-            # shading = gen_half_sphere(sh_coeffs.T)
 
             out_sh_path = osp.join(entry_dir, out_sh_fname % img_subname)
-            # print(sh_coeffs)
-            np.savetxt(out_sh_path, sh_coeffs, delimiter=',')
+
+            with open(out_sh_path, 'w') as output_file:
+                json.dump(output_props, output_file, indent=4)
         # print()
 
 
         if not args['no_orig']:
             if orig_size > 0:
-                # print(orig_img_path)
                 orig_img = cv2.imread(orig_img_path)
-                # orig_img = cv2.resize(orig_img, (orig_size, orig_size))
                 orig_img = resize_pil(orig_img, width=orig_size,height=orig_size)
 
                 cv2.imwrite(out_orig_img_path, orig_img)
@@ -211,7 +197,8 @@ for entry_dir in entry_dirs:
                 print('Deleting:', out_orig_img_path)
                 os.remove(out_orig_img_path)
 
-        sh_rot = gen_orig_sh(orig_sh_path).reshape((-1,1))
+        output_props = gen_orig_sh(orig_sh_path)
 
-        np.savetxt(out_orig_sh_path, sh_rot)
+        with open(out_orig_sh_path, 'w') as output_file:
+            json.dump(output_props, output_file, indent=4)
         # shutil.copyfile(orig_sh_path, out_orig_sh_path)

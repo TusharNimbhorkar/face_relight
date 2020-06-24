@@ -1,7 +1,9 @@
 # Our dataloader.
-
+import json
 import os.path
 import random
+from json import JSONDecodeError
+
 from data.base_dataset import BaseDataset, get_simple_transform
 import torchvision.transforms.functional as TF
 import torchvision.transforms as transforms
@@ -147,6 +149,7 @@ class lightDPR7Dataset(BaseDataset):
         orig_img_path = target_path[:-5]+'5.png'
         segment_img_path = os.path.join(self.opt.dataroot, 'segments', AB_path[0].split('/')[-1].split('_')[0],
                      source_path.split('/')[-1].split('_')[0] + '.png')
+
         return real_img_path, orig_img_path, source_path, target_path, segment_img_path, src_light_path, tgt_light_path
 
     def _img_to_input(self, img, input_mode=None):
@@ -158,7 +161,7 @@ class lightDPR7Dataset(BaseDataset):
 
         return input
 
-    def _get_sh(self, sh):
+    def _get_sh_legacy(self, sh):
         # sh = sh[0:9]
         sh = sh * 1.0
         sh = np.squeeze(sh)
@@ -175,6 +178,58 @@ class lightDPR7Dataset(BaseDataset):
             raise e
 
         return img
+
+    def _get_light_data(self, props):
+        '''
+        Generates a numpy array to be used when working with the Light network
+        :param props: Properties to convert to numpy array
+        :return:
+        '''
+
+        # enable_sun_color = 'sun_color' in props.keys()
+        # enable_ambient_color = 'ambient_color' in props.keys()
+        # enable_ambient_intensity = 'ambient_intensity' in props.keys()
+        # enable_sun_intensity = 'sun_intensity' in props.keys()
+        # enable_sun_diameter = 'sun_diameter' in props.keys()
+        #
+
+
+        light_data = props['sh']
+        keys = list(props.keys())
+        if 'sun_intensity' in keys:
+            light_data[0] = props['sun_intensity']
+            keys.remove("sun_intensity")
+
+        keys.remove("sh")
+
+        keys_ordered = [key for key in ['ambient_intensity', 'sun_diameter', 'sun_color', 'ambient_color'] if key in keys]
+        for key in keys_ordered:
+            keys.remove(key)
+
+        keys = keys_ordered + keys
+
+        for key in keys:
+            if isinstance(props[key], list):
+                light_data.extend(props[key])
+            else:
+                light_data.append(props[key])
+
+        light_data = np.array(light_data).reshape((-1,1,1))
+        # log.d('TEST', keys)
+        return light_data
+
+    def __read_properties(self, path):
+
+        try:
+            with open(path) as light_file:
+                props = json.load(light_file)
+                props = self._get_light_data(props)
+        except JSONDecodeError:
+            sh = np.loadtxt(path)
+            props = self._get_sh_legacy(sh)
+
+        return props
+
 
     def __getitem__(self, index):
         real_img_id = random.choice(range(0, self.opt.ffhq))
@@ -227,14 +282,11 @@ class lightDPR7Dataset(BaseDataset):
         input_tgt = self._img_to_input(img_tgt)
 
         #Source light
-        sh = np.loadtxt(src_light_path)
-        sh_src = self._get_sh(sh)
 
-        #Target light
-        sh = np.loadtxt(tgt_light_path)
-        sh_tgt = self._get_sh(sh)
+        props_src = self.__read_properties(src_light_path)
+        props_tgt = self.__read_properties(tgt_light_path)
 
-        return {'A': input_src, 'B': input_tgt,'C':input_real,'D':input_orig, 'AL':torch.from_numpy(sh_src),'BL':torch.from_numpy(sh_tgt), 'A_paths': AB_path, 'B_paths': AB_path}
+        return {'A': input_src, 'B': input_tgt,'C':input_real,'D':input_orig, 'AL':torch.from_numpy(props_src),'BL':torch.from_numpy(props_tgt), 'A_paths': AB_path, 'B_paths': AB_path}
 
     def __len__(self):
         return len(self.list_AB)

@@ -30,7 +30,7 @@ def make_dataset(dir, n_ids=None, n_per_dir=-1):
     entry_dirs = entry_dirs[:n_ids]
     for entry_dir in entry_dirs:
         paths = sorted(glob.glob(os.path.join(entry_dir,'*')))
-        paths = [path for path in paths if is_image_file(path)]
+        paths = [path for path in paths if is_image_file(path) and '_orig' not in path.rsplit('/',1)[-1]]
 
         if n_per_dir > 0:
             paths = paths[:n_per_dir-1] + [paths[-1]]

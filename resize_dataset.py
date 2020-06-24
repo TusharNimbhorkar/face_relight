@@ -21,6 +21,8 @@ ap.add_argument("--no_real", required=False, action="store_true",
                 help="Don't process real")
 ap.add_argument("--no_synth", required=False, action="store_true",
                 help="Don't process synthetic")
+ap.add_argument("--enable_overwrite", required=False, action="store_true",
+                help="If a file exists, overwrite it")
 args = vars(ap.parse_args())
 
 dpr_og_dir= args["input"] #'/mnt/data2/users/morris/data_synth_relight_1024_softness60_20k'
@@ -31,6 +33,7 @@ segments = 'segments/'
 
 resize_size = (int(args['size']), int(args['size'])) #(512, 512)
 new_dpr_dir = args['output'] #'./dbs/3dulight_v0.8_512'# + str(resize_size[0])
+enable_overwrite = args['enable_overwrite']
 n_threads = 6
 chunk_size = 30
 
@@ -57,16 +60,17 @@ def resize(obj):
     # make_dirs_in_segment_in_train
     obj_train_dir = osp.join(new_train_dir, obj)
     obj_seg_dir = osp.join(new_segments_dir, obj)
-
-    print(obj_train_dir)
+    #
+    # print(obj_train_dir)
 
     if not args['no_segments']:
         if not os.path.exists(obj_seg_dir):
             os.makedirs(obj_seg_dir)
 
-        segment_im_read = cv2.imread(os.path.join(dpr_og_dir,segments,obj,obj+'.png'))
         segment_im_save_path = os.path.join(obj_seg_dir,obj+'.png')
-        cv2.imwrite(segment_im_save_path,cv2.resize(segment_im_read,resize_size))
+        if not osp.exists(segment_im_save_path) or enable_overwrite:
+            segment_im_read = cv2.imread(os.path.join(dpr_og_dir,segments,obj,obj+'.png'))
+            cv2.imwrite(segment_im_save_path,cv2.resize(segment_im_read,resize_size))
 
     if not args['no_synth']:
         if not os.path.exists(obj_train_dir):
@@ -86,11 +90,14 @@ def resize(obj):
                 dst_path_sh = osp.join(obj_train_dir,file)
                 copy(src_path_sh,dst_path_sh)
             else:
-                src_path_img = osp.join(path_rel_obj, file)
-                im1 = cv2.imread(src_path_img)
-                im1_r = resize_pil(im1,width=resize_size[0],height=resize_size[1])# cv2.resize(im1,resize_size)
                 dst_path_img = osp.join(obj_train_dir,file)
-                cv2.imwrite(dst_path_img,im1_r)
+
+                if not osp.exists(dst_path_img) or enable_overwrite:
+                    print('Resizing:', dst_path_img)
+                    src_path_img = osp.join(path_rel_obj, file)
+                    im1 = cv2.imread(src_path_img)
+                    im1_r = resize_pil(im1,width=resize_size[0],height=resize_size[1])# cv2.resize(im1,resize_size)
+                    cv2.imwrite(dst_path_img,im1_r)
 
 
 pool = multiprocessing.Pool(n_threads)
