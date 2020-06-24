@@ -41,7 +41,7 @@ try()
 
 if $USE_GEN_SH ; then
     printf "\nGenerating SH and copying original images"
-    python gen_sh.py -i $SRC_PATH -p $ORIG_PATH -s $SRC_SZ
+    python gen_sh.py -i $SRC_PATH -p $ORIG_PATH -s $SRC_SZ --no_orig --del_orig
     try
 else
     printf "\nSkipping sh generation and original image copy."
@@ -51,7 +51,7 @@ if [[ $USE_OVERWRITE == false && -e $CROP_PATH && "$(ls -A ${CROP_PATH})" ]]; th
     printf "\nCrop folder exists."
 else
     printf "\nCropping the dataset..."
-    python crop_dataset.py -i $SRC_PATH -o $CROP_PATH -f $FACE_DATA_PATH
+    python crop_dataset.py -i $SRC_PATH -o $CROP_PATH -f $FACE_DATA_PATH -p $ORIG_PATH
     try
 fi
 
