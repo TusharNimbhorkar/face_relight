@@ -70,7 +70,9 @@ def crop(data_id_path):
     # Coopy all non image files without change and collect all image paths
     img_paths = []
     for file_path in glob.glob(osp.join(data_id_path, '*')):
-        if is_image_file(file_path):
+        if osp.isdir(file_path):
+            pass
+        elif is_image_file(file_path):
             img_paths.append(file_path)
         else:
             fname = file_path.rsplit('/', 1)[-1]
@@ -88,7 +90,7 @@ def crop(data_id_path):
         np.savez(face_data_id_path, rects=rects, scores=scores, idx=idx, shape=shape)
 
     if not osp.exists(output_img_path) or enable_overwrite:
-        print('Cropping: ', img_orig)
+        print('Cropping to: ', output_img_path)
         if side_offset:
             img_orig_proc = input_processor.process_side_offset(img_orig, face_data)[0]
         else:

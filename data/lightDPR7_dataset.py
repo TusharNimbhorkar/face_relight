@@ -27,6 +27,8 @@ class lightDPR7Dataset(BaseDataset):
         # parser.add_argument('--enable_neutral', action='store_true', help='Enable or disable input target sh')
         parser.add_argument('--n_ids', type=int, default=None, help='Select the amount of identities to take from the dataset. If not used, taking all identities.')
         parser.add_argument('--input_mode', type=str, default='L', choices=['L', 'LAB', 'RGB'], help='Choose between L, LAB and RGB input')
+        parser.add_argument('--exclude_props', type=str, default='',
+                            help='Define keys which to exclude when passing to the light network')
         if is_train:
             parser.add_argument('--ffhq', type=int, default=70000, help='sample size ffhq')
 
@@ -74,6 +76,8 @@ class lightDPR7Dataset(BaseDataset):
         self.AB_paths_ = make_dataset(self.dir_AB, n_ids=opt.n_ids)
         self.dict_AB = {}
         self.list_AB = []
+
+        self.excluded_props = self.opt.exclude_props.split(" ")
 
         self.img_size = self.opt.img_size
         self.use_segments = self.opt.segment
@@ -207,6 +211,11 @@ class lightDPR7Dataset(BaseDataset):
             keys.remove(key)
 
         keys = keys_ordered + keys
+
+        for key in self.excluded_props:
+            if key not in keys:
+                raise ValueError("Key %s not found" % key)
+            keys.remove(key)
 
         for key in keys:
             if isinstance(props[key], list):
