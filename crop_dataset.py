@@ -19,15 +19,17 @@ from commons.common_tools import sort_numerically
 
 ap = argparse.ArgumentParser()
 ap.add_argument("-i", "--input_dir", required=True,
-	help="Input Data Directory")
+                help="Input Data Directory")
 ap.add_argument("-p", "--prev_dir", required=True,
-	help="Original Images Directory")
+                help="Original Images Directory")
 ap.add_argument("-o", "--output_dir", required=True,
-	help="Output Directory")
+                help="Output Directory")
 ap.add_argument("-f", "--face_data_dir", required=True,
-	help="Disables copying of original images")
+                help="Disables copying of original images")
+ap.add_argument("-n", "--first_n", required=False, type=int, default=0,
+                help="Number of images to crop")
 ap.add_argument("--enable_overwrite", required=False, action="store_true",
-	help="If a cropped image already exists, overwrite it")
+                help="If a cropped image already exists, overwrite it")
 args = vars(ap.parse_args())
 
 input_data_path = args['input_dir']
@@ -35,25 +37,29 @@ output_data_dir = args['output_dir']
 face_data_dir = args['face_data_dir']
 orig_dir = args['prev_dir']
 side_offset = True
+first_n = args['first_n']
 
-first_n = 10000
 n_threads = 6
-n_files_in_folder = 6
+chunk_size = 30
+# n_files_in_folder = 6
 enable_overwrite = args['enable_overwrite']
 
 model_dir = osp.abspath('./demo/data/model')
 input_processor = InputProcessor(model_dir)
 data_id_paths = glob.glob(osp.join(input_data_path, '*'))
 sort_numerically(data_id_paths)
-data_id_paths = data_id_paths[:first_n]
+
+if first_n !=0:
+    data_id_paths = data_id_paths[:first_n]
 
 os.makedirs(face_data_dir, exist_ok=True)
 
 def crop(data_id_path):
     id_dirname = data_id_path.rsplit('/', 1)[-1]
     # print(id_dirname)
+    has_crop_in_dir = False
 
-    img_orig_fname = "%s.png" % id_dirname #"orig" #id_dirname
+    img_orig_fname = "%s.png" % id_dirname  # "orig" #id_dirname
     img_path_orig = osp.join(orig_dir, id_dirname, img_orig_fname)
     # img_orig_fname = "orig.png"
     # img_path_orig = osp.join(data_id_path, img_orig_fname)
@@ -64,8 +70,8 @@ def crop(data_id_path):
     output_img_path = osp.join(output_data_dir, id_dirname, "orig.png")
     # print(img_path_orig)
 
-    if osp.exists(output_img_path) and len(os.listdir(output_data_dir)) >= n_files_in_folder:
-        return
+    # if osp.exists(output_img_path) and len(os.listdir(output_data_dir)) >= n_files_in_folder:
+    #     return
 
     # Coopy all non image files without change and collect all image paths
     img_paths = []
@@ -90,7 +96,7 @@ def crop(data_id_path):
         np.savez(face_data_id_path, rects=rects, scores=scores, idx=idx, shape=shape)
 
     if not osp.exists(output_img_path) or enable_overwrite:
-        print('Cropping to: ', output_img_path)
+        has_crop_in_dir = True
         if side_offset:
             img_orig_proc = input_processor.process_side_offset(img_orig, face_data)[0]
         else:
@@ -108,6 +114,7 @@ def crop(data_id_path):
         if osp.exists(output_img_path) and not enable_overwrite:
             continue
 
+        has_crop_in_dir = True
         img = cv2.imread(img_path)
         if side_offset:
             img_proc = input_processor.process_side_offset(img, face_data=face_data)[0]
@@ -116,8 +123,15 @@ def crop(data_id_path):
 
         cv2.imwrite(output_img_path, img_proc)
 
+    if has_crop_in_dir:
+        print('Cropping to: ', output_img_path)
+
 
 pool = multiprocessing.Pool(n_threads)
-pool.map(crop, data_id_paths)
 
+i = 1
+for x in pool.imap_unordered(crop, data_id_paths, chunksize=chunk_size):
+    if i % 100 == 0:
+        print("Completed: ", i)
+    i += 1
 # for data_id_path in data_id_paths:

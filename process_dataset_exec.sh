@@ -6,8 +6,9 @@ TGT_PATH=$3
 TGT_SZ=$4
 ORIG_PATH=$5
 REAL_PATH=$6
+SET_SIZE=$7
 
-OPTIONS=$7
+OPTIONS=$8
 
 USE_GEN_SH=false
 DISABLE_EXISTENCE_CHECK=false
@@ -46,7 +47,7 @@ try()
 }
 
 if $USE_GEN_SH ; then
-    printf "\nGenerating SH and copying original images"
+    printf "\nGenerating SH... \n"
     python gen_sh.py -i $SRC_PATH -p $ORIG_PATH -s $SRC_SZ --no_orig --del_orig
     try
 else
@@ -56,15 +57,15 @@ fi
 if [[ $DISABLE_EXISTENCE_CHECK == false && -e $CROP_PATH && "$(ls -A ${CROP_PATH})" ]]; then
     printf "\nCrop folder exists."
 else
-    printf "\nCropping the dataset..."
-    python crop_dataset.py -i $SRC_PATH -o $CROP_PATH -f $FACE_DATA_PATH -p $ORIG_PATH $CROP_RESIZE_EXTRA_PARAMS
+    printf "\nCropping the dataset...\n"
+    python crop_dataset.py -i $SRC_PATH -o $CROP_PATH -f $FACE_DATA_PATH -p $ORIG_PATH -n $SET_SIZE $CROP_RESIZE_EXTRA_PARAMS
     try
 fi
 
 if [[ $DISABLE_EXISTENCE_CHECK == false && -e $RESIZE_PATH && "$(ls -A ${RESIZE_PATH})" ]]; then
     printf "\nResize folder exists."
 else
-    printf "\nResizing the dataset..."
+    printf "\nResizing the dataset...\n"
     python resize_dataset.py -i $CROP_PATH -o $RESIZE_PATH -s $TGT_SZ --no_real --no_segments $CROP_RESIZE_EXTRA_PARAMS
     try
 fi

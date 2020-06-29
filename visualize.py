@@ -240,8 +240,11 @@ outputs_path = '/home/nedko/face_relight/outputs/'
 outputs_remote_path = '/home/nedko/face_relight/outputs/remote/outputs/'
 
 #model_256_lab_stylegan_0.6.0_10k_neutral_sundiam_new_pcrop
+# model_256_lab_stylegan_0.5.2_10k_neutral_ambcolor_allprops_pcrop
 
-model_lab_stylegan_051_256_10k_neut_sundiam_ambcolor_pcrop_run2 = Model(outputs_path + 'model_256_lab_stylegan_0.5.1_10k_neutral_sundiam_ambcol_pcrop/23_net_G.pth', input_mode='LAB', resolution=256, ambience=0.280, nc_sh=1, dataset_name='3dulight_shfix2', name='L+AB sGAN v0.5.1 256\n10k int=0, Neut', intensity=0, enable_neutral=True, enable_amb_color=True)
+model_lab_stylegan_031_256_10k_neut_noamb_pcrop = Model(outputs_path + 'model_256_lab_stylegan_0.3.1_10k_neutral_noprops_pcrop/14_net_G.pth', input_mode='LAB', resolution=256, ambience=0.280, nc_sh=1, dataset_name='3dulight_shfix2', name='L+AB sGAN v0.3.1 256\n10k int=0, Neut, run2, pcrop', intensity=0, enable_neutral=True)
+model_lab_stylegan_052_256_10k_neut_ambcolor_pcrop = Model(outputs_path + 'model_256_lab_stylegan_0.5.2_10k_neutral_ambcolor_allprops_pcrop/14_net_G.pth', input_mode='LAB', resolution=256, ambience=None, nc_sh=1, dataset_name='3dulight_shfix2', name='L+AB sGAN v0.5.2 256\n10k int=0, Neut ambcol', intensity=0, enable_neutral=True, enable_amb_color=True)
+model_lab_stylegan_051_256_10k_neut_sundiam_ambcolor_pcrop_run2 = Model(outputs_path + 'model_256_lab_stylegan_0.5.1_10k_neutral_sundiam_ambcol_pcrop/23_net_G.pth', input_mode='LAB', resolution=256, ambience=None, nc_sh=1, dataset_name='3dulight_shfix2', name='L+AB sGAN v0.5.1 256\n10k int=0, Neut ambcol+sundiam', intensity=0, enable_neutral=True, enable_amb_color=True, enable_sun_diam=True)
 model_lab_stylegan_060_256_10k_neut_sdiam_pcrop = Model(outputs_path + 'model_256_lab_stylegan_0.6.0_10k_neutral_sundiam_new_pcrop/14_net_G.pth', input_mode='LAB', resolution=256, ambience=0.280, nc_sh=1, dataset_name='3dulight_shfix2', name='L+AB sGAN v0.6.0 256\n10k int=0, Neut, sundiam', intensity=0, enable_neutral=True, enable_sun_diam=True)
 model_lab_stylegan_031_256_10k_neut_pcrop_run2 = Model(outputs_path + 'model_256_lab_stylegan_0.3.1_10k_neutral_amb_pcrop_run2/14_net_G.pth', input_mode='LAB', resolution=256, ambience=0.280, nc_sh=1, dataset_name='3dulight_shfix2', name='L+AB sGAN v0.3.1 256\n10k int=0, Neut, run2, pcrop', intensity=0, enable_neutral=True,)
 model_lab_stylegan_031_256_10k_neut_facetone_pcrop = Model('/home/tushar/data1/project/face_relight/outputs/model_256_10k_lab_0.3.1_70kffhq_facetone/14_net_G.pth', input_mode='LAB', resolution=256, ambience=0.280, nc_sh=1, dataset_name='3dulight_shfix2', name='L+AB sGAN v0.3.1 256\n10k int=0, Neut, Facetone', intensity=0, enable_neutral=True, enable_face_tone=True)
@@ -349,8 +352,11 @@ model_l_pretrained = Model('models/trained/trained_model_03.t7', input_mode='L',
 
 model_objs = [
     model_lab_stylegan_031_256_10k_neut_pcrop,
-    model_lab_stylegan_051_256_10k_neut_sundiam_ambcolor_pcrop,
-    model_lab_stylegan_051_256_10k_neut_sundiam_ambcolor_pcrop_run2,
+    model_lab_stylegan_031_256_10k_neut_noamb_pcrop,
+
+    # model_lab_stylegan_051_256_10k_neut_sundiam_ambcolor_pcrop,
+    # model_lab_stylegan_051_256_10k_neut_sundiam_ambcolor_pcrop_run2,
+    # model_lab_stylegan_052_256_10k_neut_ambcolor_pcrop,
 
     # model_lab_stylegan_060_256_10k_neut_sdiam_oldcrop,
     # model_lab_stylegan_060_256_10k_neut_sdiam_pcrop,
