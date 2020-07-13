@@ -17,6 +17,10 @@ class BaseModel(ABC):
         # self.device = torch.device('cuda:{}'.format(self.gpu_ids[0])) if self.gpu_ids else torch.device('cpu')
         self.device = torch.device('cuda') if self.gpu_ids else torch.device('cpu')
 
+        if opt.load_dir is not None:
+            self.load_dir = os.path.join(opt.checkpoints_dir, opt.load_dir)
+        else:
+            self.load_dir = None
         self.save_dir = os.path.join(opt.checkpoints_dir, opt.name)
         if opt.resize_or_crop != 'scale_width':
             torch.backends.cudnn.benchmark = True
@@ -159,7 +163,12 @@ class BaseModel(ABC):
             if name=='G' or name=='D':
                 if isinstance(name, str):
                     load_filename = '%s_net_%s.pth' % (epoch, name)
-                    load_path = os.path.join(self.save_dir, load_filename)
+
+                    if self.load_dir is not None:
+                        load_dir = self.load_dir
+                    else:
+                        load_dir = self.save_dir
+                    load_path = os.path.join(load_dir, load_filename)
                     net = getattr(self, 'net' + name)
                     if isinstance(net, torch.nn.DataParallel):
                         net = net.module

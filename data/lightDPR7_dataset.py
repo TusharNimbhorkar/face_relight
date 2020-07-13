@@ -29,8 +29,11 @@ class lightDPR7Dataset(BaseDataset):
         parser.add_argument('--input_mode', type=str, default='L', choices=['L', 'LAB', 'RGB'], help='Choose between L, LAB and RGB input')
         parser.add_argument('--exclude_props', type=str, default='',
                             help='Define keys which to exclude when passing to the light network')
+        parser.add_argument('--enable_altered_orig', action='store_true',
+                            help='Enable per relit image corresponding original image. If not enabled the target will always be the initial original image. Used to preserve some variability in the target - like ambient color.')
         if is_train:
             parser.add_argument('--ffhq', type=int, default=70000, help='sample size ffhq')
+            parser.add_argument('--force_ambient_intensity', action='store_true', help='Do not use ambient color')
 
         return parser
 
@@ -78,25 +81,33 @@ class lightDPR7Dataset(BaseDataset):
         self.list_AB = []
 
         self.excluded_props = self.opt.exclude_props.split(" ")
+        if len(self.excluded_props) == 1 and self.excluded_props[0]=='':
+            self.excluded_props=[]
 
+        self.n_real = len(os.listdir(os.path.join(self.opt.dataroot,'real_im')))
         self.img_size = self.opt.img_size
         self.use_segments = self.opt.segment
         self.input_mode = self.opt.input_mode
+        self.force_ambient_intensity = self.opt.force_ambient_intensity
         synth_n_per_id = self.opt.n_synth
         n_want = self.opt.n_first
-        n_per_id = synth_n_per_id + 1
 
         # der = self._get_all_derangements(n_per_id)
 
-        for i in range(0, len(self.AB_paths_) - n_per_id, n_per_id):
+        for i in range(0, len(self.AB_paths_)):
 
-            orig_img_path = self.AB_paths_[i+synth_n_per_id]
-            sample_paths = self.AB_paths_[i:i + n_want]
+            orig_img_path = self.AB_paths_[i]['orig']
+            sample_paths = self.AB_paths_[i]['synth'][:n_want]
             sample_paths.append(orig_img_path)
 
-            pairs = self.gen_sample_pairs(sample_paths, n_per_id)
+            orig_altered = []
+            if opt.enable_altered_orig:
+                orig_altered = self.AB_paths_[i]['orig_altered']
+
+            pairs = self.gen_sample_pairs(sample_paths, n_want+1, altered_orig_paths=orig_altered)
 
             self.list_AB.extend(pairs)
+            # print(pairs)
             # print()
         random.shuffle(self.list_AB)
 
@@ -105,21 +116,34 @@ class lightDPR7Dataset(BaseDataset):
 
         self.transform_A = get_simple_transform(grayscale=False)
 
-    def gen_sample_pairs(self, sample_paths, n_per_id):
+    def gen_sample_pairs(self, sample_paths, n_per_id, altered_orig_paths=None):
         # i2 = deepcopy(sample_paths)
         orig_img_path = sample_paths[-1]
         src_paths = sample_paths
-        np.random.shuffle(src_paths)
+
+        if altered_orig_paths is None:
+            altered_orig_paths = []
 
         pairs = []
         if self.enable_target:
+            np.random.shuffle(src_paths)
             pairs.append([orig_img_path, orig_img_path])
             sel_der = self._random_derangement(n_per_id-1)
-            i2 = [src_paths[i] for i in sel_der]
+            tgt_paths = [src_paths[i] for i in sel_der]
         else:
-            i2 = [orig_img_path]*len(src_paths)
+            if len(altered_orig_paths) > 0:
+                p = np.random.permutation(len(altered_orig_paths))
+                src_paths = [src_paths[i] for i in p]
+                tgt_paths = [altered_orig_paths[i] for i in p]
 
-        for src_path, tgt_path in zip(src_paths, i2):
+                # tgt_paths.append(orig_img_path)
+                # src_paths.append(altered_orig_paths[np.random.randint(len(altered_orig_paths))])
+                # i2 = [orig_img_path] * len(src_paths)
+            else:
+                np.random.shuffle(src_paths)
+                tgt_paths = [orig_img_path] * len(src_paths)
+
+        for src_path, tgt_path in zip(src_paths, tgt_paths):
 
             # blist = list(set(i2) - set([src_path]))
             #
@@ -206,19 +230,29 @@ class lightDPR7Dataset(BaseDataset):
 
         keys.remove("sh")
 
-        keys_ordered = [key for key in ['ambient_intensity', 'sun_diameter', 'sun_color', 'ambient_color'] if key in keys]
+        if self.force_ambient_intensity:
+            key_order = ['ambient_intensity', 'ambient_color', 'sun_diameter', 'sun_color']
+        else:
+            key_order = ['ambient_intensity', 'sun_diameter', 'sun_color', 'ambient_color']
+
+        keys_ordered = [key for key in key_order if key in keys]
         for key in keys_ordered:
             keys.remove(key)
 
         keys = keys_ordered + keys
 
         for key in self.excluded_props:
-            if key not in keys:
-                raise ValueError("Key %s not found" % key)
-            keys.remove(key)
+            if not self.force_ambient_intensity:
+                if key not in keys:
+                    raise ValueError("Key %s not found" % key)
+
+            if key in keys:
+                keys.remove(key)
 
         for key in keys:
-            if isinstance(props[key], list):
+            if self.force_ambient_intensity and key == 'ambient_color':
+                light_data.append(props[key][0])
+            elif isinstance(props[key], list):
                 light_data.extend(props[key])
             else:
                 light_data.append(props[key])
@@ -241,7 +275,7 @@ class lightDPR7Dataset(BaseDataset):
 
 
     def __getitem__(self, index):
-        real_img_id = random.choice(range(0, self.opt.ffhq))
+        real_img_id = random.choice(range(0, self.n_real))
         AB_path = self.list_AB[index]
         real_path, orig_path, source_path, target_path, segment_img_path, src_light_path, tgt_light_path = self._get_paths(real_img_id, index)
 
@@ -250,7 +284,10 @@ class lightDPR7Dataset(BaseDataset):
 
         try:
             if self.img_size < img_real.shape[0]:
-                    img_real = cv2.resize(img_real, (self.img_size, self.img_size))
+                img_real = cv2.resize(img_real, (self.img_size, self.img_size))
+        except AttributeError as e:
+            print(real_path)
+            raise e
         except Exception as e:
             print(real_path)
             raise e

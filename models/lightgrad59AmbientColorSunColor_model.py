@@ -6,9 +6,9 @@ from .lightgrad59_model import lightgrad59Model
 
 sys.path.append('.')
 
-class lightgrad59AmbientColorModel(lightgrad59Model):
+class lightgrad59AmbientColorSunColorModel(lightgrad59Model):
     def name(self):
-        return 'lightgrad59AmbientColorModel'
+        return 'lightgrad59AmbientColorSunColorModel'
 
     def _set_model_parameters(self):
-        self.nc_light_extra = 3
+        self.nc_light_extra = 6

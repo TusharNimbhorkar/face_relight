@@ -12,6 +12,7 @@ OPTIONS=$8
 
 USE_GEN_SH=false
 DISABLE_EXISTENCE_CHECK=false
+ENABLE_CROPPING=true
 
 if [[ $OPTIONS == *"enable_gen_sh"* ]]; then
     USE_GEN_SH=true
@@ -27,6 +28,10 @@ if [[ $OPTIONS == *"disable_existence_check"* ]]; then
     DISABLE_EXISTENCE_CHECK=true
 fi
 
+
+if [[ $OPTIONS == *"disable_cropping"* ]]; then
+    ENABLE_CROPPING=false
+fi
 
 ROOT_PATH=`dirname $SRC_PATH`
 SRC_BASENAME=`basename $SRC_PATH`
@@ -57,9 +62,13 @@ fi
 if [[ $DISABLE_EXISTENCE_CHECK == false && -e $CROP_PATH && "$(ls -A ${CROP_PATH})" ]]; then
     printf "\nCrop folder exists."
 else
-    printf "\nCropping the dataset...\n"
-    python crop_dataset.py -i $SRC_PATH -o $CROP_PATH -f $FACE_DATA_PATH -p $ORIG_PATH -n $SET_SIZE $CROP_RESIZE_EXTRA_PARAMS
-    try
+    if [[ $ENABLE_CROPPING == true ]]; then
+        printf "\nCropping the dataset...\n"
+        python crop_dataset.py -i $SRC_PATH -o $CROP_PATH -f $FACE_DATA_PATH -p $ORIG_PATH -n $SET_SIZE $CROP_RESIZE_EXTRA_PARAMS
+        try
+    else
+        printf "\nCropping is disabled! Using previously cropped files."
+    fi
 fi
 
 if [[ $DISABLE_EXISTENCE_CHECK == false && -e $RESIZE_PATH && "$(ls -A ${RESIZE_PATH})" ]]; then

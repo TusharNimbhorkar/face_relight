@@ -6,6 +6,7 @@
 #enable_gen_sh - sh files will be generated in the source directory prior to proceeding
 #enable_overwrite - do not perform checks if cropped or resized folders exist - this will overwrite existing files
 #disable_existence_check - do not perform checks if cropped or resized folders exist - this will ignore existing files and only generate new ones
+#disable cropping - skips over the step of cropping, a pregenerated folder of crops is expected for resizing
 
 bash ./process_dataset_exec.sh \
  /home/nedko/face_relight/dbs/data/stylegan_v0/test 1024 \

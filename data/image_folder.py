@@ -23,19 +23,44 @@ def is_image_file(filename):
 
 
 def make_dataset(dir, n_ids=None, n_per_dir=-1):
-    images = []
+    img_paths = []
     assert os.path.isdir(dir), '%s is not a valid directory' % dir
     entry_dirs = glob.glob(os.path.join(dir,'*'))
     sort_numerically(entry_dirs)
     entry_dirs = entry_dirs[:n_ids]
+
+
     for entry_dir in entry_dirs:
+        paths_altered_orig = []
+        path_orig = None
         paths = sorted(glob.glob(os.path.join(entry_dir,'*')))
-        paths = [path for path in paths if is_image_file(path) and '_orig' not in path.rsplit('/',1)[-1]]
+        # paths = [path for path in paths if is_image_file(path)]
+
+
+        paths_synth = []
+        for path in paths:
+            if is_image_file(path):
+                fname = path.rsplit('/',1)[-1].rsplit('.',1)[0]
+                if fname == 'orig':
+                    path_orig = path
+                elif fname.rsplit('_', 1)[-1] == 'orig':
+                    paths_altered_orig.append(path)
+                else:
+                    paths_synth.append(path)
 
         if n_per_dir > 0:
-            paths = paths[:n_per_dir-1] + [paths[-1]]
-        images.extend(paths)
-    return images
+            paths_synth = paths_synth[:n_per_dir]
+            paths_altered_orig = paths_altered_orig[:n_per_dir]
+
+        assert path_orig is not None, 'No original image found in %s' % entry_dir
+        assert len(paths_synth)>0, 'No synthetic images in %s' % entry_dir
+
+        paths_dict = {'orig':path_orig,
+                 'orig_altered':paths_altered_orig,
+                 'synth':paths_synth,}
+
+        img_paths.append(paths_dict)
+    return img_paths
 
 
 def default_loader(path):

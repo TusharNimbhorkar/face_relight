@@ -8,6 +8,7 @@ class light3DULABDataset(lightDPR7Dataset):
 
     def __init__(self, opt):
         super(light3DULABDataset,self).__init__(opt)
+        self.use_large_real_set = os.path.exists(os.path.join(self.opt.dataroot, 'real_im', "{:06d}".format(0) + '.png'))
 
     def _get_item_path(self, path, fname_pattern):
         dir, fname = path.rsplit('/',1)
@@ -23,7 +24,11 @@ class light3DULABDataset(lightDPR7Dataset):
         src_light_path = self._get_item_path(source_path, 'light_%s_sh.txt')
         tgt_light_path = self._get_item_path(target_path, 'light_%s_sh.txt')
 
-        real_img_path = os.path.join(self.opt.dataroot,'real_im',"{:05d}".format(real_img_id)+'.png')
+        if self.use_large_real_set:
+            real_img_path = os.path.join(self.opt.dataroot,'real_im',"{:06d}".format(real_img_id)+'.png')
+        else:
+            real_img_path = os.path.join(self.opt.dataroot, 'real_im', "{:05d}".format(real_img_id) + '.png')
+
         orig_img_path = os.path.join(target_path.rsplit('/',1)[0], 'orig.png')
         segment_img_path = os.path.join(self.opt.dataroot,'segments',source_path.split('/')[-2],AB_path[0].split('/')[-2]+'.png')
 

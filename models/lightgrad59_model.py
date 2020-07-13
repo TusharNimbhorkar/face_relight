@@ -37,7 +37,13 @@ class lightgrad59Model(BaseModel):
             if name=='G' or name=='D':
                 if isinstance(name, str):
                     load_filename = '%s_net_%s.pth' % (epoch, name)
-                    load_path = osp.join(self.save_dir, load_filename)
+
+                    if self.load_dir is not None:
+                        load_dir = self.load_dir
+                    else:
+                        load_dir = self.save_dir
+
+                    load_path = osp.join(load_dir, load_filename)
                     net = getattr(self, 'net' + name)
                     if isinstance(net, torch.nn.DataParallel):
                         net = net.module

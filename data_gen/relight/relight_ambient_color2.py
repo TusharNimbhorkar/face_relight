@@ -17,6 +17,7 @@ from os.path import join
 import os
 import math
 from gen_ambient_illumination import get_ambient_color, get_sun_color
+import numpy as np
 
 def dump(obj):
    for attr in dir(obj):
@@ -61,6 +62,7 @@ def MultiRelight(root, dst_root, frame_name, normals_name, start_idx, params):
         except:
             bprint(f"ERROR executing {img_path}")
             bprint(traceback.format_exc())
+            raise
 
 
 def Relight(image_path, normal_path, dest_folder, params, nr_renders_per_image):
@@ -78,7 +80,7 @@ def Relight(image_path, normal_path, dest_folder, params, nr_renders_per_image):
             
     os.makedirs(dest_folder, exist_ok=True)
     with open(join(dest_folder, 'index.txt'), 'w') as f:
-        print(f"#name, light_Y, light_Z, light_intensity, ambient_r,ambient_g,ambient_b, sun_angle", file=f)
+        print(f"#name, light_Y, light_Z, light_intensity, ambient_r,ambient_g,ambient_b, sun_angle, sun_r, sun_g, sun_b", file=f)
         for i in range(nr_renders_per_image):
             ambient_strength = random.uniform(0.04, 0.4)
             sun_obj.rotation_euler[0] = 0 # no point in varying this variable
@@ -88,30 +90,44 @@ def Relight(image_path, normal_path, dest_folder, params, nr_renders_per_image):
             sun_obj.data.angle = 60 * math.pi / 180 # random.uniform(20, 60) * math.pi / 180 # params['sun_angle'] # 45 degrees, default is 11.4 degrees (0.198968 radian)
             sun_obj.data.color = get_sun_color()
 
-            rgb_orig, rgb_rel = get_ambient_color()
-            settings_orig = {"sun_strength" : 0,
+            rgb_orig, rgb_rel = get_ambient_color() #[1,1,1], np.array([ambient_strength, ambient_strength, ambient_strength]) #get_ambient_color()
+            sun_strength = random.uniform(4,7)
+
+            settings_set = []
+            settings_set.append( {"sun_strength" : 0,
                              "ambient_color" : rgb_orig.flatten(),
-                             "ext_name" : "_orig"}
+                             "ext_name" : "_orig",
+                             "shading_map": False})
 
-            settings_relight = {"sun_strength" : random.uniform(4,7),
+            settings_set.append( {"sun_strength" : sun_strength,
                              "ambient_color" : rgb_rel.flatten(),
-                             "ext_name" : ""}
+                             "ext_name" : "",
+                             "shading_map": False})
 
-            for settings in [settings_orig, settings_relight]:
+            # settings_set.append( {"sun_strength" : sun_strength,
+            #                  "ambient_color" : [1,1,1],
+            #                  "ext_name" : "_shading",
+            #                  "shading_map": True})
+
+            for settings in settings_set:
                 bpy.data.materials["relight"].node_tree.nodes["Image Texture"].interpolation = 'Closest'
-                # bpy.data.materials["relight"].node_tree.nodes["RGB"].interpolation = 'Closest'
 
-                # bpy.data.materials["relight"].node_tree.nodes["DiffuseBSDF"].interpolation = 'Closest'
-                # bpy.data.materials["relight"].node_tree.links.new(bpy.data.materials["relight"].node_tree.nodes["RGB"].outputs["Color"], bpy.data.materials["relight"].node_tree.nodes["DiffuseBSDF"].inputs[1])
+                if settings['shading_map']:
+                    bpy.data.materials["relight"].node_tree.links.new(bpy.data.materials["relight"].node_tree.nodes["RGB"].outputs["Color"], bpy.data.materials["relight"].node_tree.nodes["Diffuse BSDF"].inputs['Color'])
 
                 # ~ bpy.context.scene.world.color = [params['world_color'],] * 3 # [random.uniform(0.04, 0.280),] * 3 # [params['world_color'],] * 3
                 sun_obj.data.energy = settings['sun_strength']
                 bpy.context.scene.world.color = settings['ambient_color']
                 name = "{:0>4}{}.jpg".format(i,settings['ext_name'])
                 bprint(f"{image_path} : {name}__r")
-                print(f"{name},{sun_obj.rotation_euler[1]},{sun_obj.rotation_euler[2]},{sun_obj.data.energy},{bpy.context.scene.world.color[0]},{bpy.context.scene.world.color[1]},{bpy.context.scene.world.color[2]},{sun_obj.data.angle}", file=f)
+                print(f"{name},{sun_obj.rotation_euler[1]},{sun_obj.rotation_euler[2]},{sun_obj.data.energy},{bpy.context.scene.world.color[0]},{bpy.context.scene.world.color[1]},{bpy.context.scene.world.color[2]},{sun_obj.data.angle},{sun_obj.data.color[0]},{sun_obj.data.color[1]},{sun_obj.data.color[2]},", file=f)
                 bpy.context.scene.render.filepath = join(dest_folder, name)
                 bpy.ops.render.render(write_still=True, animation=False)
+
+                if settings['shading_map']:
+                    bpy.data.materials["relight"].node_tree.links.new(
+                        bpy.data.materials["relight"].node_tree.nodes["Image Texture"].outputs["Color"],
+                        bpy.data.materials["relight"].node_tree.nodes["Diffuse BSDF"].inputs['Color'])
     bprint("") # new line
 
 if __name__ == '__main__':

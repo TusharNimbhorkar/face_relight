@@ -57,15 +57,18 @@ from os.path import join
 # ~ except:
     # ~ print(f"ERROR executing blender")
 
-root = "/mnt/data1/users/morris/Relight/data/stylegan_final_30k"
-dst_root = "/mnt/data1/users/morris/Relight/results/stylegan_final_30k_ambient_noangle"
+root = "/home/nedko/face_relight/dbs/data/stylegan_v0/normals" #"/home/tushar/data1/stylegan4.0_normals" #"/home/nedko/face_relight/dbs/data/stylegan_v0/normals" "/home/nedko/face_relight/dbs/data/stylegan_v0/normals" #"/home/tushar/data1/stylegan4.0_normals" #"/home/nedko/face_relight/dbs/data/stylegan_v0/normals"
+dst_root = "/home/nedko/face_relight/dbs/data/stylegan_v0/v0.9.0_shadingmaps_1024" #"/home/nedko/face_relight/dbs/data/stylegan_v0/v0.5.2_ambientcolor_ext_1024"
 # ~ dst_root = "/opt/stylegan_final_30k_ambient"
 
+os.makedirs(dst_root, exist_ok=True)
+
 try:
-    relight(root, dst_root, "frame.png", "full_normal.png", size=1024, world_color=0.28, intensity=4.0, sun_angle=1.0471975511965976, blender_name="datagen.blend", relight_name="relight_ambient_color.py", print_command=True) # 0.6108652381980153    
+    relight(root, dst_root, "frame.png", "full_normal.png", size=1024, world_color=0.28, intensity=4.0, sun_angle=1.0471975511965976, blender_name="datagen.blend", relight_name="relight_ambient_color3.py", print_command=True) # 0.6108652381980153
     print("granting access")
     os.system(f"chmod -R 777 \"{dst_root}\"")
     print("DONE!")
 except:
     print(f"ERROR executing blender")
+    raise
     
