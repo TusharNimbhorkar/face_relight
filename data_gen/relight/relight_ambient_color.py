@@ -88,7 +88,7 @@ def Relight(image_path, normal_path, dest_folder, params, nr_renders_per_image):
             sun_obj.rotation_euler[2] = random.uniform(-math.pi / 2, math.pi / 2)
             # ~ sun_obj.data.energy = random.uniform(4,7)  # [4,7] # params['intensity']
             sun_obj.data.angle = 60 * math.pi / 180 # random.uniform(20, 60) * math.pi / 180 # params['sun_angle'] # 45 degrees, default is 11.4 degrees (0.198968 radian)
-            sun_obj.data.color = get_sun_color()
+            sun_obj.data.color = np.array([0,0,0]) #get_sun_color()
 
             rgb_orig, rgb_rel = get_ambient_color() #[1,1,1], np.array([ambient_strength, ambient_strength, ambient_strength]) #get_ambient_color()
             sun_strength = random.uniform(4,7)
