@@ -25,6 +25,7 @@ def dump(obj):
 
 def MultiRelight(root, dst_root, frame_name, normals_name, start_idx, params):
     image_names = natsorted(os.listdir(root))
+    # image_names = image_names[28498:]
     os.makedirs(dst_root, exist_ok=True)
     
     bpy.context.scene.render.resolution_x = params['size']
@@ -80,15 +81,15 @@ def Relight(image_path, normal_path, dest_folder, params, nr_renders_per_image):
     with open(join(dest_folder, 'index.txt'), 'w') as f:
         print(f"#name, light_Y, light_Z, light_intensity, ambient_r,ambient_g,ambient_b, sun_angle, sun_r, sun_g, sun_b", file=f)
         for i in range(nr_renders_per_image):
-            color = get_sun_color()
-            ambient_strength = 0.28 # random.uniform(0.04, 0.4)
+            # color = get_sun_color()
+            ambient_strength = random.uniform(0.04, 0.4) #0.28
             
             sun_obj.rotation_euler[0] = 0 # no point in varying this variable
             sun_obj.rotation_euler[1] = math.pi * .5 + (random.uniform(-math.pi * 60 / 180, math.pi * 45 / 180))  # the default for this axis is 90-degrees 
             sun_obj.rotation_euler[2] = random.uniform(-math.pi / 2, math.pi / 2)
             sun_obj.data.energy = random.uniform(4,7)  # [4,7] # params['intensity']
-            sun_obj.data.angle = random.uniform(20, 60) * math.pi / 180 # params['sun_angle'] # 45 degrees, default is 11.4 degrees (0.198968 radian)            
-            sun_obj.data.color = color
+            sun_obj.data.angle = 60 * math.pi / 180 # params['sun_angle'] # 45 degrees, default is 11.4 degrees (0.198968 radian)
+            # sun_obj.data.color = color
             
             bpy.context.scene.world.color = [ambient_strength,] * 3
             name = "{:0>4}.jpg".format(i)

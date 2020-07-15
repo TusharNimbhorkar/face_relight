@@ -1,0 +1,14 @@
+In relight_data_synth.py change the path of the source normal files (root) and the output path (dst_root).
+Do not change any parameter of relight() except foor relight_name, which relates to the script that will be executed in blender. There are 3 choices as of now and of course more can be added:
+    - relight.py - for generating a relight dataset (currently set for ambient dataset - in the spirit of v0.3.1)
+    - relight_ambient_color.py - for generating an ambient color dataset (v0.5.2)
+    - relight_shading_map.py - for generating shading maps (v0.9.0)
+
+In the selected file  you should change what parameters to be saved and what should not be according to your needs.
+All parameters that vary should be saved, parameters that are constant can be saved or not.
+Make sure to keep the title line correct - there are restrictions on what exact names can be used in the title, since the name of a parameter identifies it in gen_sh
+All line should be comma separated. In all non-title lines no spaces are allowed (except if part of a string).
+
+To start generating, run:
+python relight_data_synth.py
+
