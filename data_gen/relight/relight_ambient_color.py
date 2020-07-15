@@ -94,10 +94,10 @@ def Relight(image_path, normal_path, dest_folder, params, nr_renders_per_image):
             sun_strength = random.uniform(4,7)
 
             settings_set = []
-            settings_set.append( {"sun_strength" : 0,
-                             "ambient_color" : rgb_orig.flatten(),
-                             "ext_name" : "_orig",
-                             "shading_map": False})
+            # settings_set.append( {"sun_strength" : 0,
+            #                  "ambient_color" : rgb_orig.flatten(),
+            #                  "ext_name" : "_orig",
+            #                  "shading_map": False})
 
             settings_set.append( {"sun_strength" : sun_strength,
                              "ambient_color" : rgb_rel.flatten(),
