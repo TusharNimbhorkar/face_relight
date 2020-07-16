@@ -171,6 +171,135 @@ class InputProcessor:
 
         return rects, scores, idx, shape
 
+    def process2(self, img, face_data=None):
+        img = np.array(img)
+        orig_size = img.shape
+
+        if np.max(img.shape[:2]) > 1024:
+            if img.shape[0] < img.shape[1]:
+                img_res = resize_pil(img, width=1024)
+            else:
+                img_res = resize_pil(img, height=1024)
+        else:
+            img_res = img
+
+        resize_ratio = orig_size[0] / img_res.shape[0]
+        gray = cv2.cvtColor(img_res, cv2.COLOR_BGR2GRAY)
+        if face_data is None:
+            rects, scores, idx = self.detector.run(gray, 1, -1)
+
+            if len(rects) > 0:
+                rect_id = np.argmax(scores)
+                rect = rects[rect_id]
+                # rect = rects[0]
+                shape = self.predictor(gray, rect)
+                shape = shape_to_np(shape)
+                # from here
+                print()
+
+        else:
+            rects, scores, idx, shape = face_data
+
+        loc = [0, 0]
+
+        if len(rects) > 0:
+
+            ## rect_id = np.argmax(scores)
+            ## rect = rects[rect_id]
+            ## # rect = rects[0]
+            ## shape = self.predictor(gray, rect)
+            ## shape = shape_to_np(shape)
+            # (x, y, w, h) = rect_to_bb(rect)
+            e0 = np.array(shape[38])
+            e1 = np.array(shape[43])
+            # e0 = np.array(shape[0])
+            # e1 = np.array(shape[16])
+            m0 = np.array(shape[48])
+            m1 = np.array(shape[54])
+
+            lm = np.array(shape)
+            lm_chin = lm[0: 17]  # left-right
+            lm_eyebrow_left = lm[17: 22]  # left-right
+            lm_eyebrow_right = lm[22: 27]  # left-right
+            lm_nose = lm[27: 31]  # top-down
+            lm_nostrils = lm[31: 36]  # top-down
+            lm_eye_left = lm[36: 42]  # left-clockwise
+            lm_eye_right = lm[42: 48]  # left-clockwise
+            lm_mouth_outer = lm[48: 60]  # left-clockwise
+            lm_mouth_inner = lm[60: 68]  # left-clockwise
+
+            # Calculate auxiliary vectors.
+            eye_left = np.mean(lm_eye_left, axis=0)
+            eye_right = np.mean(lm_eye_right, axis=0)
+            eye_avg = (eye_left + eye_right) * 0.5
+            eye_to_eye = eye_right - eye_left
+            mouth_left = lm_mouth_outer[0]
+            mouth_right = lm_mouth_outer[6]
+            mouth_avg = (mouth_left + mouth_right) * 0.5
+            eye_to_mouth = mouth_avg - eye_avg
+
+            # Choose oriented crop rectangle.
+            x = eye_to_eye - np.flipud(eye_to_mouth) * [-1, 1]
+            x /= np.hypot(*x)
+            x *= max(np.hypot(*eye_to_eye) * 2.0, np.hypot(*eye_to_mouth) * 1.8)
+            y = np.flipud(x) * [-1, 1]
+            c = eye_avg + eye_to_mouth * 0.1
+            quad = np.stack([c - x - y, c - x + y, c + x + y, c + x - y])
+            qsize = np.hypot(*x) * 2
+
+            # Crop.
+            border = max(int(np.rint(qsize * 0.1)), 3)
+            crop = (int(np.floor(min(quad[:, 0]))), int(np.floor(min(quad[:, 1]))), int(np.ceil(max(quad[:, 0]))),
+                    int(np.ceil(max(quad[:, 1]))))
+            print(crop)
+            crop = (max(crop[0] - border, 0), max(crop[1] - border, 0), min(crop[2] + border, img.shape[1]),
+                    min(crop[3] + border, img.shape[0]))
+            if crop[2] - crop[0] < img.shape[1] or crop[3] - crop[1] < img.shape[0]:
+                img = img[int(crop[0]):int(crop[2]), int(crop[1]):int(crop[3])]
+                print(img.shape)
+                # img = img.crop(crop)
+                quad -= crop[0:2]
+
+            # x_p = e1 - e0
+            # y_p = 0.5 * (e0 + e1) - 0.5 * (m0 + m1)
+            # s = np.max([4.0 * np.linalg.norm(x_p), 3.6 * np.linalg.norm(y_p)])
+            # s *= resize_ratio
+            # c[0] *= resize_ratio
+            # c[1] *= resize_ratio
+            # top = -np.min([0, int(c[1] - s / 2)])
+            # bottom = -np.min([0, img.shape[0] - int(c[1] + s / 2)])
+            # left = -np.min([0, int(c[0] - s / 2)])
+            # right = -np.min([0, img.shape[1] - int(c[0] + s / 2)])
+
+            # img = img[int(c1_ms):int(c1_ps), int(c0_ms):int(c0_ps)]  # here do something?
+
+            if self.enable_segment:
+                mask = self.seg_gen.segment(img)
+            else:
+                mask = None
+            # mask = mask[int(c1_ms):int(c1_ps), int(c0_ms):int(c0_ps)]
+            #
+            # img = cv2.copyMakeBorder(img, top, bottom, left, right, cv2.BORDER_CONSTANT, value=[0, 0, 0])
+            #
+            # if self.enable_segment:
+            #     mask = cv2.copyMakeBorder(mask, top, bottom, left, right, cv2.BORDER_CONSTANT, 0)
+            #
+            # border = [top, bottom, left, right]
+
+            crop_sz = img.shape
+            if np.max(img.shape[:2]) > 1024:
+                img = cv2.resize(img, (1024, 1024))
+
+                if self.enable_segment:
+                    mask = cv2.resize(mask, (1024, 1024))
+        else:
+            img = None
+            mask = None
+            crop_sz = None
+            border = None
+
+        return img, mask, loc, crop_sz, border
+
     def process(self, img, face_data=None):
         img = np.array(img)
         orig_size = img.shape
@@ -330,11 +459,6 @@ class InputProcessor:
             border = [0, 0, 0, 0]
 
             crop_sz = img.shape
-            if np.max(img.shape[:2]) > 1024:
-                img = cv2.resize(img, (1024, 1024))
-
-                if self.enable_segment:
-                    mask = cv2.resize(mask, (1024, 1024))
         else:
             img = None
             mask = None
