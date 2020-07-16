@@ -145,7 +145,16 @@ class HourglassNet(nn.Module):
                 upFeat = upFeat.repeat((1, 1, row, col))
                 innerFeat[:, 0:self.ncInput, :, :] = upFeat
 
-            return innerFeat, innerFeat[:, self.ncInput:, :, :], light
+            out_inner_feature = innerFeat[:, self.ncInput:, :, :]
+
+            # ambience = light[:,-1:None,:,:]
+            # ambience = ambience.repeat(1,1,16,16)
+            # sun_color = light[:,-3:None,:,:]
+            # sun_color = sun_color.repeat(1,1,16,16)
+            # extra_inner_feature = sun_color
+            # out_inner_feature = torch.cat((out_inner_feature, extra_inner_feature.detach()), 1)
+
+            return innerFeat, out_inner_feature, light
 
     def __init__(self, baseFilter=16, gray=True, enable_target=True, ncImg=1, ncLightExtra=0, ncLight=9):
         super(HourglassNet, self).__init__()

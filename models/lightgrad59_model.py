@@ -27,6 +27,7 @@ class lightgrad59Model(BaseModel):
             parser.set_defaults(pool_size=0, gan_mode='lsgan')
             parser.add_argument('--lambda_L1', type=float, default=100.0, help='weight for L1 loss')
             parser.add_argument('--enable_neutral', action='store_true', help='Enable or disable input target sh')
+            parser.add_argument('--force_load', action='store_true', help='Force loading of weights which does not match this model by removing any tensors that do not match.')
 
         return parser
 
@@ -62,22 +63,39 @@ class lightgrad59Model(BaseModel):
                     elif name == 'D':
                         current_state_dict = self.netD.module.state_dict()
                         # print('TEST', current_state_dict['model.0.weight'].shape)
+                    #
+                    if not self.opt.force_load:
 
+                        if name == 'G' and current_state_dict['light.predict_FC1.weight'].shape[1] != loaded_state_dict['light.predict_FC1.weight'].shape[1]:
+                            del loaded_state_dict['light.predict_FC1.weight']
+                            del loaded_state_dict['light.predict_FC1.bias']
 
-                    if name == 'G' and current_state_dict['pre_conv.weight'].shape[1] != loaded_state_dict['pre_conv.weight'].shape[1]:
-                        del loaded_state_dict['pre_conv.weight']
-                        del loaded_state_dict['pre_conv.bias']
+                        if name == 'G' and current_state_dict['pre_conv.weight'].shape[1] != loaded_state_dict['pre_conv.weight'].shape[1]:
+                            del loaded_state_dict['pre_conv.weight']
+                            del loaded_state_dict['pre_conv.bias']
+                        #
+                        if name == 'G' and current_state_dict['output.weight'].shape[0] != loaded_state_dict['output.weight'].shape[0]:
+                            del loaded_state_dict['output.weight']
+                            del loaded_state_dict['output.bias']
+                        #
+                        if name == 'D' and current_state_dict['model.0.weight'].shape[1] != loaded_state_dict['model.0.weight'].shape[1]:
+                            del loaded_state_dict['model.0.weight']
+                            del loaded_state_dict['model.0.bias']
 
-                    if name == 'G' and current_state_dict['output.weight'].shape[0] != loaded_state_dict['output.weight'].shape[0]:
-                        del loaded_state_dict['output.weight']
-                        del loaded_state_dict['output.bias']
+                    else:
+                        keys_to_del = []
+                        for key in loaded_state_dict:
+                            print(loaded_state_dict[key].shape)
+                            if current_state_dict[key].shape != loaded_state_dict[key].shape:
+                                keys_to_del.append(key)
 
-                    if name == 'D' and current_state_dict['model.0.weight'].shape[1] != loaded_state_dict['model.0.weight'].shape[1]:
-                        del loaded_state_dict['model.0.weight']
-                        del loaded_state_dict['model.0.bias']
+                        for key in keys_to_del:
+                            del loaded_state_dict[key]
+
 
                     for key in list(loaded_state_dict.keys()):  # need to copy keys here because we mutate in loop
                         self._patch_instance_norm_state_dict(loaded_state_dict, net, key.split('.'))
+
                     net.load_state_dict(loaded_state_dict, strict=False)
 
                     # sd = net.cpu().state_dict()

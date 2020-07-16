@@ -684,8 +684,6 @@ def load_model(checkpoint_dir_cmd, device, input_mode='L', model_1024=False, mod
             if enable_face_tone:
                 nc_light_extra += 2
 
-            # log.d(enable_face_tone, enable_ambient, enable_sun_diam, enable_amb_color, enable_sun_color, nc_light_extra)
-
             my_network = HourglassNet(enable_target=not model_neutral, ncImg=nc_img, ncLightExtra=nc_light_extra, ncLight=9*nc_sh)
     else:
         my_network = HourglassNet_RGB()
@@ -747,7 +745,23 @@ def test(my_network, input_img, sh_id=0, sh_constant=1.0, res=256, sh_path=light
 
     output_img, output_sh = my_network(img, sh, 0, **extra_ops)
 
-    return output_img, sh
+    return output_img, sh, output_sh.cpu().detach().numpy()
+
+
+def get_output_params(output_params_tensor, model_obj):
+    '''
+    Convert output prediction tensor to organized dictionary of predictions
+    :param output_params_tensor: The predictions tensor from the encoder
+    :param model_obj: the model object
+    :return: a dictionary with organized parameters
+    '''
+    output_params = {}
+    output_params_tensor = output_params_tensor.flatten()
+
+    if len(output_params_tensor) >= 12 and model_obj.enable_amb_color:
+        output_params['ambient_color'] = output_params_tensor[-3:]
+
+    return output_params
 
 def draw_label(img, label):
     img_width = img.shape[1]
@@ -795,26 +809,28 @@ for orig_path, out_fname, gt_data in dataset.iterate():
     if enable_test_mode:
         results = []
 
+        if enable_face_boxes:
+            orig_img_show = orig_img_proc
+        else:
+            orig_img_show = orig_img
+
+        if orig_img_show.shape[0] < min_resolution:
+            continue
+
         ##UNCOMMENT FOR ORIGINAL IMAGE EXPORT
-        # if enable_face_boxes:
-        #     orig_img_show = orig_img_proc
-        # else:
-        #     orig_img_show = orig_img
-        #
         # if orig_img_show.shape[0] > min_resolution:
         #     orig_img_show = resize_pil(orig_img_show, height=min_resolution)
-        #
-        # if orig_img_show.shape[0] < min_resolution:
-        #     continue
-        #
-        # # orig_img_show = draw_label(orig_img_show, 'Original')
-        #
+
+            # results_frame.append(result_img)
         # results = [orig_img_show]
     else:
         if enable_face_boxes:
             orig_img_show = orig_img_proc
         else:
             orig_img_show = orig_img
+
+        if orig_img_show.shape[0] < min_resolution:
+            continue
 
         if orig_img_show.shape[0] > min_resolution:
             orig_img_show = resize_pil(orig_img_show, height=min_resolution)
@@ -855,6 +871,7 @@ for orig_path, out_fname, gt_data in dataset.iterate():
 
     for sh_idx in range(min_sh_list_len):
         results_frame = []
+        results_params = []
         for model_obj in model_objs:
 
             if sh_path_dataset is None:
@@ -867,7 +884,10 @@ for orig_path, out_fname, gt_data in dataset.iterate():
 
             extra_ops={}
 
-            result_img, sh = test(model_obj, orig_img_proc, sh_constant=model_obj.sh_const, res=model_obj.resolution, sh_id=target_sh, sh_path=sh_path, sh_fname=sh_fname, extra_ops=extra_ops, intensity=model_obj.intensity)
+
+            result_img, sh, output_params_tensor = test(model_obj, orig_img_proc, sh_constant=model_obj.sh_const, res=model_obj.resolution, sh_id=target_sh, sh_path=sh_path, sh_fname=sh_fname, extra_ops=extra_ops, intensity=model_obj.intensity)
+
+            output_params = get_output_params(output_params_tensor, model_obj)
 
             result_img = handle_output(result_img, orig_img_proc.shape[1], orig_img_proc.shape[0], mask, orig_img_proc, orig_img, loc, crop_sz, border, enable_face_boxes, orig_path.rsplit('/', 1)[-1].rsplit('.', 1)[0], target_sh, sh, model_obj.blend_mode)
 
@@ -882,8 +902,13 @@ for orig_path, out_fname, gt_data in dataset.iterate():
             ##COMMENT FOR ORIGINAL IMAGE EXPORT
             results_frame.append(result_img)
 
+            results_params.append(output_params)
         # tgt_result = cv2.resize(tgt_result, (256,256))
 
+        params_path = osp.join(out_dir, out_fname.rsplit('.', 1)[0] + '.txt')
+        np.savetxt(params_path, np.array(results_params[0]['ambient_color']))
+
+        results_params = np.array(results_params)
         out_img = np.concatenate(results + results_frame, axis=1)
         print(orig_path, gt_path)
 
