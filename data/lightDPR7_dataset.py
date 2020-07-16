@@ -329,8 +329,8 @@ class lightDPR7Dataset(BaseDataset):
 
         #Source light
 
-        props_src = self.__read_properties(src_light_path)
-        props_tgt = self.__read_properties(tgt_light_path)
+        props_src = self.__read_properties(src_light_path).astype(np.float32)
+        props_tgt = self.__read_properties(tgt_light_path).astype(np.float32)
 
         return {'A': input_src, 'B': input_tgt,'C':input_real,'D':input_orig, 'AL':torch.from_numpy(props_src),'BL':torch.from_numpy(props_tgt), 'A_paths': AB_path, 'B_paths': AB_path}
 
