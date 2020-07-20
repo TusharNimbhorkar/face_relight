@@ -68,7 +68,10 @@ class lightgrad59Model(BaseModel):
 
                         if name == 'G' and current_state_dict['light.predict_FC1.weight'].shape[1] != loaded_state_dict['light.predict_FC1.weight'].shape[1]:
                             del loaded_state_dict['light.predict_FC1.weight']
-                            del loaded_state_dict['light.predict_FC1.bias']
+                            try:
+                                del loaded_state_dict['light.predict_FC1.bias']
+                            except:
+                                do_nothing=0
 
                         if name == 'G' and current_state_dict['pre_conv.weight'].shape[1] != loaded_state_dict['pre_conv.weight'].shape[1]:
                             del loaded_state_dict['pre_conv.weight']
