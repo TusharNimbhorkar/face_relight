@@ -265,8 +265,11 @@ model_256_lab_stylegan_031_50k_neutral_pcrop_r50k_r50k_rerun = Model(outputs_pat
 model_lab_stylegan_052_256_20k_neut_pcrop_rmix30k_ft = Model(outputs_path + 'model_256_lab_stylegan_0.5.2_20k_neutral_pcrop_r30k+r30k_ft/24_net_G.pth', input_mode='LAB', resolution=256, ambience=None, nc_sh=1, dataset_name='3dulight_shfix2', name='(FT)L+AB 20k sGAN v0.5.2 256\n D:30k ffhq, 30k SGAN', intensity=0, enable_neutral=True, enable_amb_color=True)
 
 # model_lab_stylegan_052_256_20k_neut_pcrop_rmix30k
-##
+## overfit
 model_256_lab_stylegan_031_100_neutral_pcrop_r30k_r30k_overfit = Model(outputs_path_tushar_ds3 + 'model_256_lab_stylegan_0.3.1_100_neutral_amb_pcrop_r30k+30k_overfit_try2/14_net_G.pth', input_mode='LAB', resolution=256, ambience=0.280, nc_sh=1, dataset_name='3dulight_shfix2', name='OVERFIT lab_sgan_100k_031_256 \n D: 30k+30k', intensity=0, enable_neutral=True)
+
+# rgb model
+model_256_rgb_stylegan_031_50k_neutral_pcrop_r30k_r0k = Model(outputs_path_tushar_ds3 + 'model_256_rgb_stylegan_0.3.1_50k_neutral_amb_pcrop_r30k+30k/14_net_G.pth', input_mode='RGB', resolution=256, ambience=0.280, nc_sh=1, dataset_name='3dulight_shfix2', name='RGB _sgan_100k_031_256 \n D: 30k+30k', intensity=0, enable_neutral=True)
 
 
 model_512_lab_stylegan_052_20k_r30k_30k_neutral_pcrop = Model(outputs_path_tushar_ds3 + 'model_512_lab_stylegan_0.5.2_20k_r30k+30k_neutral_noprops_pcrop/14_net_G.pth', input_mode='LAB', resolution=512, ambience=None, nc_sh=1, dataset_name='3dulight_shfix2', name='L+AB 20k sGAN v0.5.2 512\n D:30k ffhq, 30k SGAN', intensity=0, enable_neutral=True, enable_amb_color=True)
@@ -444,7 +447,10 @@ model_objs = [
 # model_lab_stylegan_052_256_20k_neut_pcrop_rmix30k, model_lab_stylegan_052_256_20k_neut_pcrop_rmix30k_ft
 
 #     overfit
-model_256_lab_stylegan_031_100_neutral_pcrop_r30k_r30k_overfit
+# model_256_lab_stylegan_031_100_neutral_pcrop_r30k_r30k_overfit,
+
+    # rgb
+model_256_rgb_stylegan_031_50k_neutral_pcrop_r30k_r0k
 ]
 
 # dataset = dataset_stylegan_v0p2
@@ -694,7 +700,7 @@ def handle_output(out_img, col, row, mask, img_p, img_orig, loc, crop_sz, border
 
 def load_model(checkpoint_dir_cmd, device, input_mode='L', model_1024=False, model_neutral=False, enable_ambient=False,
                nc_sh=1, enable_sun_diam=False, enable_sun_color=False, enable_amb_color=False, enable_face_tone=False):
-    if input_mode in ['L', 'LAB']:
+    if input_mode in ['L', 'LAB','RGB']:
         nc_img = 3 if input_mode == 'LAB' else 1
         if model_1024:
             my_network_512 = HourglassNet_512_1024(16)
