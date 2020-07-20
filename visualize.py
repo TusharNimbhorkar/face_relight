@@ -266,10 +266,10 @@ model_lab_stylegan_052_256_20k_neut_pcrop_rmix30k_ft = Model(outputs_path + 'mod
 
 # model_lab_stylegan_052_256_20k_neut_pcrop_rmix30k
 ## overfit
-model_256_lab_stylegan_031_100_neutral_pcrop_r30k_r30k_overfit = Model(outputs_path_tushar_ds3 + 'model_256_lab_stylegan_0.3.1_100_neutral_amb_pcrop_r30k+30k_overfit_try2/14_net_G.pth', input_mode='LAB', resolution=256, ambience=0.280, nc_sh=1, dataset_name='3dulight_shfix2', name='OVERFIT lab_sgan_100k_031_256 \n D: 30k+30k', intensity=0, enable_neutral=True)
+model_256_lab_stylegan_031_100_neutral_pcrop_r30k_r30k_overfit = Model(outputs_path_tushar_ds3 + 'model_256_lab_stylegan_0.3.1_100_neutral_amb_pcrop_r30k+30k_overfit_try2/14_net_G.pth', input_mode='LAB', resolution=256, ambience=0.280, nc_sh=1, dataset_name='3dulight_shfix2', name='OVERFIT lab_sgan_100_031_256 \n D: 30k+30k', intensity=0, enable_neutral=True)
 
 # rgb model
-model_256_rgb_stylegan_031_50k_neutral_pcrop_r30k_r0k = Model(outputs_path_tushar_ds3 + 'model_256_rgb_stylegan_0.3.1_50k_neutral_amb_pcrop_r30k+30k/14_net_G.pth', input_mode='RGB', resolution=256, ambience=0.280, nc_sh=1, dataset_name='3dulight_shfix2', name='RGB _sgan_100k_031_256 \n D: 30k+30k', intensity=0, enable_neutral=True)
+model_256_rgb_stylegan_031_50k_neutral_pcrop_r30k_r0k = Model(outputs_path_tushar_ds3 + 'model_256_rgb_stylegan_0.3.1_50k_neutral_amb_pcrop_r30k+30k/14_net_G.pth', input_mode='RGB', resolution=256, ambience=0.280, nc_sh=1, dataset_name='3dulight_shfix2', name='RGB _sgan_50k_031_256 \n D: 30k+30k', intensity=0, enable_neutral=True)
 
 
 model_512_lab_stylegan_052_20k_r30k_30k_neutral_pcrop = Model(outputs_path_tushar_ds3 + 'model_512_lab_stylegan_0.5.2_20k_r30k+30k_neutral_noprops_pcrop/14_net_G.pth', input_mode='LAB', resolution=512, ambience=None, nc_sh=1, dataset_name='3dulight_shfix2', name='L+AB 20k sGAN v0.5.2 512\n D:30k ffhq, 30k SGAN', intensity=0, enable_neutral=True, enable_amb_color=True)
@@ -439,7 +439,7 @@ model_objs = [
 
     #     G_D comparison models
     # model_256_lab_stylegan_031_50k_neutral_pcrop_r30k_r30k,
-    # model_256_lab_stylegan_031_50k_neutral_pcrop_r30k_r30k_rerun,
+    model_256_lab_stylegan_031_50k_neutral_pcrop_r30k_r30k_rerun,
     # model_256_lab_stylegan_031_50k_neutral_pcrop_r50k_r50k,
     # model_256_lab_stylegan_031_50k_neutral_pcrop_r50k_r50k_rerun
 
