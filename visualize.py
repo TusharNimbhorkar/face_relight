@@ -439,7 +439,7 @@ model_objs = [
 
     #     G_D comparison models
     # model_256_lab_stylegan_031_50k_neutral_pcrop_r30k_r30k,
-    model_256_lab_stylegan_031_50k_neutral_pcrop_r30k_r30k_rerun,
+    # model_256_lab_stylegan_031_50k_neutral_pcrop_r30k_r30k_rerun,
     # model_256_lab_stylegan_031_50k_neutral_pcrop_r50k_r50k,
     # model_256_lab_stylegan_031_50k_neutral_pcrop_r50k_r50k_rerun
 
@@ -450,6 +450,7 @@ model_objs = [
 # model_256_lab_stylegan_031_100_neutral_pcrop_r30k_r30k_overfit,
 
     # rgb
+model_lab_stylegan_031_256_30k_neut_pcrop_rmix30k,
 model_256_rgb_stylegan_031_50k_neutral_pcrop_r30k_r0k
 ]
 
