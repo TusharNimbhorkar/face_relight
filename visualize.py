@@ -701,7 +701,7 @@ def handle_output(out_img, col, row, mask, img_p, img_orig, loc, crop_sz, border
 def load_model(checkpoint_dir_cmd, device, input_mode='L', model_1024=False, model_neutral=False, enable_ambient=False,
                nc_sh=1, enable_sun_diam=False, enable_sun_color=False, enable_amb_color=False, enable_face_tone=False):
     if input_mode in ['L', 'LAB','RGB']:
-        nc_img = 3 if input_mode == 'LAB' else 1
+        nc_img = 3 if input_mode == 'LAB' or input_mode == 'RGB'  else 1
         if model_1024:
             my_network_512 = HourglassNet_512_1024(16)
             my_network = HourglassNet_1024(my_network_512, 16)
