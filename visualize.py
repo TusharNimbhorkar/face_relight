@@ -939,7 +939,8 @@ for orig_path, out_fname, gt_data in dataset.iterate():
         # tgt_result = cv2.resize(tgt_result, (256,256))
 
         params_path = osp.join(out_dir, out_fname.rsplit('.', 1)[0] + '.txt')
-        np.savetxt(params_path, np.array(results_params[0]['ambient_color']))
+        # Todo: save txt ??
+        # np.savetxt(params_path, np.array(results_params[0]['ambient_color']))
 
         results_params = np.array(results_params)
         out_img = np.concatenate(results + results_frame, axis=1)
