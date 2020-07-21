@@ -269,7 +269,7 @@ model_lab_stylegan_052_256_20k_neut_pcrop_rmix30k_ft = Model(outputs_path + 'mod
 model_256_lab_stylegan_031_100_neutral_pcrop_r30k_r30k_overfit = Model(outputs_path_tushar_ds3 + 'model_256_lab_stylegan_0.3.1_100_neutral_amb_pcrop_r30k+30k_overfit_try2/14_net_G.pth', input_mode='LAB', resolution=256, ambience=0.280, nc_sh=1, dataset_name='3dulight_shfix2', name='OVERFIT lab_sgan_100_031_256 \n D: 30k+30k', intensity=0, enable_neutral=True)
 # only generator /overfit
 # model_256_rgb_stylegan_0.3.1_100_neutral_amb_pcrop_r30k+30k_overfitting_onlyG
-model_256_rgb_stylegan_031_100_neutral_amb_pcrop_r30k_30k_overfitting_onlyG = Model(outputs_path_tushar_ds3 + 'model_256_rgb_stylegan_0.3.1_100_neutral_amb_pcrop_r30k+30k_overfitting_onlyG/14_net_G.pth', input_mode='LAB', resolution=256, ambience=0.280, nc_sh=1, dataset_name='3dulight_shfix2', name='OVERFIT lab_sgan_100_031_256 \n onlyG', intensity=0, enable_neutral=True)
+model_256_rgb_stylegan_031_100_neutral_amb_pcrop_r30k_30k_overfitting_onlyG = Model(outputs_path_tushar_ds3 + 'model_256_rgb_stylegan_0.3.1_100_neutral_amb_pcrop_r30k+30k_overfitting_onlyG/24_net_G.pth', input_mode='LAB', resolution=256, ambience=0.280, nc_sh=1, dataset_name='3dulight_shfix2', name='OVERFIT lab_sgan_100_031_256 \n onlyG', intensity=0, enable_neutral=True)
 model_256_rgb_stylegan_031_20k_neutral_amb_pcrop_r30k_30k_onlyG = Model(outputs_path_tushar_ds3 + 'model_256_rgb_stylegan_0.3.1_20k_neutral_amb_pcrop_r30k+30k_onlyG/14_net_G.pth', input_mode='LAB', resolution=256, ambience=0.280, nc_sh=1, dataset_name='3dulight_shfix2', name='OVERFIT lab_sgan_20k_031_256 \n onlyG', intensity=0, enable_neutral=True)
 # model_256_rgb_stylegan_0.3.1_20k_neutral_amb_pcrop_r30k+30k_onlyG
 
