@@ -267,6 +267,13 @@ model_lab_stylegan_052_256_20k_neut_pcrop_rmix30k_ft = Model(outputs_path + 'mod
 # model_lab_stylegan_052_256_20k_neut_pcrop_rmix30k
 ## overfit
 model_256_lab_stylegan_031_100_neutral_pcrop_r30k_r30k_overfit = Model(outputs_path_tushar_ds3 + 'model_256_lab_stylegan_0.3.1_100_neutral_amb_pcrop_r30k+30k_overfit_try2/14_net_G.pth', input_mode='LAB', resolution=256, ambience=0.280, nc_sh=1, dataset_name='3dulight_shfix2', name='OVERFIT lab_sgan_100_031_256 \n D: 30k+30k', intensity=0, enable_neutral=True)
+# only generator /overfit
+# model_256_rgb_stylegan_0.3.1_100_neutral_amb_pcrop_r30k+30k_overfitting_onlyG
+model_256_rgb_stylegan_031_100_neutral_amb_pcrop_r30k_30k_overfitting_onlyG = Model(outputs_path_tushar_ds3 + 'model_256_rgb_stylegan_0.3.1_100_neutral_amb_pcrop_r30k+30k_overfitting_onlyG/14_net_G.pth', input_mode='LAB', resolution=256, ambience=0.280, nc_sh=1, dataset_name='3dulight_shfix2', name='OVERFIT lab_sgan_100_031_256 \n onlyG', intensity=0, enable_neutral=True)
+model_256_rgb_stylegan_031_20k_neutral_amb_pcrop_r30k_30k_onlyG = Model(outputs_path_tushar_ds3 + 'model_256_rgb_stylegan_0.3.1_20k_neutral_amb_pcrop_r30k+30k_onlyG/14_net_G.pth', input_mode='LAB', resolution=256, ambience=0.280, nc_sh=1, dataset_name='3dulight_shfix2', name='OVERFIT lab_sgan_20k_031_256 \n onlyG', intensity=0, enable_neutral=True)
+# model_256_rgb_stylegan_0.3.1_20k_neutral_amb_pcrop_r30k+30k_onlyG
+
+
 
 # rgb model
 model_256_rgb_stylegan_031_50k_neutral_pcrop_r30k_r30k = Model(outputs_path_tushar_ds3 + 'model_256_rgb_stylegan_0.3.1_50k_neutral_amb_pcrop_r30k+30k/14_net_G.pth', input_mode='RGB', resolution=256, ambience=0.280, nc_sh=1, dataset_name='3dulight_shfix2', name='RGB _sgan_50k_031_256 \n D: 30k+30k', intensity=0, enable_neutral=True)
@@ -281,6 +288,9 @@ model_lab_stylegan_031_256_70k_neut_pcrop_rmix70k = Model(outputs_path + 'model_
 # model_lab_stylegan_052_256_20k_neut_pcrop_rmix30k = Model(outputs_path + 'model_256_lab_stylegan_0.5.2_20k_neutral_pcrop_r30k+r30k/14_net_G.pth', input_mode='LAB', resolution=256, ambience=None, nc_sh=1, dataset_name='3dulight_shfix2', name='L+AB 20k sGAN v0.5.2 256\n int=0, Neut, rmix30k, pcrop', intensity=0, enable_neutral=True, enable_amb_color=True)
 model_lab_stylegan_052_256_30k_neut_pcrop = Model(outputs_path + 'model_256_lab_stylegan_0.5.2_30k_neutral_pcrop/14_net_G.pth', input_mode='LAB', resolution=256, ambience=None, nc_sh=1, dataset_name='3dulight_shfix2', name='L+AB 30k sGAN v0.5.2 256\n int=0, Neut, pcrop', intensity=0, enable_neutral=True, enable_amb_color=True)
 model_lab_stylegan_052_256_30k_neut_pcrop_rmix30k = Model(outputs_path + 'model_256_lab_stylegan_0.5.2_30k_r30k+30k_neutral_pcrop/14_net_G.pth', input_mode='LAB', resolution=256, ambience=None, nc_sh=1, dataset_name='3dulight_shfix2', name='L+AB 30k sGAN v0.5.2 256\n int=0, Neut, rmix30k, pcrop', intensity=0, enable_neutral=True, enable_amb_color=True)
+
+
+
 
 model_lab_stylegan_031_256_30k_neut_pcrop_rmix30k = Model(outputs_path + 'model_256_lab_stylegan_0.3.1_30k_neutral_pcrop_r30k+r30k/14_net_G.pth', input_mode='LAB', resolution=256, ambience=0.280, nc_sh=1, dataset_name='3dulight_shfix2', name='L+AB 30k sGAN v0.3.1 256\n int=0, Neut,rmix30k pcrop', intensity=0, enable_neutral=True)
 model_lab_stylegan_031_256_20k_neut_pcrop_rmix30k = Model(outputs_path + 'model_256_lab_stylegan_0.3.1_20k_neutral_pcrop_r30k+r30k/14_net_G.pth', input_mode='LAB', resolution=256, ambience=0.280, nc_sh=1, dataset_name='3dulight_shfix2', name='L+AB 20k sGAN v0.3.1 256\n int=0, Neut,rmix30k pcrop', intensity=0, enable_neutral=True)
@@ -450,10 +460,19 @@ model_lab_stylegan_052_256_20k_neut_pcrop_rmix30k,#, model_lab_stylegan_052_256_
 #     overfit
 # model_256_lab_stylegan_031_100_neutral_pcrop_r30k_r30k_overfit,
 
+#overfit only G
+# model_256_rgb_stylegan_031_100_neutral_amb_pcrop_r30k_30k_overfitting_onlyG,
+# onlyG
+model_256_rgb_stylegan_031_20k_neutral_amb_pcrop_r30k_30k_onlyG
+
+
     # rgb
 # model_lab_stylegan_031_256_30k_neut_pcrop_rmix30k,
-model_256_rgb_stylegan_031_50k_neutral_pcrop_r30k_r30k,
-model_256_rgb_stylegan_052_20k_r30k_neutral_pcrop
+# model_256_rgb_stylegan_031_50k_neutral_pcrop_r30k_r30k,
+# model_256_rgb_stylegan_052_20k_r30k_neutral_pcrop
+
+#     Only generator models
+
 ]
 
 # dataset = dataset_stylegan_v0p2
