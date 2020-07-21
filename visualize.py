@@ -412,7 +412,7 @@ model_l_pretrained = Model('models/trained/trained_model_03.t7', input_mode='L',
 model_objs = [
     # model_lab_stylegan_031_256_10k_neut_pcrop,
     # model_lab_stylegan_031_256_20k_neut_pcrop,
-    # model_lab_stylegan_031_256_20k_neut_pcrop_rmix30k,
+    model_lab_stylegan_031_256_20k_neut_pcrop_rmix30k,
     # model_lab_stylegan_031_256_30k_neut_pcrop,
     # model_lab_stylegan_031_256_30k_neut_pcrop_rmix30k,
     # model_lab_stylegan_031_256_50k_neut_pcrop,
@@ -455,7 +455,7 @@ model_objs = [
     # model_256_lab_stylegan_031_50k_neutral_pcrop_r50k_r50k_rerun
 
 #compare ft
-model_lab_stylegan_052_256_20k_neut_pcrop_rmix30k,#, model_lab_stylegan_052_256_20k_neut_pcrop_rmix30k_ft
+# model_lab_stylegan_052_256_20k_neut_pcrop_rmix30k,#, model_lab_stylegan_052_256_20k_neut_pcrop_rmix30k_ft
 
 #     overfit
 # model_256_lab_stylegan_031_100_neutral_pcrop_r30k_r30k_overfit,
