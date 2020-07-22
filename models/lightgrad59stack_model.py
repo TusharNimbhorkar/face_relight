@@ -126,8 +126,9 @@ class lightgrad59stackModel(BaseModel):
             self.nc_img = 1
 
         self._set_model_parameters()
+        '''
         self.netG = HourglassNet(enable_target=False, ncImg=self.nc_img, ncLightExtra=self.nc_light_extra).to(self.device)
-
+        '''
         # Neutral
         self.netG1 = HourglassNet(enable_target=self.enable_target, ncImg=self.nc_img, ncLightExtra=self.nc_light_extra).to(self.device)
 
@@ -135,13 +136,17 @@ class lightgrad59stackModel(BaseModel):
         self.netG2 = HourglassNet(enable_target=True, ncImg=self.nc_img, ncLightExtra=self.nc_light_extra).to(self.device)
 
         if 'cpu' not in str(self.device):
-            self.netG = torch.nn.DataParallel(self.netG, self.opt.gpu_ids)
-        self.netG.train(True)
+            self.netG1 = torch.nn.DataParallel(self.netG1, self.opt.gpu_ids)
+            self.netG2 = torch.nn.DataParallel(self.netG2, self.opt.gpu_ids)
+        self.netG1.train(True)
+        self.netG2.train(True)
 
         if self.isTrain:
             self.epochs_G_only = 0
+            '''
             self.netD = networks.define_D(2 * self.nc_img, opt.ndf, opt.netD,
                                           opt.n_layers_D, opt.norm, opt.init_type, opt.init_gain, self.gpu_ids)
+            '''
             # neutral
             self.netD1 = networks.define_D(2 * self.nc_img, opt.ndf, opt.netD,
                                           opt.n_layers_D, opt.norm, opt.init_type, opt.init_gain, self.gpu_ids)
@@ -159,11 +164,18 @@ class lightgrad59stackModel(BaseModel):
             # initialize optimizers
             self.optimizers = []
 
-            self.optimizer_G = torch.optim.Adam(self.netG.parameters())
-            self.optimizer_D = torch.optim.Adam(self.netD.parameters())
+            self.optimizer_G1 = torch.optim.Adam(self.netG1.parameters())
+            self.optimizer_G2 = torch.optim.Adam(self.netG2.parameters())
+            self.optimizer_D1 = torch.optim.Adam(self.netD1.parameters())
+            self.optimizer_D2 = torch.optim.Adam(self.netD2.parameters())
 
-            self.optimizers.append(self.optimizer_G)
-            self.optimizers.append(self.optimizer_D)
+            self.G_opt = torch.optim.Adam(list(self.netG1.parameters()) + list(self.netG2.parameters()))
+            self.D_opt = torch.optim.Adam(list(self.netD1.parameters()) + list(self.netD2.parameters()))
+
+            self.optimizers.append(self.optimizer_G1)
+            self.optimizers.append(self.optimizer_G2)
+            self.optimizers.append(self.optimizer_D1)
+            self.optimizers.append(self.optimizer_D2)
 
     def _set_model_parameters(self):
         pass
@@ -186,18 +198,19 @@ class lightgrad59stackModel(BaseModel):
             count_skip = 9 % epoch
         if epoch >= 10:
             count_skip = 0
-
+        '''
         if epoch <= 10:
             self.fake_B, _, self.fake_AL, _ = self.netG(self.real_A, self.real_BL, count_skip, oriImg=None)
 
         if epoch > 10:
             self.fake_B, self.face_feat_A, self.fake_AL, self.face_feat_B = self.netG(self.real_A, self.real_BL,
-                                                                                      count_skip, oriImg=self.real_D)
+                                                                                      count_skip, oriImg=self.real_D)'''
         # figure out the what needs to be inputed or not
+        count_skip = 0
         self.fake_B1, _, self.fake_AL, _ = self.netG1(self.real_A, self.real_BL, count_skip, oriImg=None)
         self.fake_B2, _, self.fake_AL, _ = self.netG2(self.fake_B1, self.real_BL, count_skip, oriImg=None)
 
-        print(self.fake_B1,self.fake_B2)
+        # print(self.fake_B1,self.fake_B2)
 
     def calc_gradient(self, x):
         a = np.array([[1, 0, -1], [2, 0, -2], [1, 0, -1]])
@@ -229,49 +242,100 @@ class lightgrad59stackModel(BaseModel):
     def backward_D(self):
         # Fake
         # stop backprop to the generator by detaching fake_B
-        fake_AB = torch.cat((self.real_C, self.fake_B), 1)
-        pred_fake = self.netD(fake_AB.detach())
+
+        # TODO: Check for the inputs to the discriminator.
+        ### D1 ###
+        fake_AB = torch.cat((self.real_C, self.fake_B1), 1)
+        pred_fake = self.netD1(fake_AB.detach())
         self.loss_D_fake = self.criterionGAN(pred_fake, False)
 
         # Real
         real_AB = torch.cat((self.real_C, self.real_B), 1)
-        pred_real = self.netD(real_AB)
+        pred_real = self.netD1(real_AB)
         self.loss_D_real = self.criterionGAN(pred_real, True)
 
         # Combined loss
-        self.loss_D = (self.loss_D_fake + self.loss_D_real) * 0.5
+        self.loss_D1 = (self.loss_D_fake + self.loss_D_real) * 0.5
+
+        ### D2 ###
+
+        fake_AB = torch.cat((self.real_C, self.fake_B2), 1)
+        pred_fake = self.netD2(fake_AB.detach())
+        self.loss_D_fake = self.criterionGAN(pred_fake, False)
+
+        # Real
+        real_AB = torch.cat((self.real_C, self.real_B), 1)
+        pred_real = self.netD2(real_AB)
+        self.loss_D_real = self.criterionGAN(pred_real, True)
+
+        # Combined loss
+        self.loss_D2 = (self.loss_D_fake + self.loss_D_real) * 0.5
+
+        self.loss_D = self.loss_D1 + self.loss_D2
 
         self.loss_D.backward()
 
     def backward_G(self, epoch):
         # First, G(A) should fake the discriminator
 
-        fake_AB = torch.cat((self.real_C, self.fake_B), 1)
+        ### G1 loss ###
+
+        fake_AB = torch.cat((self.real_C, self.fake_B1), 1)
 
         self.loss_G_GAN = 0
 
         if self.epochs_G_only==0 or epoch>1:
-            pred_fake = self.netD(fake_AB)
+            pred_fake = self.netD1(fake_AB)
             self.loss_G_GAN = self.criterionGAN(pred_fake, True) * 0.5
 
         # Second, G(A) = B
-        self.loss_G_L1 = self.criterionL1(self.real_B, self.fake_B)  # * self.opt.lambda_L1
+        self.loss_G_L1 = self.criterionL1(self.real_B, self.fake_B1)  # * self.opt.lambda_L1
 
         self.loss_G_MSE = self.mseloss(self.real_AL, self.fake_AL)
 
         self.loss_G_total_variance = self.criterionL1(self.calc_gradient(x=self.real_B),
-                                                      self.calc_gradient(self.fake_B))
+                                                      self.calc_gradient(self.fake_B1))
 
         self.loss_L1_add = self.loss_G_L1 + self.loss_G_MSE + self.loss_G_total_variance
 
-        self.loss_G = self.loss_G_GAN + self.loss_L1_add #self.loss_G_L1 + self.loss_G_MSE + self.loss_G_total_variance
+        self.loss_G1 = self.loss_G_GAN + self.loss_L1_add #self.loss_G_L1 + self.loss_G_MSE + self.loss_G_total_variance
         #
+        '''#off for a moment
+        if epoch > 10:
+            self.loss_G_feat = self.mseloss(self.face_feat_A1, self.face_feat_B1) * 0.5
+            self.loss_G = self.loss_G + self.loss_G_feat
+        else:
+            self.loss_G_feat = 0.0'''
+
+
+        ### G2 Loss ###
+        fake_AB = torch.cat((self.real_C, self.fake_B2), 1)
+
+        self.loss_G_GAN = 0
+
+        if self.epochs_G_only == 0 or epoch > 1:
+            pred_fake = self.netD2(fake_AB)
+            self.loss_G_GAN = self.criterionGAN(pred_fake, True) * 0.5
+
+        # Second, G(A) = B
+        self.loss_G_L1 = self.criterionL1(self.real_B, self.fake_B2)  # * self.opt.lambda_L1
+
+        self.loss_G_MSE = self.mseloss(self.real_AL, self.fake_AL)
+
+        self.loss_G_total_variance = self.criterionL1(self.calc_gradient(x=self.real_B),
+                                                      self.calc_gradient(self.fake_B2))
+
+        self.loss_L1_add = self.loss_G_L1 + self.loss_G_MSE + self.loss_G_total_variance
+
+        self.loss_G2 = self.loss_G_GAN + self.loss_L1_add  # self.loss_G_L1 + self.loss_G_MSE + self.loss_G_total_variance
+        '''#off for a moment
         if epoch > 10:
             self.loss_G_feat = self.mseloss(self.face_feat_A, self.face_feat_B) * 0.5
             self.loss_G = self.loss_G + self.loss_G_feat
         else:
-            self.loss_G_feat = 0.0
+            self.loss_G_feat = 0.0'''
 
+        self.loss_G = self.loss_G1 + self.loss_G2
         self.loss_G.backward()
 
     def optimize_parameters(self, epoch):
@@ -284,13 +348,17 @@ class lightgrad59stackModel(BaseModel):
 
         if self.epochs_G_only==0 or epoch>1:
             # update D
-            self.set_requires_grad(self.netD, True)
-            self.optimizer_D.zero_grad()
+            self.set_requires_grad(self.netD1, True)
+            self.set_requires_grad(self.netD2, True)
+            # self.optimizer_D.zero_grad()
+            self.D_opt.zero_grad()
             self.backward_D()
-            self.optimizer_D.step()
+            self.D_opt.step()
 
         # update G
-        self.set_requires_grad(self.netD, False)
-        self.optimizer_G.zero_grad()
+        self.set_requires_grad(self.netD1, False)
+        self.set_requires_grad(self.netD2, False)
+        # self.optimizer_G.zero_grad()
+        self.G_opt.zero_grad()
         self.backward_G(epoch)
         self.optimizer_G.step()
