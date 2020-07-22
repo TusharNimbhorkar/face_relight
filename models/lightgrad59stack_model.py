@@ -112,7 +112,7 @@ class lightgrad59stackModel(BaseModel):
         self.visual_names = ['real_A', 'fake_B', 'real_B']
         # specify the models you want to save to the disk. The program will call base_model.save_networks and base_model.load_networks
         if self.isTrain:
-            self.model_names = ['G', 'D']
+            self.model_names = ['G1', 'G2', 'D1', 'D2']
         else:  # during test time, only load Gs
             self.model_names = ['G']
 
