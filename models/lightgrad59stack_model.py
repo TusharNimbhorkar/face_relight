@@ -188,6 +188,7 @@ class lightgrad59stackModel(BaseModel):
         self.real_BL = input['BL'].to(self.device)
         self.real_C = input['C'].to(self.device)
         self.real_D = input['D'].to(self.device)
+        self.real_OL = input['orig_sh'].to(self.device)
 
         self.image_paths = input['A_paths' if AtoB else 'B_paths']
 
@@ -208,7 +209,7 @@ class lightgrad59stackModel(BaseModel):
         # figure out the what needs to be inputed or not
         count_skip = 0
         self.fake_B1, _, self.fake_AL, _ = self.netG1(self.real_A, self.real_BL, count_skip, oriImg=None)
-        self.fake_B2, _, self.fake_AL, _ = self.netG2(self.fake_B1, self.real_BL, count_skip, oriImg=None)
+        self.fake_B2, _, self.fake_OL, _ = self.netG2(self.fake_B1, self.real_BL, count_skip, oriImg=None)
 
         # print(self.fake_B1,self.fake_B2)
 
@@ -289,12 +290,12 @@ class lightgrad59stackModel(BaseModel):
             self.loss_G_GAN = self.criterionGAN(pred_fake, True) * 0.5
 
         # Second, G(A) = B
-        self.loss_G_L1 = self.criterionL1(self.real_B, self.fake_B1)  # * self.opt.lambda_L1
+        self.loss_G_L1 = self.criterionL1(self.real_D, self.fake_B1)  # * self.opt.lambda_L1
 
         self.loss_G_MSE = self.mseloss(self.real_AL, self.fake_AL)
 
-        self.loss_G_total_variance = self.criterionL1(self.calc_gradient(x=self.real_B),
-                                                      self.calc_gradient(self.fake_B1))
+        self.loss_G_total_variance = self.criterionL1(self.calc_gradient(x=self.real_D),
+                                                      self.calc_gradient(x=self.fake_B1))
 
         self.loss_L1_add = self.loss_G_L1 + self.loss_G_MSE + self.loss_G_total_variance
 
@@ -320,10 +321,10 @@ class lightgrad59stackModel(BaseModel):
         # Second, G(A) = B
         self.loss_G_L1 = self.criterionL1(self.real_B, self.fake_B2)  # * self.opt.lambda_L1
 
-        self.loss_G_MSE = self.mseloss(self.real_AL, self.fake_AL)
+        self.loss_G_MSE = self.mseloss(self.real_OL, self.fake_OL)
 
         self.loss_G_total_variance = self.criterionL1(self.calc_gradient(x=self.real_B),
-                                                      self.calc_gradient(self.fake_B2))
+                                                      self.calc_gradient(x=self.fake_B2))
 
         self.loss_L1_add = self.loss_G_L1 + self.loss_G_MSE + self.loss_G_total_variance
 
