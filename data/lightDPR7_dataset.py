@@ -31,6 +31,7 @@ class lightDPR7Dataset(BaseDataset):
                             help='Define keys which to exclude when passing to the light network')
         parser.add_argument('--enable_altered_orig', action='store_true',
                             help='Enable per relit image corresponding original image. If not enabled the target will always be the initial original image. Used to preserve some variability in the target - like ambient color.')
+        parser.add_argument('--enable_stack', action='store_true', help='Enable or disable stack input sh')
         if is_train:
             parser.add_argument('--ffhq', type=int, default=70000, help='sample size ffhq')
             parser.add_argument('--force_ambient_intensity', action='store_true', help='Do not use ambient color')
@@ -332,8 +333,18 @@ class lightDPR7Dataset(BaseDataset):
         props_src = self.__read_properties(src_light_path).astype(np.float32)
         props_tgt = self.__read_properties(tgt_light_path).astype(np.float32)
 
-        return {'A': input_src, 'B': input_tgt,'C':input_real,'D':input_orig, 'AL':torch.from_numpy(props_src),'BL':torch.from_numpy(props_tgt), 'A_paths': AB_path, 'B_paths': AB_path}
+        data_dict = {'A': input_src, 'B': input_tgt,'C':input_real,'D':input_orig,
+                     'AL':torch.from_numpy(props_src),'BL':torch.from_numpy(props_tgt),
+                     'A_paths': AB_path, 'B_paths': AB_path}
 
+
+        if self.opt.enable_stack:
+            orig_path_sh = orig_path.replace('orig.png', 'light_orig_sh.txt')
+            orig_sh = self.__read_properties(orig_path_sh).astype(np.float32)
+            data_dict['orig_sh'] = torch.from_numpy(orig_sh)
+
+
+        return data_dict
     def __len__(self):
         return len(self.list_AB)
 
