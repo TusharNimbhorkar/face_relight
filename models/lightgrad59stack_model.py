@@ -361,4 +361,4 @@ class lightgrad59stackModel(BaseModel):
         # self.optimizer_G.zero_grad()
         self.G_opt.zero_grad()
         self.backward_G(epoch)
-        self.optimizer_G.step()
+        self.G_opt.step()
