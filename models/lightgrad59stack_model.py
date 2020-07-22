@@ -109,7 +109,7 @@ class lightgrad59stackModel(BaseModel):
         # specify the training losses you want to print out. The program will call base_model.get_current_losses
         self.loss_names = ['G_GAN', 'G_L1', 'G_MSE', 'G_total_variance', 'G_feat', 'L1_add', 'G', 'D_real', 'D_fake', 'D']
         # specify the images you want to save/display. The program will call base_model.get_current_visuals
-        self.visual_names = ['real_A', 'fake_B', 'real_B']
+        self.visual_names = ['real_A', 'fake_B1', 'fake_B1', 'real_B']
         # specify the models you want to save to the disk. The program will call base_model.save_networks and base_model.load_networks
         if self.isTrain:
             self.model_names = ['G1', 'G2', 'D1', 'D2']
