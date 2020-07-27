@@ -455,7 +455,7 @@ class PixelDiscriminator(nn.Module):
 
 #Class for VGG perceptual loss
 
-# todo: check the colorspace(?)
+# todo: check the colorspace(?), check if it is working on cuda
 class VGGPerceptualLoss(nn.Module):
     def __init__(self, resize=True):
         super(VGGPerceptualLoss, self).__init__()
@@ -467,10 +467,10 @@ class VGGPerceptualLoss(nn.Module):
         for bl in blocks:
             for p in bl:
                 p.requires_grad = False
-        self.blocks = torch.nn.ModuleList(blocks)
-        self.transform = torch.nn.functional.interpolate
-        self.mean = torch.nn.Parameter(torch.tensor([0.485, 0.456, 0.406]).view(1,3,1,1))
-        self.std = torch.nn.Parameter(torch.tensor([0.229, 0.224, 0.225]).view(1,3,1,1))
+        self.blocks = nn.ModuleList(blocks)
+        self.transform = nn.functional.interpolate
+        self.mean = nn.Parameter(torch.tensor([0.485, 0.456, 0.406]).view(1,3,1,1))
+        self.std = nn.Parameter(torch.tensor([0.229, 0.224, 0.225]).view(1,3,1,1))
         self.resize = resize
 
     def forward(self, input, target):
