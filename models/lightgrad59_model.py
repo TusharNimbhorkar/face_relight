@@ -5,6 +5,8 @@ import sys
 
 from commons.common_tools import overrides
 from util.image_pool import ImagePool
+from util.ssim import pytorch_ssim
+
 from .base_model import BaseModel
 from . import networks
 
@@ -27,6 +29,7 @@ class lightgrad59Model(BaseModel):
             parser.set_defaults(pool_size=0, gan_mode='lsgan')
             parser.add_argument('--lambda_L1', type=float, default=100.0, help='weight for L1 loss')
             parser.add_argument('--enable_neutral', action='store_true', help='Enable or disable input target sh')
+            parser.add_argument('--enable_ssim', action='store_true', help='Enable or disable input target sh')
             parser.add_argument('--force_load', action='store_true', help='Force loading of weights which does not match this model by removing any tensors that do not match.')
 
         return parser
@@ -117,6 +120,8 @@ class lightgrad59Model(BaseModel):
             self.model_names = ['G']
 
         self.enable_target = not opt.enable_neutral
+        self.enable_ssim = opt.enable_ssim
+
         self.input_mode = opt.input_mode
 
         self.nc_light_extra = 0
@@ -142,7 +147,9 @@ class lightgrad59Model(BaseModel):
             self.criterionGAN = networks.GANLoss(gan_mode='lsgan').to(self.device)
             self.criterionL1 = torch.nn.L1Loss().to(self.device)
             self.mseloss = torch.nn.MSELoss(reduction='mean').to(self.device)
-
+            if self.enable_ssim:
+                self.ssimLoss = pytorch_ssim.SSIM()
+                self.loss_names.append('G_ssim')
             # initialize optimizers
             self.optimizers = []
 
@@ -253,6 +260,12 @@ class lightgrad59Model(BaseModel):
             self.loss_G = self.loss_G + self.loss_G_feat
         else:
             self.loss_G_feat = 0.0
+
+        if self.enable_ssim:
+            ssim_out = 1 - self.ssimLoss(self.real_B, self.fake_B)
+            self.loss_G_ssim = ssim_out.item()
+            self.loss_G = self.loss_G + self.loss_G_ssim
+
 
         self.loss_G.backward()
 
