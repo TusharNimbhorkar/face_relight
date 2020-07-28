@@ -126,9 +126,7 @@ class lightgrad59stackModel(BaseModel):
             self.nc_img = 1
 
         self._set_model_parameters()
-        '''
-        self.netG = HourglassNet(enable_target=False, ncImg=self.nc_img, ncLightExtra=self.nc_light_extra).to(self.device)
-        '''
+
         # Neutral
         self.netG1 = HourglassNet(enable_target=self.enable_target, ncImg=self.nc_img, ncLightExtra=self.nc_light_extra).to(self.device)
 
@@ -143,10 +141,7 @@ class lightgrad59stackModel(BaseModel):
 
         if self.isTrain:
             self.epochs_G_only = 0
-            '''
-            self.netD = networks.define_D(2 * self.nc_img, opt.ndf, opt.netD,
-                                          opt.n_layers_D, opt.norm, opt.init_type, opt.init_gain, self.gpu_ids)
-            '''
+
             # neutral
             self.netD1 = networks.define_D(2 * self.nc_img, opt.ndf, opt.netD,
                                           opt.n_layers_D, opt.norm, opt.init_type, opt.init_gain, self.gpu_ids)
@@ -190,6 +185,10 @@ class lightgrad59stackModel(BaseModel):
         self.real_D = input['D'].to(self.device)
         self.real_OL = input['orig_sh'].to(self.device)
 
+        if 'C2' in input.keys():
+            self.real_C2 = input['C2'].to(self.device)
+        else:
+            self.real_C2 = input['C'].to(self.device)
         self.image_paths = input['A_paths' if AtoB else 'B_paths']
 
     def forward(self, epoch):
@@ -260,12 +259,12 @@ class lightgrad59stackModel(BaseModel):
 
         ### D2 ###
 
-        fake_AB = torch.cat((self.real_C, self.fake_B2), 1)
+        fake_AB = torch.cat((self.real_C2, self.fake_B2), 1)
         pred_fake = self.netD2(fake_AB.detach())
         self.loss_D_fake = self.criterionGAN(pred_fake, False)
 
         # Real
-        real_AB = torch.cat((self.real_C, self.real_B), 1)
+        real_AB = torch.cat((self.real_C2, self.real_B), 1)
         pred_real = self.netD2(real_AB)
         self.loss_D_real = self.criterionGAN(pred_real, True)
 
@@ -310,7 +309,7 @@ class lightgrad59stackModel(BaseModel):
 
 
         ### G2 Loss ###
-        fake_AB = torch.cat((self.real_C, self.fake_B2), 1)
+        fake_AB = torch.cat((self.real_C2, self.fake_B2), 1)
 
         self.loss_G_GAN = 0
 
