@@ -32,6 +32,9 @@ class lightDPR7Dataset(BaseDataset):
         parser.add_argument('--enable_altered_orig', action='store_true',
                             help='Enable per relit image corresponding original image. If not enabled the target will always be the initial original image. Used to preserve some variability in the target - like ambient color.')
         parser.add_argument('--enable_stack', action='store_true', help='Enable or disable stack input sh')
+        # parser.add_argument('--real_imD2', action='store_true', help='Enable or disable stack input sh')
+        parser.add_argument('--load_realD2', type=str, default=None, help='real im dir 2')
+
         if is_train:
             parser.add_argument('--ffhq', type=int, default=70000, help='sample size ffhq')
             parser.add_argument('--force_ambient_intensity', action='store_true', help='Do not use ambient color')
@@ -86,6 +89,10 @@ class lightDPR7Dataset(BaseDataset):
             self.excluded_props=[]
 
         self.n_real = len(os.listdir(os.path.join(self.opt.dataroot,'real_im')))
+
+        if self.opt.load_realD2 is not None:
+            self.n_real2 = len(os.listdir(os.path.join(self.opt.load_realD2)))
+
         self.img_size = self.opt.img_size
         self.use_segments = self.opt.segment
         self.input_mode = self.opt.input_mode
@@ -278,9 +285,15 @@ class lightDPR7Dataset(BaseDataset):
     def __getitem__(self, index):
         real_img_id = random.choice(range(0, self.n_real))
         AB_path = self.list_AB[index]
-        real_path, orig_path, source_path, target_path, segment_img_path, src_light_path, tgt_light_path = self._get_paths(real_img_id, index)
 
-        #Real discriminator image
+        if self.opt.load_realD2 is not None:
+            real_img_id2 = random.choice(range(0, self.n_real2))
+            real_path, orig_path, source_path, target_path, segment_img_path, src_light_path, tgt_light_path, real_path2 = self._get_paths(real_img_id, index, real_img_id2=real_img_id2)
+        else:
+            real_path, orig_path, source_path, target_path, segment_img_path, src_light_path, tgt_light_path = self._get_paths(real_img_id, index, real_img_id2=None)
+
+
+        #Real discriminator image 1
         img_real = cv2.imread(real_path)
 
         try:
@@ -292,6 +305,25 @@ class lightDPR7Dataset(BaseDataset):
         except Exception as e:
             print(real_path)
             raise e
+
+        if self.opt.load_realD2 is not None:
+            # Real discriminator image 2
+            img_real2 = cv2.imread(real_path2)
+
+            try:
+                if self.img_size < img_real2.shape[0]:
+                    img_real2 = cv2.resize(img_real2, (self.img_size, self.img_size))
+            except AttributeError as e:
+                print(real_path2)
+                raise e
+            except Exception as e:
+                print(real_path2)
+                raise e
+
+            input_real2 = self._img_to_input(img_real2)
+
+
+
 
         input_real = self._img_to_input(img_real)
 
@@ -342,6 +374,8 @@ class lightDPR7Dataset(BaseDataset):
             orig_path_sh = orig_path.replace('orig.png', 'light_orig_sh.txt')
             orig_sh = self.__read_properties(orig_path_sh).astype(np.float32)
             data_dict['orig_sh'] = torch.from_numpy(orig_sh)
+        if self.opt.load_realD2 is not None:
+            data_dict['C2']= input_real2
 
 
         return data_dict
