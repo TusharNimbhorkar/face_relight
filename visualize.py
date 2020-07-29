@@ -260,6 +260,12 @@ model_256_lab_stylegan_031_50k_neutral_pcrop_r70k_r70k = Model(outputs_path_tush
 model_256_lab_stylegan_031_50k_neutral_pcrop_r30k_r30k_rerun = Model(outputs_path_tushar_ds3 + 'model_256_lab_stylegan_0.3.1_50k_neutral_amb_pcrop_r30k+30k_try2/14_net_G.pth', input_mode='LAB', resolution=256, ambience=0.280, nc_sh=1, dataset_name='3dulight_shfix2', name='RERUN lab_sgan_50k_031_256 \n D: 30k+30k', intensity=0, enable_neutral=True)
 model_256_lab_stylegan_031_50k_neutral_pcrop_r50k_r50k_rerun = Model(outputs_path_tushar_ds3 + 'model_256_lab_stylegan_0.3.1_50k_neutral_amb_pcrop_r50k+50k_try2/14_net_G.pth', input_mode='LAB', resolution=256, ambience=0.280, nc_sh=1, dataset_name='3dulight_shfix2', name='RERUN lab_sgan_50k_031_256 \n D: 50k+50k', intensity=0, enable_neutral=True)
 
+# ssim
+model_lab_stylegan_031_256_20k_neut_pcrop_rmix30k_ssim_1 = Model(outputs_path_tushar_ds3 + 'model_256_lab_stylegan_0.3.1_20k_neutral_amb_pcrop_r30k+30k_ssim/14_net_G.pth', input_mode='LAB', resolution=256, ambience=0.280, nc_sh=1, dataset_name='3dulight_shfix2', name='L+AB 20k sGAN v0.3.1 256\n Neut,rmix30k SSIM 1.0', intensity=0, enable_neutral=True)
+model_lab_stylegan_031_256_20k_neut_pcrop_rmix30k_ssim_01 = Model(outputs_path_tushar_ds3 + 'model_256_lab_stylegan_0.3.1_20k_neutral_amb_pcrop_r30k+30k_ssim_0.1/14_net_G.pth', input_mode='LAB', resolution=256, ambience=0.280, nc_sh=1, dataset_name='3dulight_shfix2', name='L+AB 20k sGAN v0.3.1 256\n Neut,rmix30k SSIM 0.1', intensity=0, enable_neutral=True)
+model_lab_stylegan_031_256_20k_neut_pcrop_rmix30k_ssim_001 = Model(outputs_path_tushar_ds3 + 'model_256_lab_stylegan_0.3.1_20k_neutral_amb_pcrop_r30k+30k_ssim_0.01/14_net_G.pth', input_mode='LAB', resolution=256, ambience=0.280, nc_sh=1, dataset_name='3dulight_shfix2', name='L+AB 20k sGAN v0.3.1 256\n  Neut,rmix30k SSIM 0.01', intensity=0, enable_neutral=True)
+
+
 
 ## ft model
 model_lab_stylegan_052_256_20k_neut_pcrop_rmix30k_ft = Model(outputs_path + 'model_256_lab_stylegan_0.5.2_20k_neutral_pcrop_r30k+r30k_ft/24_net_G.pth', input_mode='LAB', resolution=256, ambience=None, nc_sh=1, dataset_name='3dulight_shfix2', name='(FT)L+AB 20k sGAN v0.5.2 256\n D:30k ffhq, 30k SGAN', intensity=0, enable_neutral=True, enable_amb_color=True)
@@ -461,7 +467,7 @@ model_objs = [
 # model_256_lab_stylegan_031_100_neutral_pcrop_r30k_r30k_overfit,
 
 #overfit only G
-model_256_rgb_stylegan_031_100_neutral_amb_pcrop_r30k_30k_overfitting_onlyG,
+# model_256_rgb_stylegan_031_100_neutral_amb_pcrop_r30k_30k_overfitting_onlyG,
 # onlyG
 # model_256_rgb_stylegan_031_20k_neutral_amb_pcrop_r30k_30k_onlyG
 
@@ -471,7 +477,12 @@ model_256_rgb_stylegan_031_100_neutral_amb_pcrop_r30k_30k_overfitting_onlyG,
 # model_256_rgb_stylegan_031_50k_neutral_pcrop_r30k_r30k,
 # model_256_rgb_stylegan_052_20k_r30k_neutral_pcrop
 
-#     Only generator models
+# ssim comparison
+model_lab_stylegan_031_256_20k_neut_pcrop_rmix30k,
+model_lab_stylegan_031_256_20k_neut_pcrop_rmix30k_ssim_1,
+model_lab_stylegan_031_256_20k_neut_pcrop_rmix30k_ssim_01,
+model_lab_stylegan_031_256_20k_neut_pcrop_rmix30k_ssim_001
+
 
 ]
 
