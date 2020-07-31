@@ -29,7 +29,8 @@ class lightgrad59Model(BaseModel):
             parser.set_defaults(pool_size=0, gan_mode='lsgan')
             parser.add_argument('--lambda_L1', type=float, default=100.0, help='weight for L1 loss')
             parser.add_argument('--enable_neutral', action='store_true', help='Enable or disable input target sh')
-            parser.add_argument('--enable_ssim', action='store_true', help='Enable or disable input target sh')
+            parser.add_argument('--enable_ssim', action='store_true', help='Enable or disable SSIM loss')
+            parser.add_argument('--enable_vgg', action='store_true', help='Enable or disable VGG loss')
             parser.add_argument('--force_load', action='store_true', help='Force loading of weights which does not match this model by removing any tensors that do not match.')
 
         return parser
@@ -121,6 +122,7 @@ class lightgrad59Model(BaseModel):
 
         self.enable_target = not opt.enable_neutral
         self.enable_ssim = opt.enable_ssim
+        self.enable_vgg = opt.enable_vgg
 
         self.input_mode = opt.input_mode
 
@@ -150,6 +152,10 @@ class lightgrad59Model(BaseModel):
             if self.enable_ssim:
                 self.ssimLoss = pytorch_ssim.SSIM()
                 self.loss_names.append('G_ssim')
+            if self.enable_vgg:
+                self.vggLoss = networks.VGGPerceptualLoss().to(self.device)
+                self.loss_names.append('G_vgg')
+
             # initialize optimizers
             self.optimizers = []
 
@@ -265,6 +271,11 @@ class lightgrad59Model(BaseModel):
             ssim_out = 1 - self.ssimLoss(self.real_B, self.fake_B)
             self.loss_G_ssim = ssim_out.item()
             self.loss_G = self.loss_G + self.loss_G_ssim
+
+        if self.enable_vgg:
+            # todo it only works for rgb at the moment.
+            self.loss_G_vgg = self.vggLoss(self.real_B, self.fake_B)
+            self.loss_G = self.loss_G + self.loss_G_vgg
 
 
         self.loss_G.backward()
