@@ -128,7 +128,7 @@ class lightgrad59stackModel(BaseModel):
         self._set_model_parameters()
 
         # Neutral
-        self.netG1 = HourglassNet(enable_target=self.enable_target, ncImg=self.nc_img, ncLightExtra=self.nc_light_extra).to(self.device)
+        self.netG1 = HourglassNet(enable_target=False, ncImg=self.nc_img, ncLightExtra=self.nc_light_extra).to(self.device)
 
         # Relight
         self.netG2 = HourglassNet(enable_target=True, ncImg=self.nc_img, ncLightExtra=self.nc_light_extra).to(self.device)
